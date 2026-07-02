@@ -1,0 +1,81 @@
+/* Home — role-aware landing ("what's on my plate today") */
+(function () {
+  window.Views = window.Views || {};
+  var OPEN = ["New", "Assigned", "Under review", "Pending review", "Returned"];
+
+  window.Views.home = {
+    render: function (mount) {
+      var A = window.DP.raw.allegations;
+      var r = window.APP.ROLES[window.APP.state.role];
+      mount.innerHTML = '<div class="page">' +
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px"><div class="avatar" style="width:34px;height:34px">' + r.initials + '</div>' +
+        '<div><div class="page-title" style="font-size:18px">Welcome back, ' + r.name + '</div><div class="page-sub">' + r.title + ' workspace · ' + window.DP.raw.meta.disclaimer.split("—")[0].trim() + '</div></div></div>' +
+        (window.APP.isSupervisor() ? supervisorHome(A) : analystHome(A)) +
+        recent() + '</div>';
+      wire(mount);
+    }
+  };
+
+  function analystHome(A) {
+    var me = "Dana Whitmore";
+    var mine = A.filter(function (a) { return a.assignee === me && OPEN.indexOf(a.status) >= 0; });
+    var mineHigh = mine.filter(function (a) { return a.riskScore >= 80; });
+    var returned = A.filter(function (a) { return a.status === "Returned"; });
+    var myExp = mine.reduce(function (s, a) { return s + (a.exposurePost || 0); }, 0);
+    var next = A.filter(function (a) { return !a.assignee && a.status === "New"; }).sort(function (a, b) { return b.riskScore - a.riskScore; })[0];
+    return kpis([
+      ["Assigned to me", mine.length], ["High-risk (mine)", mineHigh.length],
+      ["Returned to me", returned.length], ["My flagged exposure", window.DP.usdShort(myExp)]
+    ]) +
+      (next ? nextCard(next, "Highest-risk unassigned claim — pick it up and review.") : "") +
+      caseList("My open cases", mine.sort(function (a, b) { return b.riskScore - a.riskScore; }), "You have no open cases assigned.");
+  }
+
+  function supervisorHome(A) {
+    var pending = window.APP.pendingReviews();
+    var team = A.filter(function (a) { return OPEN.indexOf(a.status) >= 0; });
+    var byAnalyst = {};
+    team.forEach(function (a) { if (a.assignee) byAnalyst[a.assignee] = (byAnalyst[a.assignee] || 0) + 1; });
+    var submitted = window.APP.kpis().submittedForRecovery;
+    var teamHtml = Object.keys(byAnalyst).sort(function (a, b) { return byAnalyst[b] - byAnalyst[a]; }).map(function (n) {
+      return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-top:0.5px solid var(--border2);font-size:12.5px"><span>' + window.APP.esc(n) + '</span><span style="font-weight:500">' + byAnalyst[n] + ' open</span></div>';
+    }).join("");
+    return kpis([
+      ["Awaiting my approval", pending.length], ["Team open cases", team.length],
+      ["Submitted for recovery", window.DP.usdShort(submitted)], ["Investigations", window.DP.listInvestigations().length]
+    ]) +
+      (pending.length ? '<div class="card" style="margin-bottom:10px;border:0.5px solid #e7c99a"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-weight:500;font-size:13px"><i class="ti ti-inbox" style="color:var(--med)"></i> ' + pending.length + ' decision' + (pending.length > 1 ? "s" : "") + ' awaiting your approval</div><button class="btn primary" id="h-appr" style="background:var(--med);border-color:var(--med)">Review approvals <i class="ti ti-arrow-right"></i></button></div>' +
+        pending.slice(0, 3).map(function (p) { return '<div class="row" data-id="' + p.id + '" style="display:flex;gap:10px;align-items:center;padding:6px 0;border-top:0.5px solid var(--border2);cursor:pointer">' + window.UI.riskChip(p.a.riskScore) + '<div style="flex:1;font-size:12.5px;font-weight:500">' + window.APP.esc(p.a.provider.name) + ' <span class="tag fwa">' + p.a.fwaType + '</span></div><span class="muted" style="font-size:11px">' + (p.dec.outcome === "confirm" ? "Confirm" : "Escalate") + ' · ' + window.DP.usd(p.a.exposurePost) + '</span></div>'; }).join("") + '</div>' : '') +
+      '<div class="card" style="margin-bottom:10px"><div style="font-weight:500;font-size:13px;margin-bottom:4px">Team workload</div>' + (teamHtml || '<div class="muted" style="font-size:12px">No assigned work.</div>') + '</div>';
+  }
+
+  function nextCard(a, sub) {
+    return '<div class="card" style="margin-bottom:10px;display:flex;align-items:center;gap:12px;border:0.5px solid #9fe1d8">' +
+      window.UI.riskChip(a.riskScore) +
+      '<div style="flex:1"><div style="font-size:10.5px;color:var(--text2);text-transform:none">Next up</div><div style="font-weight:500;font-size:13px">' + window.APP.esc(window.DP.getProvider(a.providerId).name) + ' <span class="tag fwa">' + a.fwaType + '</span></div><div style="font-size:11.5px;color:var(--text2)">' + sub + '</div></div>' +
+      '<button class="btn primary" data-id="' + a.id + '" id="h-next"><i class="ti ti-player-play"></i> Review</button></div>';
+  }
+
+  function caseList(title, rows, emptyMsg) {
+    return '<div class="card" style="padding:0;overflow:hidden"><div style="padding:11px 13px 6px;font-weight:500;font-size:13px">' + title + ' <span class="muted" style="font-weight:400;font-size:11px">· ' + rows.length + '</span></div>' +
+      (rows.length ? '<table><tbody>' + rows.map(function (a) {
+        var p = window.DP.getProvider(a.providerId);
+        return '<tr class="row" data-id="' + a.id + '"><td style="width:70px">' + window.UI.riskChip(a.riskScore) + '</td><td><span style="font-weight:500">' + window.APP.esc(p.name) + '</span> <span class="tag fwa">' + a.fwaType + '</span></td><td>' + window.UI.statusPill(a.status) + '</td><td class="right" style="font-weight:500">' + window.DP.usd(a.exposurePost || 0) + '</td></tr>';
+      }).join("") + '</tbody></table>' : '<div class="muted" style="font-size:12px;padding:0 13px 13px">' + emptyMsg + '</div>') + '</div>';
+  }
+
+  function recent() {
+    var log = window.APP.state.audit.slice(0, 5);
+    if (!log.length) return "";
+    return '<div class="card" style="margin-top:10px"><div style="font-weight:500;font-size:13px;margin-bottom:6px">Recent activity</div>' +
+      log.map(function (e) { return '<div style="display:flex;gap:10px;padding:5px 0;border-top:0.5px solid var(--border2);font-size:11.5px"><span style="flex:1">' + window.APP.esc(e.detail) + '</span><span class="mono" style="color:var(--text3)">' + window.APP.fmtTs(e.ts) + '</span></div>'; }).join("") + '</div>';
+  }
+
+  function kpis(list) { return '<div class="kpis">' + list.map(function (k) { return '<div class="kpi"><div class="l">' + k[0] + '</div><div class="v">' + k[1] + '</div></div>'; }).join("") + '</div>'; }
+
+  function wire(mount) {
+    var next = document.getElementById("h-next"); if (next) next.addEventListener("click", function () { window.APP.openAllegation(next.getAttribute("data-id")); });
+    var appr = document.getElementById("h-appr"); if (appr) appr.addEventListener("click", function () { window.APP.nav("approvals"); });
+    mount.querySelectorAll("tr.row, .row[data-id]").forEach(function (el) { el.addEventListener("click", function () { window.APP.openAllegation(el.getAttribute("data-id")); }); });
+  }
+})();

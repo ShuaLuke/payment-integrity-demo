@@ -50,4 +50,5 @@
       draw();
     }
   };
+  window.Views.approvals = window.Views.supervisor; // Casework > Approvals sub-tab
 })();

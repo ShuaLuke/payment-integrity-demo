@@ -17,7 +17,10 @@
       APP.state.role = role;
       APP.setRoleHeader();
       APP.auditLog("ROLE_SWITCH", "Now acting as " + APP.ROLES[role].name + " (" + APP.ROLES[role].title + ")");
-      APP.nav(APP.state.view, { id: APP.state.allegationId });
+      var v = APP.state.view;
+      if (role === "analyst" && v === "approvals") v = "queue";
+      if (role === "supervisor" && v === "queue") v = "approvals";
+      APP.nav(v, { id: APP.state.allegationId });
     },
 
     fmtTs: function (d) {
@@ -85,21 +88,56 @@
         .map(function (id) { return { id: id, dec: APP.state.decisions[id], a: window.DP.getAllegation(id) }; });
     },
     updateSupBadge: function () {
-      var b = document.getElementById("sup-badge"); if (!b) return;
       var n = APP.pendingReviews().length;
-      b.textContent = n; b.style.display = n ? "inline-block" : "none";
+      var b = document.getElementById("sup-badge");
+      if (b) { b.textContent = n; b.style.display = (n && APP.isSupervisor()) ? "inline-block" : "none"; }
+      var sb = document.getElementById("sub-appr-badge");
+      if (sb) sb.innerHTML = n ? '<span class="tag" style="background:#c77d11;color:#fff">' + n + '</span>' : "";
     },
 
     decisionFor: function (id) { return APP.state.decisions[id] || null; },
 
+    // ---- information architecture: 4 areas, each with sub-views ----
+    SUBS: {
+      home: [],
+      casework: [{ v: "queue", l: "Work queue", role: "analyst" }, { v: "approvals", l: "Approvals", role: "supervisor" }, { v: "investigations", l: "Investigations" }],
+      insights: [{ v: "analytics", l: "Overview" }, { v: "network", l: "Network" }, { v: "heatmap", l: "Heatmap" }],
+      library: [{ v: "rules", l: "Rules" }, { v: "audit", l: "Audit" }]
+    },
+    VIEW_AREA: { home: "home", queue: "casework", claim: "casework", investigations: "casework", approvals: "casework", provider: "insights", analytics: "insights", network: "insights", heatmap: "insights", rules: "library", audit: "library" },
+    subsFor: function (area) { return (APP.SUBS[area] || []).filter(function (s) { return !s.role || s.role === APP.state.role; }); },
+    areaOf: function (view) { return APP.VIEW_AREA[view] || "casework"; },
+    openArea: function (area) {
+      if (area === "home") return APP.nav("home");
+      if (area === "casework") return APP.nav(APP.isSupervisor() ? "approvals" : "queue");
+      var subs = APP.subsFor(area);
+      APP.nav(subs.length ? subs[0].v : area);
+    },
+
     nav: function (view, params) {
       APP.state.view = view;
+      var area = APP.areaOf(view);
       document.querySelectorAll(".navitem").forEach(function (n) {
-        n.classList.toggle("active", n.getAttribute("data-view") === view);
+        n.classList.toggle("active", n.getAttribute("data-area") === area);
       });
+      APP.renderSubnav(area, view);
       window.scrollTo(0, 0);
       var V = window.Views[view];
       if (V) V.render(mount, params || {});
+    },
+    renderSubnav: function (area, view) {
+      var el = document.getElementById("subnav"); if (!el) return;
+      var subs = APP.subsFor(area);
+      if (area === "home" || subs.length < 1) { el.style.display = "none"; return; }
+      var wsLabel = APP.isSupervisor() && area === "casework" ? '<span style="font-size:11px;color:var(--accent-d);font-weight:500;margin-right:14px"><i class="ti ti-user-shield"></i> Supervisor workspace</span>' : "";
+      el.style.display = "block";
+      el.innerHTML = '<div style="max-width:1180px;margin:0 auto;padding:0 20px;display:flex;align-items:center;gap:2px">' + wsLabel +
+        subs.map(function (s) {
+          var active = s.v === view || (view === "claim" && s.v === "queue") || (view === "provider" && s.v === "analytics");
+          return '<button class="subtab' + (active ? " active" : "") + '" data-view="' + s.v + '">' + s.l + (s.v === "approvals" ? ' <span id="sub-appr-badge"></span>' : "") + '</button>';
+        }).join("") + '</div>';
+      el.querySelectorAll(".subtab").forEach(function (b) { b.addEventListener("click", function () { APP.nav(b.getAttribute("data-view")); }); });
+      APP.updateSupBadge();
     },
 
     openAllegation: function (id) { APP.state.allegationId = id; APP.nav("claim", { id: id }); },
@@ -109,14 +147,13 @@
       mount = document.getElementById("view");
       document.getElementById("disclaimer").textContent = window.DP.disclaimer;
       document.querySelectorAll(".navitem").forEach(function (n) {
-        n.addEventListener("click", function () { APP.nav(n.getAttribute("data-view")); });
+        n.addEventListener("click", function () { APP.openArea(n.getAttribute("data-area")); });
       });
       var rs = document.getElementById("role-switch");
       if (rs) rs.addEventListener("click", APP.toggleRole);
       APP.setRoleHeader();
       APP.auditLog("SESSION_START", "Analyst signed in · PIV authenticated");
-      APP.updateSupBadge();
-      APP.nav("queue");
+      APP.nav("home");
     }
   };
   window.APP = APP;
