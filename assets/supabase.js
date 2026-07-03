@@ -81,10 +81,10 @@
       '<div style="padding:20px">' +
       '<div style="font-size:12px;color:#5f6b7a;margin-bottom:10px">Sign in to continue</div>' +
       '<input id="lg-email" placeholder="Email" value="analyst@example.com" style="width:100%;padding:9px 11px;border:0.5px solid #d3d9e0;border-radius:8px;font-size:13px;margin-bottom:8px;font-family:inherit">' +
-      '<input id="lg-pass" type="password" placeholder="Password" value="PivotDemo2026" style="width:100%;padding:9px 11px;border:0.5px solid #d3d9e0;border-radius:8px;font-size:13px;font-family:inherit">' +
+      '<input id="lg-pass" type="password" placeholder="Password" style="width:100%;padding:9px 11px;border:0.5px solid #d3d9e0;border-radius:8px;font-size:13px;font-family:inherit">' +
       '<div id="lg-err" style="color:#b91c1c;font-size:11.5px;min-height:16px;margin:6px 0"></div>' +
       '<button id="lg-go" style="width:100%;background:#10243b;color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit">Sign in</button>' +
-      '<div style="display:flex;gap:8px;margin-top:12px"><button class="lg-quick" data-e="analyst@example.com" style="flex:1;background:#f6f8fa;border:0.5px solid #e3e8ee;border-radius:8px;padding:8px;font-size:11.5px;cursor:pointer;font-family:inherit">Demo: Analyst</button><button class="lg-quick" data-e="supervisor@example.com" style="flex:1;background:#f6f8fa;border:0.5px solid #e3e8ee;border-radius:8px;padding:8px;font-size:11.5px;cursor:pointer;font-family:inherit">Demo: Supervisor</button></div>' +
+      '<div style="display:flex;gap:8px;margin-top:12px"><button class="lg-quick" data-e="analyst@example.com" style="flex:1;background:#f6f8fa;border:0.5px solid #e3e8ee;border-radius:8px;padding:8px;font-size:11.5px;cursor:pointer;font-family:inherit">Use Analyst email</button><button class="lg-quick" data-e="supervisor@example.com" style="flex:1;background:#f6f8fa;border:0.5px solid #e3e8ee;border-radius:8px;padding:8px;font-size:11.5px;cursor:pointer;font-family:inherit">Use Supervisor email</button></div>' +
       '<div style="font-size:10px;color:#8a95a3;text-align:center;margin-top:12px"><i class="ti ti-shield-lock"></i> Synthetic data · demonstration only</div>' +
       '</div></div>';
     document.body.appendChild(o);
@@ -98,7 +98,7 @@
     }
     o.querySelector("#lg-go").addEventListener("click", go);
     o.querySelector("#lg-pass").addEventListener("keydown", function (e) { if (e.key === "Enter") go(); });
-    o.querySelectorAll(".lg-quick").forEach(function (b) { b.addEventListener("click", function () { document.getElementById("lg-email").value = b.getAttribute("data-e"); document.getElementById("lg-pass").value = "PivotDemo2026"; go(); }); });
+    o.querySelectorAll(".lg-quick").forEach(function (b) { b.addEventListener("click", function () { document.getElementById("lg-email").value = b.getAttribute("data-e"); document.getElementById("lg-pass").focus(); }); });
   }
 
   function start() {
