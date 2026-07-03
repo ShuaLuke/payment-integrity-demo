@@ -53,7 +53,7 @@
 
   window.SEARCH = { open: openPalette, close: close };
   function boot() {
-    if (!window.APP || !window.DP) return setTimeout(boot, 60);
+    if (!window.APP || !window.DP || !window.APP.ready) return setTimeout(boot, 100);
     build();
     var btn = document.getElementById("gsearch"); if (btn) btn.addEventListener("click", openPalette);
     document.addEventListener("keydown", function (e) {

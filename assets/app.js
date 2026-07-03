@@ -30,8 +30,10 @@
     },
     esc: function (s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]; }); },
 
+    ready: false,
+    resetDemo: function () { location.reload(); }, // overridden by Supabase integration
     auditLog: function (action, detail) {
-      APP.state.audit.unshift({ ts: new Date(), action: action, detail: detail, user: "Dana Whitmore" });
+      APP.state.audit.unshift({ ts: new Date(), action: action, detail: detail, user: (APP.ROLES[APP.state.role] || {}).name || "Dana Whitmore" });
       var b = document.getElementById("audit-badge");
       if (b) { b.textContent = APP.state.audit.length; b.style.display = APP.state.audit.length ? "inline-block" : "none"; }
     },
@@ -180,8 +182,9 @@
       var rs = document.getElementById("role-switch");
       if (rs) rs.addEventListener("click", APP.toggleRole);
       APP.setRoleHeader();
-      APP.auditLog("SESSION_START", "Analyst signed in · PIV authenticated");
+      APP.auditLog("SESSION_START", APP.ROLES[APP.state.role].name + " signed in · " + (window.SB && window.SB.enabled ? "authenticated" : "PIV authenticated"));
       APP.nav("home");
+      APP.ready = true;
     }
   };
   window.APP = APP;
@@ -200,6 +203,5 @@
     srcTag: function (s) { return '<span class="muted" style="font-size:10.5px">' + (s === "Pattern Recognition" ? "AI" : s === "Rules Engine" ? "Rule" : "AI+Rule") + '</span>'; }
   };
 
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", APP.boot);
-  else APP.boot();
+  // Boot is orchestrated by supabase.js (auth gate in Supabase mode, or immediate in local mode).
 })();

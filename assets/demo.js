@@ -67,6 +67,6 @@
   };
   window.DEMO = DEMO;
 
-  function boot() { if (!window.APP) { return setTimeout(boot, 60); } DEMO.start(); }
+  function boot() { if (!window.APP || !window.APP.ready) { return setTimeout(boot, 100); } DEMO.start(); }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot); else boot();
 })();

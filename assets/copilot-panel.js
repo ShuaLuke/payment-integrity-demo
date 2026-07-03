@@ -73,6 +73,6 @@
   function el(cls, txt) { var d = document.createElement("div"); d.className = cls; if (txt) d.textContent = txt; return d; }
 
   window.COPILOT = { open: function () { if (!open) toggle(); }, ask: ask };
-  function boot() { if (!window.APP || !window.DP) return setTimeout(boot, 60); build(); }
+  function boot() { if (!window.APP || !window.DP || !window.APP.ready) return setTimeout(boot, 100); build(); }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot); else boot();
 })();

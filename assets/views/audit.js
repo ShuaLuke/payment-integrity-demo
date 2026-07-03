@@ -23,7 +23,7 @@
         }).join("") : '<div class="muted" style="font-size:12.5px">No actions yet.</div>') +
         '</div></div>';
       var rb = document.getElementById("audit-reset");
-      if (rb) rb.addEventListener("click", function () { if (confirm("Reset the demo? This clears all decisions, approvals and the audit trail back to the initial state.")) location.reload(); });
+      if (rb) rb.addEventListener("click", function () { if (confirm("Reset the demo? This clears all decisions, approvals and the audit trail back to the initial state.")) window.APP.resetDemo(); });
     }
   };
   function label(a) { return a.replace(/_/g, " ").toLowerCase().replace(/^./, function (c) { return c.toUpperCase(); }); }
