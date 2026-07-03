@@ -69,6 +69,7 @@
         (ring ? '<div style="font-size:11px;color:var(--high);margin-top:5px;display:flex;align-items:center;gap:4px"><i class="ti ti-affiliate"></i>Shared TIN — provider ring</div>' : '') +
         '<div style="font-size:11px;color:var(--text2);margin-top:6px">' + window.APP.esc(p.city || "") + ', ' + (p.state || "") + ' · ' + (p.claimCount || 0) + ' claims · ' + (p.openAllegations || 0) + ' open</div>' +
         '<div style="font-size:11.5px;color:var(--accent-d);margin-top:7px;cursor:pointer;display:flex;align-items:center;gap:4px" id="c-net"><i class="ti ti-share-3"></i>View in network</div></div>' +
+        (window.APP.isSupervisor() ? '<div class="card"><div class="l" style="font-size:10.5px;color:var(--text2);margin-bottom:6px">Assignment</div><div style="font-size:11.5px;color:var(--text2);margin-bottom:6px">Currently: <span style="color:var(--ink);font-weight:500">' + (a.assignee || "Unassigned") + '</span></div><select id="c-assign" class="input" style="font-size:12px">' + assignOptions(a.assignee) + '</select></div>' : '') +
         (ve ? '<div class="card"><div class="l" style="font-size:10.5px;color:var(--text2);margin-bottom:6px">Veteran</div><div style="font-weight:500;font-size:12.5px">' + window.APP.esc(ve.name) + '</div><div class="mono" style="font-size:11px;color:var(--text2);line-height:1.6">DOB ' + ve.dob + ' · ' + ve.sex + '<br>' + ve.memberId + '</div></div>' : '') +
         '<div class="card"><div class="l" style="font-size:10.5px;color:var(--text2);margin-bottom:7px">Evidence on file</div>' +
         '<div id="c-docs" style="display:flex;flex-direction:column;gap:5px">' + docsHtml + '</div>' +
@@ -97,6 +98,8 @@
 
       document.getElementById("c-back").addEventListener("click", function () { window.APP.goBack(); });
       document.getElementById("c-net").addEventListener("click", function () { window.APP.nav("network"); });
+      var asg = document.getElementById("c-assign");
+      if (asg) asg.addEventListener("change", function () { window.APP.assignCase(id, this.value === "__unassigned__" ? null : this.value); rerender(id); });
       document.getElementById("c-prov").addEventListener("click", function () { window.APP.openProvider(p.id); });
       mount.querySelectorAll(".prec-row").forEach(function (row) {
         row.addEventListener("click", function () {
@@ -218,6 +221,7 @@
   }
 
   function rerender(id) { window.Views.claim.render(document.getElementById("view"), { id: id }); }
+  function assignOptions(cur) { return '<option value="__unassigned__"' + (!cur ? " selected" : "") + '>Unassigned</option>' + window.APP.ANALYSTS.map(function (n) { return '<option value="' + n + '"' + (cur === n ? " selected" : "") + '>' + n + '</option>'; }).join(""); }
 
   function stat(l, v) { return '<div class="card" style="padding:8px 9px"><div class="l" style="font-size:10.5px;color:var(--text2)">' + l + '</div><div style="font-size:16px;font-weight:600;margin-top:2px">' + v + '</div></div>'; }
   function bandColor(r) { return r >= 80 ? "var(--high-tx)" : r >= 50 ? "var(--med-tx)" : "var(--low-tx)"; }

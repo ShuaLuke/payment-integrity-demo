@@ -38,7 +38,7 @@
     team.forEach(function (a) { if (a.assignee) byAnalyst[a.assignee] = (byAnalyst[a.assignee] || 0) + 1; });
     var submitted = window.APP.kpis().submittedForRecovery;
     var teamHtml = Object.keys(byAnalyst).sort(function (a, b) { return byAnalyst[b] - byAnalyst[a]; }).map(function (n) {
-      return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-top:0.5px solid var(--border2);font-size:12.5px"><span>' + window.APP.esc(n) + '</span><span style="font-weight:500">' + byAnalyst[n] + ' open</span></div>';
+      return '<div class="tm-link" data-team="' + window.APP.esc(n) + '" style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:0.5px solid var(--border2);font-size:12.5px;cursor:pointer"><span>' + window.APP.esc(n) + '</span><span style="display:flex;align-items:center;gap:8px"><span style="font-weight:500">' + byAnalyst[n] + ' open</span><i class="ti ti-chevron-right" style="color:var(--text3)"></i></span></div>';
     }).join("");
     return kpis([
       ["Awaiting my approval", pending.length], ["Team open cases", team.length],
@@ -46,7 +46,7 @@
     ]) +
       (pending.length ? '<div class="card" style="margin-bottom:10px;border:0.5px solid #e7c99a"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-weight:500;font-size:13px"><i class="ti ti-inbox" style="color:var(--med)"></i> ' + pending.length + ' decision' + (pending.length > 1 ? "s" : "") + ' awaiting your approval</div><button class="btn primary" id="h-appr" style="background:var(--med);border-color:var(--med)">Review approvals <i class="ti ti-arrow-right"></i></button></div>' +
         pending.slice(0, 3).map(function (p) { return '<div class="row" data-id="' + p.id + '" style="display:flex;gap:10px;align-items:center;padding:6px 0;border-top:0.5px solid var(--border2);cursor:pointer">' + window.UI.riskChip(p.a.riskScore) + '<div style="flex:1;font-size:12.5px;font-weight:500">' + window.APP.esc(p.a.provider.name) + ' <span class="tag fwa">' + p.a.fwaType + '</span></div><span class="muted" style="font-size:11px">' + (p.dec.outcome === "confirm" ? "Confirm" : "Escalate") + ' · ' + window.DP.usd(p.a.exposurePost) + '</span></div>'; }).join("") + '</div>' : '') +
-      '<div class="card" style="margin-bottom:10px"><div style="font-weight:500;font-size:13px;margin-bottom:4px">Team workload</div>' + (teamHtml || '<div class="muted" style="font-size:12px">No assigned work.</div>') + '</div>';
+      '<div class="card" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div style="font-weight:500;font-size:13px">Team workload</div><button class="btn" id="h-team" style="font-size:11px;padding:4px 9px">Manage &amp; assign <i class="ti ti-arrow-right"></i></button></div>' + (teamHtml || '<div class="muted" style="font-size:12px">No assigned work.</div>') + '</div>';
   }
 
   function nextCard(a, sub) {
@@ -76,6 +76,8 @@
   function wire(mount) {
     var next = document.getElementById("h-next"); if (next) next.addEventListener("click", function () { window.APP.openAllegation(next.getAttribute("data-id")); });
     var appr = document.getElementById("h-appr"); if (appr) appr.addEventListener("click", function () { window.APP.nav("approvals"); });
+    var team = document.getElementById("h-team"); if (team) team.addEventListener("click", function () { window.APP.nav("team"); });
+    mount.querySelectorAll(".tm-link").forEach(function (el) { el.addEventListener("click", function () { window.APP.openTeam(el.getAttribute("data-team")); }); });
     mount.querySelectorAll("tr.row, .row[data-id]").forEach(function (el) { el.addEventListener("click", function () { window.APP.openAllegation(el.getAttribute("data-id")); }); });
   }
 })();

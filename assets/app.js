@@ -97,14 +97,25 @@
 
     decisionFor: function (id) { return APP.state.decisions[id] || null; },
 
+    ANALYSTS: ["Dana Whitmore", "Maria Delgado", "Devon Carter", "Priya Nair"],
+    // Supervisor assigns / reassigns a flagged claim to an analyst (or unassigns).
+    assignCase: function (id, name) {
+      var a = window.DP.raw.allegations.find(function (x) { return x.id === id; });
+      if (!a) return;
+      a.assignee = name || null;
+      if (name && a.status === "New") a.status = "Assigned";
+      APP.auditLog("CASE_ASSIGNED", "Flagged claim #" + id + " · " + (name ? "→ " + name : "unassigned"));
+    },
+    openTeam: function (sel) { APP.state.teamSel = sel; APP.nav("team"); },
+
     // ---- information architecture: 4 areas, each with sub-views ----
     SUBS: {
       home: [],
-      casework: [{ v: "queue", l: "Work queue", role: "analyst" }, { v: "approvals", l: "Approvals", role: "supervisor" }, { v: "investigations", l: "Investigations" }],
+      casework: [{ v: "queue", l: "Work queue", role: "analyst" }, { v: "approvals", l: "Approvals", role: "supervisor" }, { v: "team", l: "Team", role: "supervisor" }, { v: "investigations", l: "Investigations" }],
       insights: [{ v: "analytics", l: "Overview" }, { v: "network", l: "Network" }, { v: "heatmap", l: "Heatmap" }],
       library: [{ v: "rules", l: "Rules" }, { v: "audit", l: "Audit" }]
     },
-    VIEW_AREA: { home: "home", queue: "casework", claim: "casework", investigations: "casework", approvals: "casework", provider: "insights", analytics: "insights", network: "insights", heatmap: "insights", rules: "library", audit: "library" },
+    VIEW_AREA: { home: "home", queue: "casework", claim: "casework", investigations: "casework", approvals: "casework", team: "casework", provider: "insights", analytics: "insights", network: "insights", heatmap: "insights", rules: "library", audit: "library" },
     subsFor: function (area) { return (APP.SUBS[area] || []).filter(function (s) { return !s.role || s.role === APP.state.role; }); },
     areaOf: function (view) { return APP.VIEW_AREA[view] || "casework"; },
     openArea: function (area) {
