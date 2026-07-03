@@ -1,16 +1,20 @@
-/* Team & assignments — supervisor roster, per-analyst caseload, unassigned pool, (re)assign */
+/* Team & assignments — roster, per-analyst caseload, unassigned pool,
+   single + bulk (re)assignment, and workload-balancing suggestions. */
 (function () {
   window.Views = window.Views || {};
   var OPEN = ["New", "Assigned", "Under review", "Returned", "Pending review", "Recommended close"];
   var isOpen = function (a) { return OPEN.indexOf(a.status) >= 0; };
+  var selected = {};
 
   window.Views.team = {
     render: function (mount) {
+      selected = {};
       var team = window.APP.ANALYSTS;
       var A = window.DP.raw.allegations;
       function forAnalyst(n) { return A.filter(function (a) { return a.assignee === n && isOpen(a); }); }
       var unassigned = A.filter(function (a) { return !a.assignee && isOpen(a); });
       var sel = window.APP.state.teamSel || team[0];
+      var isPool = sel === "__unassigned__";
 
       function rosterRow(name, list, key) {
         var high = list.filter(function (a) { return a.riskScore >= 80; }).length;
@@ -22,9 +26,8 @@
           '<div style="text-align:right"><div style="font-size:12px;font-weight:500">' + window.DP.usdShort(exp) + '</div></div></div>';
       }
 
-      var selName = sel === "__unassigned__" ? "Unassigned pool" : sel;
-      var selList = (sel === "__unassigned__" ? unassigned : forAnalyst(sel)).sort(function (a, b) { return b.riskScore - a.riskScore; });
-      var assignOpts = function (cur) { return '<option value="__unassigned__"' + (!cur ? " selected" : "") + '>Unassigned</option>' + team.map(function (n) { return '<option value="' + n + '"' + (cur === n ? " selected" : "") + '>' + n + '</option>'; }).join(""); };
+      var selName = isPool ? "Unassigned pool" : sel;
+      var selList = (isPool ? unassigned : forAnalyst(sel)).sort(function (a, b) { return b.riskScore - a.riskScore; });
 
       mount.innerHTML =
         '<div class="page">' +
@@ -38,27 +41,74 @@
         rosterRow("Unassigned pool", unassigned, "__unassigned__") +
         '</div>' +
         '<div style="flex:1;min-width:0">' +
-        '<div class="card" style="padding:0;overflow:hidden"><div style="padding:11px 13px;display:flex;justify-content:space-between;align-items:center;border-bottom:0.5px solid var(--border2)"><div style="font-weight:500;font-size:13px">' + window.APP.esc(selName) + ' <span class="muted" style="font-weight:400;font-size:11px">· ' + selList.length + ' open</span></div></div>' +
-        '<table><thead><tr><th>Risk</th><th>Flagged claim</th><th>Provider</th><th class="right">Exposure</th><th>Status</th><th>Assign to</th></tr></thead><tbody>' +
+        '<div class="card" style="padding:0;overflow:hidden">' +
+        '<div style="padding:11px 13px;display:flex;justify-content:space-between;align-items:center;border-bottom:0.5px solid var(--border2)"><div style="font-weight:500;font-size:13px">' + window.APP.esc(selName) + ' <span class="muted" style="font-weight:400;font-size:11px">· ' + selList.length + ' open</span></div>' +
+        (isPool && selList.length ? '<button class="btn" id="tm-balance" style="font-size:11.5px"><i class="ti ti-scale"></i> Balance workload</button>' : '') + '</div>' +
+        '<div id="tm-bulk" style="display:none;padding:8px 13px;background:var(--accent-l);border-bottom:0.5px solid #cdeee8;align-items:center;gap:10px"><span id="tm-bulk-n" style="font-weight:500;font-size:12.5px;color:var(--accent-d)"></span><span style="flex:1"></span><span style="font-size:12px;color:var(--text2)">Assign to</span><select id="tm-bulk-who" class="input" style="width:auto;font-size:12px">' + team.map(function (n) { return '<option value="' + n + '">' + n + '</option>'; }).join("") + '<option value="__unassigned__">Unassign</option></select><button class="btn primary" id="tm-bulk-apply" style="font-size:12px"><i class="ti ti-user-check"></i> Assign</button><button class="btn" id="tm-bulk-clear" style="font-size:12px">Clear</button></div>' +
+        '<table><thead><tr><th style="width:30px"><input type="checkbox" class="tm-all"></th><th>Risk</th><th>Flagged claim</th><th>Provider</th><th class="right">Exposure</th><th>Status</th><th>Assign to</th></tr></thead><tbody>' +
         (selList.length ? selList.map(function (a) {
           var p = window.DP.getProvider(a.providerId);
-          return '<tr class="tm-case" data-id="' + a.id + '"><td>' + window.UI.riskChip(a.riskScore) + '</td>' +
+          return '<tr class="tm-case" data-id="' + a.id + '"><td><input type="checkbox" class="tm-check" data-id="' + a.id + '" onclick="event.stopPropagation()"></td><td>' + window.UI.riskChip(a.riskScore) + '</td>' +
             '<td><span class="mono" style="font-weight:500">#' + a.id + '</span> <span class="tag fwa">' + a.fwaType + '</span></td>' +
             '<td>' + window.APP.esc(p.name) + '</td><td class="right" style="font-weight:500">' + window.DP.usd(a.exposurePost || 0) + '</td>' +
             '<td>' + window.UI.statusPill(a.status) + '</td>' +
-            '<td><select class="input tm-assign" data-id="' + a.id + '" style="width:auto;font-size:11.5px;padding:4px 6px" onclick="event.stopPropagation()">' + assignOpts(a.assignee) + '</select></td></tr>';
-        }).join("") : '<tr><td colspan="6" class="muted" style="padding:16px;text-align:center">' + (sel === "__unassigned__" ? "No unassigned claims — everything's allocated." : "No open cases for this analyst.") + '</td></tr>') +
-        '</tbody></table></div></div></div></div>';
+            '<td><select class="input tm-assign" data-id="' + a.id + '" style="width:auto;font-size:11.5px;padding:4px 6px" onclick="event.stopPropagation()">' + assignOpts(a.assignee, team) + '</select></td></tr>';
+        }).join("") : '<tr><td colspan="7" class="muted" style="padding:16px;text-align:center">' + (isPool ? "No unassigned claims — everything's allocated." : "No open cases for this analyst.") + '</td></tr>') +
+        '</tbody></table></div><div id="tm-plan"></div></div></div></div>';
 
+      // roster + row navigation
       mount.querySelectorAll(".tm-row").forEach(function (r) { r.addEventListener("click", function () { window.APP.state.teamSel = r.getAttribute("data-sel"); window.Views.team.render(mount); }); });
       mount.querySelectorAll(".tm-case").forEach(function (r) { r.addEventListener("click", function () { window.APP.openAllegation(r.getAttribute("data-id")); }); });
-      mount.querySelectorAll(".tm-assign").forEach(function (s) {
-        s.addEventListener("change", function () {
-          var v = this.value; window.APP.assignCase(this.getAttribute("data-id"), v === "__unassigned__" ? null : v);
-          window.Views.team.render(mount);
-        });
+      mount.querySelectorAll(".tm-assign").forEach(function (s) { s.addEventListener("change", function () { var v = this.value; window.APP.assignCase(this.getAttribute("data-id"), v === "__unassigned__" ? null : v); window.Views.team.render(mount); }); });
+
+      // selection + bulk bar
+      function refreshBulk() {
+        var ids = Object.keys(selected).filter(function (k) { return selected[k]; });
+        var bar = document.getElementById("tm-bulk");
+        bar.style.display = ids.length ? "flex" : "none";
+        document.getElementById("tm-bulk-n").textContent = ids.length + " selected";
+      }
+      mount.querySelectorAll(".tm-check").forEach(function (c) { c.addEventListener("change", function () { selected[this.getAttribute("data-id")] = this.checked; refreshBulk(); }); });
+      var all = mount.querySelector(".tm-all");
+      if (all) all.addEventListener("change", function () { var on = this.checked; mount.querySelectorAll(".tm-check").forEach(function (c) { c.checked = on; selected[c.getAttribute("data-id")] = on; }); refreshBulk(); });
+      document.getElementById("tm-bulk-clear").addEventListener("click", function () { selected = {}; window.Views.team.render(mount); });
+      document.getElementById("tm-bulk-apply").addEventListener("click", function () {
+        var who = document.getElementById("tm-bulk-who").value;
+        Object.keys(selected).forEach(function (id) { if (selected[id]) window.APP.assignCase(id, who === "__unassigned__" ? null : who); });
+        window.Views.team.render(mount);
       });
+
+      // workload-balancing suggestion
+      var bb = document.getElementById("tm-balance");
+      if (bb) bb.addEventListener("click", function () { showBalancePlan(mount, unassigned, team, forAnalyst); });
     }
   };
+
+  function showBalancePlan(mount, unassigned, team, forAnalyst) {
+    var loads = {}; team.forEach(function (n) { loads[n] = forAnalyst(n).length; });
+    var before = {}; team.forEach(function (n) { before[n] = loads[n]; });
+    var plan = unassigned.slice().sort(function (a, b) { return b.riskScore - a.riskScore; }).map(function (c) {
+      var pick = team.reduce(function (m, n) { return loads[n] < loads[m] ? n : m; }, team[0]);
+      loads[pick]++;
+      return { id: c.id, risk: c.riskScore, provider: window.DP.getProvider(c.providerId).name, fwa: c.fwaType, who: pick };
+    });
+    var summary = team.map(function (n) { return '<span class="tag" style="margin-right:6px">' + initials(n) + ' ' + before[n] + '→<span style="color:var(--accent-d);font-weight:500">' + loads[n] + '</span></span>'; }).join("");
+    document.getElementById("tm-plan").innerHTML =
+      '<div class="card" style="margin-top:10px;border:0.5px solid #9fe1d8">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-weight:500;font-size:13px"><i class="ti ti-scale" style="color:var(--accent-d)"></i> Suggested balanced assignment</div>' +
+      '<div><button class="btn" id="tm-plan-cancel" style="font-size:12px;margin-right:6px">Cancel</button><button class="btn primary" id="tm-plan-apply" style="font-size:12px"><i class="ti ti-check"></i> Apply all (' + plan.length + ')</button></div></div>' +
+      '<div style="font-size:11.5px;color:var(--text2);margin-bottom:8px">Distributes ' + plan.length + ' unassigned claims to the least-loaded analysts, highest-risk first. Open cases after: ' + summary + '</div>' +
+      '<table><thead><tr><th>Risk</th><th>Flagged claim</th><th>Provider</th><th>Suggested analyst</th></tr></thead><tbody>' +
+      plan.map(function (r) { return '<tr><td>' + window.UI.riskChip(r.risk) + '</td><td><span class="mono" style="font-weight:500">#' + r.id + '</span> <span class="tag fwa">' + r.fwa + '</span></td><td>' + window.APP.esc(r.provider) + '</td><td><span class="avatar" style="width:22px;height:22px;font-size:9px;display:inline-flex;vertical-align:middle;margin-right:5px">' + initials(r.who) + '</span>' + window.APP.esc(r.who) + '</td></tr>'; }).join("") +
+      '</tbody></table></div>';
+    document.getElementById("tm-plan-cancel").addEventListener("click", function () { document.getElementById("tm-plan").innerHTML = ""; });
+    document.getElementById("tm-plan-apply").addEventListener("click", function () {
+      plan.forEach(function (r) { window.APP.assignCase(r.id, r.who); });
+      window.APP.auditLog("WORKLOAD_BALANCED", plan.length + " claims auto-distributed across " + team.length + " analysts");
+      window.Views.team.render(mount);
+    });
+  }
+
+  function assignOpts(cur, team) { return '<option value="__unassigned__"' + (!cur ? " selected" : "") + '>Unassigned</option>' + team.map(function (n) { return '<option value="' + n + '"' + (cur === n ? " selected" : "") + '>' + n + '</option>'; }).join(""); }
   function initials(n) { return n.split(" ").map(function (x) { return x[0]; }).join("").slice(0, 2).toUpperCase(); }
 })();
