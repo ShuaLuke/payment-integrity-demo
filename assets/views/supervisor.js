@@ -45,7 +45,7 @@
       function empty() {
         return '<div class="card" style="text-align:center;padding:32px"><i class="ti ti-inbox" style="font-size:28px;color:var(--text3)"></i>' +
           '<div style="font-size:13px;color:var(--text2);margin-top:8px">No decisions awaiting review.</div>' +
-          '<div style="font-size:11.5px;color:var(--text3);margin-top:3px">Confirm or escalate an allegation in the work queue to route it here.</div></div>';
+          '<div style="font-size:11.5px;color:var(--text3);margin-top:3px">Confirm or escalate a flagged claim in the work queue to route it here.</div></div>';
       }
       draw();
     }

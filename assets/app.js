@@ -58,8 +58,8 @@
       var reviewState = final ? "final" : "pending";
       a.status = status; a.assignee = a.assignee || "Dana Whitmore";
       APP.state.decisions[id] = { outcome: outcome, rationale: rationale, ts: new Date(), status: status, reviewState: reviewState };
-      APP.auditLog("DECISION_" + outcome.toUpperCase(), "Allegation #" + id + " · " + (final ? "Dismissed (false positive)" : outcome) + (rationale ? " · rationale recorded" : ""));
-      if (!final) APP.auditLog("SUBMITTED_FOR_REVIEW", "Allegation #" + id + " · " + outcome + " → supervisor (Karen Boyd)");
+      APP.auditLog("DECISION_" + outcome.toUpperCase(), "Flagged claim #" + id + " · " + (final ? "Dismissed (false positive)" : outcome) + (rationale ? " · rationale recorded" : ""));
+      if (!final) APP.auditLog("SUBMITTED_FOR_REVIEW", "Flagged claim #" + id + " · " + outcome + " → supervisor (Karen Boyd)");
       APP.updateSupBadge();
     },
 
@@ -71,13 +71,13 @@
         dec.reviewState = "approved";
         a.status = dec.outcome === "confirm" ? "Confirmed" : "Escalated";
         dec.status = a.status;
-        APP.auditLog("SUPERVISOR_APPROVED", "Allegation #" + id + " · " + a.status + " · approver Karen Boyd");
-        if (dec.outcome === "confirm") APP.auditLog("RECOVERY_SUBMITTED", "Allegation #" + id + " · " + window.DP.usd(a.exposurePost || 0));
-        if (dec.outcome === "escalate") { APP.state.investigations.push(id); APP.auditLog("INVESTIGATION_OPENED", "Allegation #" + id + " · " + a.providerId); }
+        APP.auditLog("SUPERVISOR_APPROVED", "Flagged claim #" + id + " · " + a.status + " · approver Karen Boyd");
+        if (dec.outcome === "confirm") APP.auditLog("RECOVERY_SUBMITTED", "Flagged claim #" + id + " · " + window.DP.usd(a.exposurePost || 0));
+        if (dec.outcome === "escalate") { APP.state.investigations.push(id); APP.auditLog("INVESTIGATION_OPENED", "Flagged claim #" + id + " · " + a.providerId); }
       } else {
         dec.reviewState = "returned"; dec.returnNote = note || "";
         a.status = "Returned"; dec.status = "Returned";
-        APP.auditLog("SUPERVISOR_RETURNED", "Allegation #" + id + (note ? " · " + note : ""));
+        APP.auditLog("SUPERVISOR_RETURNED", "Flagged claim #" + id + (note ? " · " + note : ""));
       }
       APP.updateSupBadge();
     },
@@ -108,10 +108,27 @@
     subsFor: function (area) { return (APP.SUBS[area] || []).filter(function (s) { return !s.role || s.role === APP.state.role; }); },
     areaOf: function (view) { return APP.VIEW_AREA[view] || "casework"; },
     openArea: function (area) {
+      APP.state.hist = []; // top-level navigation starts a fresh trail
       if (area === "home") return APP.nav("home");
       if (area === "casework") return APP.nav(APP.isSupervisor() ? "approvals" : "queue");
       var subs = APP.subsFor(area);
       APP.nav(subs.length ? subs[0].v : area);
+    },
+    // ---- drill-down history for smart back / breadcrumb ----
+    snapshot: function () { return { view: APP.state.view, allegationId: APP.state.allegationId, providerId: APP.state.providerId }; },
+    labelForSnap: function (s) {
+      if (!s) return "Work queue";
+      if (s.view === "claim") return "Flagged claim #" + s.allegationId;
+      if (s.view === "provider") { var p = window.DP.getProvider(s.providerId); return p ? p.name : "Provider"; }
+      var map = { queue: "Work queue", home: "Home", investigations: "Investigations", approvals: "Approvals", analytics: "Analytics", network: "Network", heatmap: "Heatmap", rules: "Rules", audit: "Audit" };
+      return map[s.view] || "Back";
+    },
+    backLabel: function () { return APP.state.hist && APP.state.hist.length ? APP.labelForSnap(APP.state.hist[APP.state.hist.length - 1]) : "Work queue"; },
+    goBack: function () {
+      var t = (APP.state.hist || []).pop();
+      if (!t) return APP.nav(APP.isSupervisor() ? "approvals" : "queue");
+      APP.state.allegationId = t.allegationId; APP.state.providerId = t.providerId;
+      APP.nav(t.view, { id: t.allegationId });
     },
 
     nav: function (view, params) {
@@ -140,8 +157,8 @@
       APP.updateSupBadge();
     },
 
-    openAllegation: function (id) { APP.state.allegationId = id; APP.nav("claim", { id: id }); },
-    openProvider: function (id) { APP.state.providerId = id; APP.nav("provider", { id: id }); },
+    openAllegation: function (id) { (APP.state.hist = APP.state.hist || []).push(APP.snapshot()); APP.state.allegationId = id; APP.nav("claim", { id: id }); },
+    openProvider: function (id) { (APP.state.hist = APP.state.hist || []).push(APP.snapshot()); APP.state.providerId = id; APP.nav("provider", { id: id }); },
 
     boot: function () {
       mount = document.getElementById("view");

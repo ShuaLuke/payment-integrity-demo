@@ -15,7 +15,7 @@
 
       mount.innerHTML =
         '<div class="page">' +
-        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><span class="btn" id="pv-back" style="padding:5px 9px"><i class="ti ti-arrow-left"></i> Back</span>' +
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><span class="btn" id="pv-back" style="padding:5px 9px"><i class="ti ti-arrow-left"></i> ' + window.APP.esc(window.APP.backLabel()) + '</span>' +
         '<span class="page-title">' + window.APP.esc(p.name) + '</span>' + window.UI.riskChip(p.riskScore || 0) + '</div>' +
         '<div style="display:flex;gap:12px;align-items:flex-start">' +
         '<div style="width:220px;flex:none;display:flex;flex-direction:column;gap:10px">' +
@@ -31,13 +31,13 @@
         '</div>' +
         '<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:10px">' +
         '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">' +
-        kpi("Claims", p.claimCount || claims.length) + kpi("Open allegations", allegs.length) +
+        kpi("Claims", p.claimCount || claims.length) + kpi("Open flagged claims", allegs.length) +
         kpi("Flagged exposure", window.DP.usd(exposure)) + kpi("Total paid", window.DP.usd(p.totalPaid || 0)) + '</div>' +
-        '<div class="card" style="padding:0;overflow:hidden"><div style="padding:11px 13px 6px;font-weight:500;font-size:13px">Allegations (' + allegs.length + ')</div>' +
+        '<div class="card" style="padding:0;overflow:hidden"><div style="padding:11px 13px 6px;font-weight:500;font-size:13px">Flagged claims (' + allegs.length + ')</div>' +
         '<table><thead><tr><th>Risk</th><th>FWA type</th><th>Status</th><th class="right">Exposure</th></tr></thead><tbody>' +
         (allegs.length ? allegs.sort(function (a, b) { return b.riskScore - a.riskScore; }).map(function (a) {
           return '<tr class="row" data-id="' + a.id + '"><td>' + window.UI.riskChip(a.riskScore) + '</td><td><span class="tag fwa">' + a.fwaType + '</span> <span class="mono" style="font-size:10.5px;color:var(--text3)">#' + a.id + '</span></td><td>' + window.UI.statusPill(a.status) + '</td><td class="right" style="font-weight:500">' + window.DP.usd(a.exposurePost || 0) + '</td></tr>';
-        }).join("") : '<tr><td colspan="4" class="muted" style="padding:12px">No allegations.</td></tr>') +
+        }).join("") : '<tr><td colspan="4" class="muted" style="padding:12px">No flagged claims.</td></tr>') +
         '</tbody></table></div>' +
         '<div class="card" style="padding:0;overflow:hidden"><div style="padding:11px 13px 6px;font-weight:500;font-size:13px">Recent claims <span class="muted" style="font-weight:400;font-size:11px">· showing ' + Math.min(claims.length, 8) + ' of ' + claims.length + '</span></div>' +
         '<table><thead><tr><th>Claim</th><th>Type</th><th>DOS</th><th class="right">Paid</th></tr></thead><tbody>' +
@@ -45,7 +45,7 @@
         '</tbody></table></div>' +
         '</div></div></div>';
 
-      document.getElementById("pv-back").addEventListener("click", function () { window.APP.nav("queue"); });
+      document.getElementById("pv-back").addEventListener("click", function () { window.APP.goBack(); });
       document.getElementById("pv-net").addEventListener("click", function () { window.APP.nav("network"); });
       mount.querySelectorAll("tr.row").forEach(function (tr) { tr.addEventListener("click", function () { window.APP.openAllegation(tr.getAttribute("data-id")); }); });
     }

@@ -36,7 +36,7 @@
         '<div class="canvas" id="n-canvas"></div>' +
         '<div class="legend">' +
         lg("#c6362f", "#fbe3e3", "Provider · high risk") + lg("#c77d11", "#fbe6cf", "Provider · medium") +
-        lg("#378add", "#e6f1fb", "Veteran") + lg("#8b1a13", "#fbe3e3", "Allegation") +
+        lg("#378add", "#e6f1fb", "Veteran") + lg("#8b1a13", "#fbe3e3", "Flagged claim") +
         '<span class="lg"><span style="width:16px;height:0;border-top:3px solid #c6362f"></span>Shared TIN</span></div>' +
         '<div style="display:flex;gap:10px;margin-top:4px">' +
         '<div style="flex:1;background:var(--high-bg);border:0.5px solid #f3c9c9;border-radius:8px;padding:10px 12px"><div style="display:flex;align-items:center;gap:6px;font-weight:500;font-size:12.5px;color:var(--high-tx)"><i class="ti ti-alert-triangle"></i>Ring detected</div><div style="font-size:11.5px;color:#7a3a34;margin-top:3px;line-height:1.5">Alamo Internal Medicine &amp; Rio Grande Surgical share <span class="mono">TIN 00-6820473</span>, 9 referrals and 6 patients — two providers, one billing entity, coordinated anomalies.</div></div>' +
@@ -82,7 +82,7 @@
 
     var tip = d3.select(el).append("div").style("position", "absolute").style("background", "#10243b").style("border-radius", "6px").style("padding", "8px 11px").style("font-size", "11px").style("font-family", "IBM Plex Mono,monospace").style("color", "#e6eef7").style("pointer-events", "none").style("opacity", 0).style("z-index", 10).style("max-width", "220px");
     nodeG.on("mouseover", function (e, d) {
-      var h = "<div style='color:" + col(d) + ";margin-bottom:4px;font-family:IBM Plex Sans'>" + d.type + "</div><div>" + (d.full || d.name) + "</div>";
+      var h = "<div style='color:" + col(d) + ";margin-bottom:4px;font-family:IBM Plex Sans'>" + (d.type === "Allegation" ? "Flagged claim" : d.type) + "</div><div>" + (d.full || d.name) + "</div>";
       if (d.type === "Provider") h += "<div style='color:#93a7bf'>NPI " + d.npi + "<br>TIN " + d.tin + "<br>" + d.spec + " · risk " + d.risk + "</div>";
       if (d.type === "Veteran") h += "<div style='color:#93a7bf'>" + d.city + ", TX</div>";
       if (d.type === "Allegation") h += "<div style='color:#93a7bf'>#" + d.allegId + " · risk " + d.risk + " · click to open</div>";

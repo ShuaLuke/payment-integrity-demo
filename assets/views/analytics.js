@@ -72,14 +72,14 @@
 
   function exportCsv() {
     var rows = window.DP.listAllegations();
-    var head = ["Allegation", "FWA Type", "Risk", "Confidence", "Source", "Status", "Assignee", "Provider", "NPI", "ClaimType", "Exposure"];
+    var head = ["Flagged claim", "FWA Type", "Risk", "Confidence", "Source", "Status", "Assignee", "Provider", "NPI", "ClaimType", "Exposure"];
     var lines = [head.join(",")].concat(rows.map(function (r) {
       return ["#" + r.id, q(r.fwaType), r.riskScore, r.confidence + "%", q(r.source), q(r.status), q(r.assignee || ""), q(r.providerName), r.providerNpi, r.claimType, r.exposurePost].join(",");
     }));
     var blob = new Blob([lines.join("\n")], { type: "text/csv" });
     var url = URL.createObjectURL(blob), a = document.createElement("a");
-    a.href = url; a.download = "pivot-allegations.csv"; a.click(); URL.revokeObjectURL(url);
-    window.APP.auditLog("EXPORT", "CSV export · " + rows.length + " allegations");
+    a.href = url; a.download = "pivot-flagged-claims.csv"; a.click(); URL.revokeObjectURL(url);
+    window.APP.auditLog("EXPORT", "CSV export · " + rows.length + " flagged claims");
   }
   function q(s) { s = String(s); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
   function notify(msg) {

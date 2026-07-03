@@ -54,7 +54,7 @@
     var chat = document.getElementById("cp-chat"); chat.innerHTML = "";
     var a = ctx();
     addAI(focused()
-      ? "I'm focused on allegation #" + a.id + " — " + a.fwaType.toLowerCase() + " at " + a.provider.name + ". Ask me to summarize the risk, compare to peers, recommend an action, or draft a rationale."
+      ? "I'm focused on flagged claim #" + a.id + " — " + a.fwaType.toLowerCase() + " at " + a.provider.name + ". Ask me to summarize the risk, compare to peers, recommend an action, or draft a rationale."
       : "Ask me about any flagged case. Open a claim and I'll ground my answers in its evidence, rules and network context.", false);
   }
   function addUser(t) { var d = el("msg user", t); chat().appendChild(d); scroll(); }

@@ -50,7 +50,7 @@
     if (q.indexOf("exposure") >= 0 || q.indexOf("recover") >= 0 || q.indexOf("amount") >= 0 || q.indexOf("dollar") >= 0) {
       return "Estimated post-payment exposure is " + window.DP.usd(a.exposurePost || 0) + ". If confirmed, that amount moves to Submitted for recovery.";
     }
-    return "This is a " + a.fwaType.toLowerCase() + " allegation on " + p.name + " with risk " + a.riskScore + "/100 and " + a.confidence + "% confidence. Ask me to summarize the risk, compare to peers, recommend an action, or draft a rationale.";
+    return "This is a " + a.fwaType.toLowerCase() + " flagged claim on " + p.name + " with risk " + a.riskScore + "/100 and " + a.confidence + "% confidence. Ask me to summarize the risk, compare to peers, recommend an action, or draft a rationale.";
   }
 
   // Typewriter streamer for the "live" feel.

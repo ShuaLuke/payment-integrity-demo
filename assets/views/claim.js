@@ -10,7 +10,7 @@
     render: function (mount, params) {
       var id = params.id || window.APP.state.allegationId;
       var a = window.DP.getAllegation(id);
-      if (!a) { mount.innerHTML = '<div class="page"><p>Allegation not found.</p></div>'; return; }
+      if (!a) { mount.innerHTML = '<div class="page"><p>Flagged claim not found.</p></div>'; return; }
       var p = a.provider || {}, cl = a.claim, ve = a.veteran;
       var dec = window.APP.decisionFor(id);
       var ring = p.tin && sharesTin(p);
@@ -57,8 +57,8 @@
       mount.innerHTML =
         '<div class="page">' +
         '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">' +
-        '<span class="btn" id="c-back" style="padding:5px 9px"><i class="ti ti-arrow-left"></i> Work queue</span>' +
-        '<span class="page-title">Allegation #' + id + '</span><span id="c-status">' + window.UI.statusPill(a.status) + '</span>' +
+        '<span class="btn" id="c-back" style="padding:5px 9px"><i class="ti ti-arrow-left"></i> ' + window.APP.esc(window.APP.backLabel()) + '</span>' +
+        '<span class="page-title">Flagged claim #' + id + '</span><span id="c-status">' + window.UI.statusPill(a.status) + '</span>' +
         '<span style="font-size:11px;color:var(--text2);display:inline-flex;align-items:center;gap:4px"><i class="ti ti-lock"></i> Locked to you</span></div>' +
         '<div style="display:flex;gap:12px;align-items:flex-start">' +
         // left rail
@@ -95,7 +95,7 @@
         '<div class="card" id="c-decision"></div>' +
         '</div></div></div>';
 
-      document.getElementById("c-back").addEventListener("click", function () { window.APP.nav("queue"); });
+      document.getElementById("c-back").addEventListener("click", function () { window.APP.goBack(); });
       document.getElementById("c-net").addEventListener("click", function () { window.APP.nav("network"); });
       document.getElementById("c-prov").addEventListener("click", function () { window.APP.openProvider(p.id); });
       mount.querySelectorAll(".prec-row").forEach(function (row) {
@@ -110,17 +110,40 @@
         row.addEventListener("click", function () {
           var key = row.getAttribute("data-doc");
           document.getElementById("c-doc").innerHTML = docContent(key, id, a, cl);
-          window.APP.auditLog(key === "mr" ? "MEDICAL_RECORD_VIEWED" : "EVIDENCE_VIEWED", "Allegation #" + id + (key === "mr" ? "" : " · " + key));
+          window.APP.auditLog(key === "mr" ? "MEDICAL_RECORD_VIEWED" : "EVIDENCE_VIEWED", "Flagged claim #" + id + (key === "mr" ? "" : " · " + key));
         });
       });
       document.getElementById("c-req").addEventListener("click", function () {
-        window.APP.auditLog("RECORDS_REQUESTED", "Allegation #" + id + " · additional records");
+        window.APP.auditLog("RECORDS_REQUESTED", "Flagged claim #" + id + " · additional records");
         document.getElementById("c-support").innerHTML = '<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:7px;padding:7px 9px;font-size:11px;color:var(--text2)"><i class="ti ti-clock"></i> Additional records requested from provider.</div>';
       });
 
       renderDecision(id, a, dec);
+      renderStickyBar(id, a, dec);
     }
   };
+
+  // A sticky quick-decision bar so the analyst never has to scroll to act.
+  function renderStickyBar(id, a, dec) {
+    if (window.APP.isSupervisor()) return;
+    if (dec && dec.reviewState !== "returned") return; // already decided / pending
+    var bar = document.createElement("div");
+    bar.style.cssText = "position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:150;background:var(--ink);border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,0.22);display:flex;align-items:center;gap:7px;padding:7px 12px;transition:opacity .2s;font-family:var(--sans)";
+    var btn = function (d, label, icon, bg, col) { return '<button class="sbtn" data-d="' + d + '" style="background:' + bg + ';color:' + col + ';border:none;border-radius:7px;padding:6px 12px;font-size:12px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:5px;font-family:var(--sans)"><i class="ti ti-' + icon + '"></i>' + label + '</button>'; };
+    bar.innerHTML = '<span style="color:#93a7bf;font-size:12px;margin:0 3px">Decide:</span>' +
+      btn("c", "Confirm", "check", "#fff", "#8b1a13") + btn("d", "Dismiss", "x", "rgba(255,255,255,0.12)", "#fff") + btn("e", "Escalate", "arrow-up-right", "rgba(255,255,255,0.12)", "#fff");
+    document.getElementById("view").appendChild(bar);
+    bar.querySelectorAll(".sbtn").forEach(function (b) {
+      b.onclick = function () {
+        var dc = document.getElementById("c-decision"); if (dc) dc.scrollIntoView({ behavior: "smooth", block: "center" });
+        setTimeout(function () { var seg = document.querySelector('.seg[data-d="' + b.getAttribute("data-d") + '"]'); if (seg) seg.click(); }, 320);
+      };
+    });
+    var dc = document.getElementById("c-decision");
+    if (window.IntersectionObserver && dc) {
+      new IntersectionObserver(function (es) { es.forEach(function (e) { bar.style.opacity = e.isIntersecting ? "0" : "1"; bar.style.pointerEvents = e.isIntersecting ? "none" : "auto"; }); }).observe(dc);
+    }
+  }
 
   function renderDecision(id, a, dec) {
     var box = document.getElementById("c-decision");
@@ -143,8 +166,8 @@
       }
       box.innerHTML = '<div style="font-weight:500;font-size:13px;margin-bottom:9px">Decision</div><div style="display:flex;align-items:flex-start;gap:10px"><i class="ti ti-' + icon + '" style="color:' + color + ';font-size:22px"></i><div><div style="font-weight:500;font-size:13px">' + msg + '</div>' + (dec.rationale ? '<div style="font-size:11.5px;color:var(--text2);margin-top:4px">' + window.APP.esc(dec.rationale) + '</div>' : '') + '<div style="font-size:11px;color:var(--text3);margin-top:5px">Logged to audit trail · ' + window.APP.fmtTs(dec.ts) + '</div></div></div>' + svPanel;
       if (dec.reviewState === "pending" && window.APP.isSupervisor()) {
-        document.getElementById("sv-appr").addEventListener("click", function () { window.APP.supervisorAction(id, "approve"); window.APP.openAllegation(id); });
-        document.getElementById("sv-ret").addEventListener("click", function () { window.APP.supervisorAction(id, "return", document.getElementById("sv-note").value); window.APP.openAllegation(id); });
+        document.getElementById("sv-appr").addEventListener("click", function () { window.APP.supervisorAction(id, "approve"); rerender(id); });
+        document.getElementById("sv-ret").addEventListener("click", function () { window.APP.supervisorAction(id, "return", document.getElementById("sv-note").value); rerender(id); });
       }
       return;
     }
@@ -190,10 +213,11 @@
       if (!choice) return;
       var rationale = document.getElementById("c-rat").value;
       window.APP.applyDecision(id, outMap[choice], rationale);
-      document.getElementById("c-status").innerHTML = window.UI.statusPill(window.DP.raw.allegations.find(function (x) { return x.id === id; }).status);
-      renderDecision(id, window.DP.getAllegation(id), window.APP.decisionFor(id));
+      rerender(id); // refresh status, timeline and decision panel in place
     });
   }
+
+  function rerender(id) { window.Views.claim.render(document.getElementById("view"), { id: id }); }
 
   function stat(l, v) { return '<div class="card" style="padding:8px 9px"><div class="l" style="font-size:10.5px;color:var(--text2)">' + l + '</div><div style="font-size:16px;font-weight:600;margin-top:2px">' + v + '</div></div>'; }
   function bandColor(r) { return r >= 80 ? "var(--high-tx)" : r >= 50 ? "var(--med-tx)" : "var(--low-tx)"; }
@@ -214,7 +238,7 @@
     ev.push({ d: a.createdDate, t: "Flagged — " + a.fwaType, s: "by " + (a.model ? a.model.name : a.source) + " · risk " + a.riskScore + " · confidence " + a.confidence + "%", ic: "flag", c: "var(--high)" });
     if (a.assignee) ev.push({ d: a.createdDate, t: "Assigned", s: "to " + a.assignee, ic: "user", c: "var(--text2)" });
     window.APP.state.audit.slice().reverse().forEach(function (e) {
-      if (e.detail.indexOf("#" + id) >= 0 && e.action.indexOf("SESSION") < 0) ev.push({ d: window.APP.fmtTs(e.ts), t: labelize(e.action), s: e.detail.replace("Allegation #" + id, "").replace(/^ · /, ""), ic: iconFor(e.action), c: "var(--accent-d)" });
+      if (e.detail.indexOf("#" + id) >= 0 && e.action.indexOf("SESSION") < 0) ev.push({ d: window.APP.fmtTs(e.ts), t: labelize(e.action), s: e.detail.replace("Flagged claim #" + id, "").replace(/^ · /, ""), ic: iconFor(e.action), c: "var(--accent-d)" });
     });
     ev.sort(function (a, b) { return a.d < b.d ? -1 : a.d > b.d ? 1 : 0; });
     return '<div style="position:relative;padding-left:6px">' + ev.map(function (e, i) {

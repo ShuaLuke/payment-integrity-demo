@@ -12,7 +12,8 @@
       mount.innerHTML =
         '<div class="page">' +
         '<div class="page-head"><div><div class="page-title">Audit trail</div><div class="page-sub">Every action is logged for compliance, investigations and oversight</div></div>' +
-        '<span class="tag"><i class="ti ti-shield-lock"></i> ' + log.length + ' events · immutable</span></div>' +
+        '<div style="display:flex;align-items:center;gap:8px"><span class="tag"><i class="ti ti-shield-lock"></i> ' + log.length + ' events · immutable</span>' +
+        '<button class="btn" id="audit-reset" style="font-size:11.5px"><i class="ti ti-refresh"></i> Reset demo</button></div></div>' +
         '<div class="card">' +
         (log.length ? log.map(function (e) {
           return '<div class="audit-row"><i class="ti ti-' + (ICON[e.action] || "point") + ' ic"></i>' +
@@ -21,6 +22,8 @@
             '<div class="ts">' + window.APP.fmtTs(e.ts) + '</div></div>';
         }).join("") : '<div class="muted" style="font-size:12.5px">No actions yet.</div>') +
         '</div></div>';
+      var rb = document.getElementById("audit-reset");
+      if (rb) rb.addEventListener("click", function () { if (confirm("Reset the demo? This clears all decisions, approvals and the audit trail back to the initial state.")) location.reload(); });
     }
   };
   function label(a) { return a.replace(/_/g, " ").toLowerCase().replace(/^./, function (c) { return c.toUpperCase(); }); }

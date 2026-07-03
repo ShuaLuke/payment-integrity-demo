@@ -19,7 +19,7 @@
               '<td style="color:' + (a.assignee ? "var(--ink)" : "var(--text3)") + '">' + (a.assignee || "Unassigned") + '</td>' +
               '<td class="right" style="font-weight:500">' + window.DP.usd(a.exposurePost || 0) + '</td></tr>';
           }).join("") + '</tbody></table></div>'
-          : '<div class="card" style="text-align:center;padding:32px"><i class="ti ti-folder-open" style="font-size:28px;color:var(--text3)"></i><div style="font-size:13px;color:var(--text2);margin-top:8px">No open investigations.</div><div style="font-size:11.5px;color:var(--text3);margin-top:3px">Escalate an allegation (with supervisor approval) to open one.</div></div>') +
+          : '<div class="card" style="text-align:center;padding:32px"><i class="ti ti-folder-open" style="font-size:28px;color:var(--text3)"></i><div style="font-size:13px;color:var(--text2);margin-top:8px">No open investigations.</div><div style="font-size:11.5px;color:var(--text3);margin-top:3px">Escalate a flagged claim (with supervisor approval) to open one.</div></div>') +
         '</div>';
       mount.querySelectorAll("tr.row").forEach(function (tr) { tr.addEventListener("click", function () { window.APP.openAllegation(tr.getAttribute("data-id")); }); });
     }
