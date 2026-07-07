@@ -59,7 +59,8 @@
         '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">' +
         '<span class="btn" id="c-back" style="padding:5px 9px"><i class="ti ti-arrow-left"></i> ' + window.APP.esc(window.APP.backLabel()) + '</span>' +
         '<span class="page-title">Flagged claim #' + id + '</span><span id="c-status">' + window.UI.statusPill(a.status) + '</span>' +
-        '<span style="font-size:11px;color:var(--text2);display:inline-flex;align-items:center;gap:4px"><i class="ti ti-lock"></i> Locked to you</span></div>' +
+        '<span style="font-size:11px;color:var(--text2);display:inline-flex;align-items:center;gap:4px"><i class="ti ti-lock"></i> Locked to you</span>' +
+        '<span style="flex:1"></span><button class="btn primary" id="c-summarize" style="font-size:12px"><i class="ti ti-file-analytics"></i> Summarize for adjudication</button></div>' +
         '<div style="display:flex;gap:12px;align-items:flex-start">' +
         // left rail
         '<div style="width:200px;flex:none;display:flex;flex-direction:column;gap:10px">' +
@@ -107,6 +108,8 @@
       document.getElementById("c-back").addEventListener("click", function () { window.APP.goBack(); });
       document.getElementById("c-net").addEventListener("click", function () { window.APP.nav("network"); });
       renderCollusion(p, id);
+      var sumBtn = document.getElementById("c-summarize");
+      if (sumBtn) sumBtn.addEventListener("click", function () { if (window.COPILOT) window.COPILOT.summarize(id); });
       var asg = document.getElementById("c-assign");
       if (asg) asg.addEventListener("change", function () { window.APP.assignCase(id, this.value === "__unassigned__" ? null : this.value); rerender(id); });
       document.getElementById("c-prov").addEventListener("click", function () { window.APP.openProvider(p.id); });

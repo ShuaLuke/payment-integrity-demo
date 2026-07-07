@@ -4,7 +4,8 @@
   var ICON = {
     SESSION_START: "login", DECISION_CONFIRM: "circle-check", DECISION_DISMISS: "circle-x",
     DECISION_ESCALATE: "arrow-up-right", RECOVERY_SUBMITTED: "cash", INVESTIGATION_OPENED: "folder-plus",
-    MEDICAL_RECORD_REQUESTED: "file-text", CLAIM_DATA_REQUESTED: "database", COPILOT_QUERY: "sparkles", EXPORT: "download"
+    MEDICAL_RECORD_REQUESTED: "file-text", CLAIM_DATA_REQUESTED: "database", COPILOT_QUERY: "sparkles",
+    AI_CASE_SUMMARY: "file-analytics", NETWORK_VIEWED: "affiliate", EXPORT: "download"
   };
   window.Views.audit = {
     render: function (mount) {

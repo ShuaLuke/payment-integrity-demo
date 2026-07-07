@@ -1,7 +1,7 @@
 /* Copilot — floating slide-over assistant, available on every screen.
    Scopes to the current claim when you're viewing one, else a default hero case. */
 (function () {
-  var SUGGEST = ["Summarize this provider's risk", "How does it compare to peers?", "What's the recommended action?", "Draft a rationale"];
+  var SUGGEST = ["Summarize this case for adjudication", "How does it compare to peers?", "What's the recommended action?", "Draft a rationale"];
   var open = false;
 
   function ctx() {
@@ -66,13 +66,75 @@
     addUser(qy);
     var a = ctx();
     window.APP.auditLog("COPILOT_QUERY", "#" + a.id + " · " + qy);
+    if (isAdjIntent(qy)) { thinkThen(function () { addBrief(a); window.APP.auditLog("AI_CASE_SUMMARY", "Flagged claim #" + a.id); }); return; }
     setTimeout(function () { addAI(window.AI.copilot(a, qy), true); }, 200);
+  }
+  function isAdjIntent(q) { q = (q || "").toLowerCase(); return /summar/.test(q) && /(adjudicat|case|decision|brief)/.test(q); }
+  function thinkThen(fn) {
+    var d = el("msg ai", "Analyzing the case…"); chat().appendChild(d); scroll();
+    setTimeout(function () { d.remove(); fn(); }, 420);
   }
   function chat() { return document.getElementById("cp-chat"); }
   function scroll() { var c = chat(); c.scrollTop = c.scrollHeight; }
   function el(cls, txt) { var d = document.createElement("div"); d.className = cls; if (txt) d.textContent = txt; return d; }
 
-  window.COPILOT = { open: function () { if (!open) toggle(); }, ask: ask };
+  // ---- structured adjudication brief ----
+  function addBrief(a) {
+    var s = window.AI.adjudicationSummary(a);
+    var wrap = document.createElement("div"); wrap.style.alignSelf = "stretch";
+    wrap.innerHTML = briefHtml(s);
+    chat().appendChild(wrap); scroll();
+    var go = wrap.querySelector('[data-act="go"]'); if (go) go.onclick = function () { applyRec(s.recommendation.action); };
+  }
+  var REC_STYLE = {
+    "confirm": { bg: "var(--high-bg)", tx: "var(--high-tx)", icon: "check", cta: "Open decision · pre-fill Confirm" },
+    "confirm-escalate": { bg: "var(--high-bg)", tx: "var(--high-tx)", icon: "check", cta: "Open decision · pre-fill Confirm" },
+    "escalate": { bg: "var(--med-bg)", tx: "var(--med-tx)", icon: "arrow-up-right", cta: "Open decision · pre-fill Escalate" },
+    "dismiss": { bg: "var(--low-bg)", tx: "var(--low-tx)", icon: "x", cta: "Open decision · pre-fill Dismiss" },
+    "request-records": { bg: "var(--accent-l)", tx: "var(--accent-d)", icon: "file-text", cta: "Request additional records" }
+  };
+  function sect(title, body) { return '<div><div style="font-weight:600;font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--text3);margin-bottom:3px">' + title + '</div><div style="line-height:1.5;color:var(--text);font-size:12px">' + body + '</div></div>'; }
+  function briefHtml(s) {
+    var rec = s.recommendation, st = REC_STYLE[rec.action] || REC_STYLE.confirm;
+    var ev = '<ul style="margin:0;padding-left:15px;line-height:1.55">' + s.evidence.map(function (e) {
+      return '<li style="margin-bottom:1px"><span style="color:var(--text2)">' + window.APP.esc(e.label) + ':</span> <span' + (e.outlier ? ' style="color:var(--high-tx);font-weight:500"' : '') + '>' + window.APP.esc(e.detail) + '</span></li>';
+    }).join("") + '</ul>';
+    var precChips = (s.precedents.cases || []).map(function (c) {
+      var conf = c.outcome === "Confirmed";
+      return '<span class="pill ' + (conf ? "p-conf" : "p-dis") + '" style="font-size:10px">#' + c.id + ' · ' + c.outcome + '</span>';
+    }).join(" ");
+    return '<div style="background:var(--card);border:0.5px solid var(--border);border-radius:12px;overflow:hidden">' +
+      '<div style="background:#10243b;color:#fff;padding:8px 11px;font-size:11.5px;display:flex;align-items:center;gap:6px"><i class="ti ti-file-analytics" style="color:#7fe0d6"></i> Adjudication brief · #' + s.headline.split("#")[1] + '</div>' +
+      '<div style="padding:11px;display:flex;flex-direction:column;gap:10px">' +
+      '<div style="display:flex;align-items:center;gap:9px;background:' + st.bg + ';border-radius:8px;padding:8px 10px"><i class="ti ti-' + st.icon + '" style="color:' + st.tx + ';font-size:18px"></i><div style="font-weight:600;color:' + st.tx + ';font-size:12.5px">Recommended: ' + window.APP.esc(rec.label) + '</div></div>' +
+      sect("The anomaly", window.APP.esc(s.anomaly)) +
+      sect("Evidence", ev) +
+      sect(s.isRing ? "Network signal — coordinated" : "Network signal", '<span' + (s.isRing ? ' style="color:var(--high-tx)"' : '') + '><i class="ti ti-affiliate"></i> ' + window.APP.esc(s.network) + '</span>') +
+      sect("Precedent", window.APP.esc(s.precedents.text) + (precChips ? '<div style="margin-top:5px;display:flex;gap:5px;flex-wrap:wrap">' + precChips + '</div>' : "")) +
+      sect("Why this recommendation", window.APP.esc(rec.rationale)) +
+      '<button class="btn primary" data-act="go" style="width:100%;justify-content:center;font-size:12px"><i class="ti ti-arrow-right"></i> ' + st.cta + '</button>' +
+      '<div style="font-size:10px;color:var(--text3);text-align:center"><i class="ti ti-sparkles"></i> Demonstration-scripted · grounded in this case\'s evidence &amp; precedent</div>' +
+      '</div></div>';
+  }
+  // Take the analyst to the decision control, pre-selecting the recommended action.
+  function applyRec(action) {
+    if (open) toggle();
+    if (action === "request-records") { var rq = document.getElementById("c-req"); if (rq) { rq.scrollIntoView({ behavior: "smooth", block: "center" }); setTimeout(function () { rq.click(); }, 300); } return; }
+    var seg = { "confirm": "c", "confirm-escalate": "c", "dismiss": "d", "escalate": "e" }[action];
+    var dc = document.getElementById("c-decision"); if (dc) dc.scrollIntoView({ behavior: "smooth", block: "center" });
+    setTimeout(function () { var el = document.querySelector('.seg[data-d="' + seg + '"]'); if (el) el.click(); }, 360);
+  }
+
+  window.COPILOT = {
+    open: function () { if (!open) toggle(); }, ask: ask,
+    summarize: function (id) {
+      if (!open) toggle();
+      setCtxLine();
+      var a = id ? window.DP.getAllegation(id) : ctx();
+      addUser("Summarize this case for adjudication");
+      thinkThen(function () { addBrief(a); window.APP.auditLog("AI_CASE_SUMMARY", "Flagged claim #" + a.id); });
+    }
+  };
   function boot() { if (!window.APP || !window.DP || !window.APP.ready) return setTimeout(boot, 100); build(); }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot); else boot();
 })();
