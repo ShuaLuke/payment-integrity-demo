@@ -32,8 +32,8 @@
       var rulesHtml = (a.rules || []).map(function (r) {
         return '<div style="display:flex;gap:9px;align-items:flex-start"><i class="ti ti-gavel" style="color:var(--high);margin-top:2px"></i><div><div style="font-size:12px;font-weight:500">' + window.APP.esc(r.name) + ' <span class="mono" style="font-weight:400;color:var(--text2)">' + window.APP.esc(r.code) + '</span> <span class="tag">' + window.APP.esc(r.source) + '</span></div><div style="font-size:11.5px;color:var(--text2)">' + window.APP.esc(r.description) + '</div></div></div>';
       }).join("");
-      if (a.model) rulesHtml += '<div style="display:flex;gap:9px;align-items:center;padding-top:2px"><i class="ti ti-brain" style="color:var(--accent-d)"></i><div style="font-size:11.5px;color:var(--text2)">Pattern model: <span style="color:var(--ink);font-weight:500">' + window.APP.esc(a.model.name) + '</span> (' + window.APP.esc(a.model.type) + ')</div></div>';
-      if (!rulesHtml) rulesHtml = '<div style="font-size:11.5px;color:var(--text2)">No rules fired — behavioral pattern flagged by ' + (a.model ? window.APP.esc(a.model.name) : "the pattern engine") + '.</div>';
+      if (a.model) rulesHtml += '<div style="display:flex;gap:9px;align-items:center;padding-top:2px"><i class="ti ti-brain" style="color:var(--accent-d)"></i><div style="font-size:11.5px;color:var(--text2)">ML/AI model: <span style="color:var(--ink);font-weight:500">' + window.APP.esc(a.model.name) + '</span> (' + window.APP.esc(a.model.type) + ')</div></div>';
+      if (!rulesHtml) rulesHtml = '<div style="font-size:11.5px;color:var(--text2)">No rules fired — behavioral anomaly flagged by ' + (a.model ? window.APP.esc(a.model.name) : "the ML/AI models") + '.</div>';
 
       // evidence documents (available to view, not gated behind a request)
       var docs = [{ key: "mr", label: "Medical record", icon: "file-text", meta: "on file" }];
@@ -82,7 +82,7 @@
         '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">' +
         stat("Risk", '<span style="color:' + bandColor(a.riskScore) + '">' + a.riskScore + ' <span style="font-size:10px;font-weight:500">' + bandLabel(a.riskScore) + '</span></span>') +
         stat("Confidence", a.confidence + "%") + stat("Exposure", window.DP.usd(a.exposurePost)) +
-        stat("Source", '<span style="font-size:12.5px">' + (a.source === "Both" ? "AI + Rule" : a.source === "Pattern Recognition" ? "AI" : "Rule") + '</span>') +
+        stat("Source", '<span style="font-size:12.5px">' + (a.source === "Both" ? "ML/AI + Rules" : a.source === "Pattern Recognition" ? "ML/AI" : "Rules") + '</span>') +
         stat("FWA type", '<span style="font-size:12.5px">' + a.fwaType + '</span>') +
         '</div>' +
         (a.xai ? '<div class="xai"><div class="xai-h"><i class="ti ti-sparkles" style="color:var(--accent-d)"></i><span class="t">Why this was flagged</span><span style="font-size:10.5px;color:#5f8a80;margin-left:auto">Explainable AI</span></div>' +

@@ -46,10 +46,10 @@
             '<div style="height:8px;background:var(--border2);border-radius:4px;overflow:hidden"><div style="height:100%;width:' + Math.max(3, Math.round(r.exp / maxExp * 100)) + '%;background:var(--accent)"></div></div></div>';
         }).join("") + '</div>' +
         '<div class="card"><div style="font-weight:500;font-size:13px;margin-bottom:10px">Detection source</div>' +
-        srcBar("Pattern Recognition (AI)", src["Pattern Recognition"], allegs.length, "#17b3a6") +
-        srcBar("Rules Engine", src["Rules Engine"], allegs.length, "#378add") +
+        srcBar("ML / AI models", src["Pattern Recognition"], allegs.length, "#17b3a6") +
+        srcBar("Rules engine", src["Rules Engine"], allegs.length, "#378add") +
         srcBar("Both", src["Both"], allegs.length, "#c77d11") +
-        '<div style="font-size:11px;color:var(--text2);margin-top:8px;line-height:1.5">AI-driven flags dominate volume; rules provide defensible, citation-backed edits. Cases flagged by <span style="font-weight:500">both</span> carry the highest confidence.</div></div>' +
+        '<div style="font-size:11px;color:var(--text2);margin-top:8px;line-height:1.5">ML/AI composite anomaly models drive volume; rules provide defensible, citation-backed edits. Cases flagged by <span style="font-weight:500">both</span> carry the highest confidence.</div></div>' +
         '</div>' +
         '<div class="card" style="margin-bottom:10px"><div style="font-weight:500;font-size:13px;margin-bottom:9px">Human-in-the-loop feedback <span class="muted" style="font-weight:400;font-size:11px">· confirmed &amp; dismissed outcomes feed model retraining</span></div>' + hitlHtml() + '</div>' +
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +

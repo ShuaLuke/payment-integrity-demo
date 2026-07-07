@@ -331,7 +331,7 @@ addAllegation({
   source: "Pattern Recognition", status: "New", claimType: "837P", exposurePost: s1ExposurePost, model: "model_em_peer",
   narrative: "",
   xai: {
-    summary: `E/M level distribution deviates 5.8σ from the Internal Medicine peer group: 99215 share ${p1SharePct}% vs peer median 14%, sustained across 11 months. Linked diagnoses show low clinical complexity. No rules fired — pattern-based behavioral outlier.`,
+    summary: `E/M level distribution deviates 5.8σ from the Internal Medicine peer group: 99215 share ${p1SharePct}% vs peer median 14%, sustained across 11 months. Linked diagnoses show low clinical complexity. No rules fired — flagged by a composite ML/AI anomaly model.`,
     factors: [
       { label: "99215 share", value: `${p1SharePct}%`, benchmark: "peer median 14%" },
       { label: "Deviation", value: "5.8σ above peer group" },

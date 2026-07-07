@@ -6,7 +6,7 @@
       var rules = window.DP.getRules(), models = window.DP.getModels();
       mount.innerHTML =
         '<div class="page">' +
-        '<div class="page-head"><div><div class="page-title">Rules library</div><div class="page-sub">VA-approved compliance rules, pricing logic and pattern models</div></div>' +
+        '<div class="page-head"><div><div class="page-title">Rules library</div><div class="page-sub">VA-approved compliance rules, pricing logic and ML / AI models</div></div>' +
         '<span class="tag"><i class="ti ti-git-branch"></i> dev → test → pre-prod → production</span></div>' +
         '<div class="card" style="padding:0;overflow:hidden"><table><thead><tr><th>Rule</th><th>Category</th><th>Source authority</th><th>Version</th><th>Effective</th><th>Env</th></tr></thead><tbody>' +
         rules.map(function (r) {
@@ -19,7 +19,7 @@
             '<td class="mono" style="font-size:11px">' + window.APP.esc(r.effectiveDate || "—") + '</td>' +
             '<td><span class="pill p-conf" style="background:var(--low-bg);color:var(--low-tx)">' + window.APP.esc(r.environment || "Production") + '</span></td></tr>';
         }).join("") + '</tbody></table></div>' +
-        '<div class="card" style="margin-top:10px"><div style="font-weight:500;font-size:13px;margin-bottom:9px">Pattern-recognition models</div>' +
+        '<div class="card" style="margin-top:10px"><div style="font-weight:500;font-size:13px;margin-bottom:3px">ML / AI models</div><div style="font-size:11px;color:var(--text2);margin-bottom:9px">Composite anomaly models — behavioral detection that complements the hard rule edits above.</div>' +
         models.map(function (m) {
           return '<div style="display:flex;gap:9px;align-items:flex-start;padding:7px 0;border-top:0.5px solid var(--border2)"><i class="ti ti-brain" style="color:var(--accent-d);margin-top:2px"></i>' +
             '<div style="flex:1"><div style="font-size:12.5px;font-weight:500">' + window.APP.esc(m.name) + ' <span class="tag">' + window.APP.esc(m.type) + '</span></div>' +

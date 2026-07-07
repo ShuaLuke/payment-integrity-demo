@@ -29806,7 +29806,7 @@
       "verifiedRecoupment": 0,
       "narrative": "",
       "xai": {
-        "summary": "E/M level distribution deviates 5.8σ from the Internal Medicine peer group: 99215 share 90% vs peer median 14%, sustained across 11 months. Linked diagnoses show low clinical complexity. No rules fired — pattern-based behavioral outlier.",
+        "summary": "E/M level distribution deviates 5.8σ from the Internal Medicine peer group: 99215 share 90% vs peer median 14%, sustained across 11 months. Linked diagnoses show low clinical complexity. No rules fired — flagged by a composite ML/AI anomaly model.",
         "factors": [
           {
             "label": "99215 share",

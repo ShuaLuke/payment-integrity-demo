@@ -200,7 +200,7 @@
       var m = { "New": "p-new", "Assigned": "p-asg", "Under review": "p-rev", "Recommended close": "p-rec", "Confirmed": "p-conf", "Dismissed": "p-dis", "Escalated": "p-esc", "Pending review": "p-pend", "Returned": "p-ret" };
       return '<span class="pill ' + (m[s] || "p-asg") + '">' + s + '</span>';
     },
-    srcTag: function (s) { return '<span class="muted" style="font-size:10.5px">' + (s === "Pattern Recognition" ? "AI" : s === "Rules Engine" ? "Rule" : "AI+Rule") + '</span>'; }
+    srcTag: function (s) { return '<span class="muted" style="font-size:10.5px">' + (s === "Pattern Recognition" ? "ML/AI" : s === "Rules Engine" ? "Rules" : "ML/AI + Rules") + '</span>'; }
   };
 
   // Boot is orchestrated by supabase.js (auth gate in Supabase mode, or immediate in local mode).
