@@ -2,7 +2,7 @@
 (function () {
   var mount;
   var APP = {
-    state: { view: "queue", allegationId: null, filters: {}, decisions: {}, audit: [], investigations: [], role: "analyst" },
+    state: { view: "queue", allegationId: null, filters: {}, decisions: {}, audit: [], investigations: [], role: "analyst", watchlist: {} },
 
     ROLES: { analyst: { name: "Dana Whitmore", title: "Analyst", initials: "DW" }, supervisor: { name: "Karen Boyd", title: "Supervisor", initials: "KB" } },
     isSupervisor: function () { return APP.state.role === "supervisor"; },
@@ -109,6 +109,16 @@
       APP.auditLog("CASE_ASSIGNED", "Flagged claim #" + id + " · " + (name ? "→ " + name : "unassigned"));
     },
     openTeam: function (sel) { APP.state.teamSel = sel; APP.nav("team"); },
+
+    // Flag/unflag a provider for future reference (repeat-offender watchlist).
+    isProviderWatched: function (id) { return !!APP.state.watchlist[id]; },
+    toggleProviderWatch: function (id) {
+      var p = window.DP.getProvider(id); if (!p) return false;
+      var on = !APP.state.watchlist[id];
+      if (on) APP.state.watchlist[id] = true; else delete APP.state.watchlist[id];
+      APP.auditLog(on ? "PROVIDER_FLAGGED" : "PROVIDER_UNFLAGGED", p.name + " (NPI " + (p.npi || "—") + ")" + (on ? " added to watchlist for future reference" : " removed from watchlist"));
+      return on;
+    },
 
     // ---- information architecture: 4 areas, each with sub-views ----
     SUBS: {
