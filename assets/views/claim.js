@@ -91,6 +91,14 @@
         (cl ? '<div class="card" style="padding:0;overflow:hidden"><div style="padding:9px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:0.5px solid var(--border2)"><span style="font-weight:500;font-size:13px">Claim <span class="mono" style="font-weight:400;color:var(--text2)">' + cl.claimNumber + '</span></span><span style="font-size:11px;color:var(--text2)">' + cl.type + ' · DOS ' + cl.dateOfService + ' · Dx ' + (cl.diagnosisCodes.join(",") || "—") + ' · ' + cl.claimStatus + ' / ' + cl.paymentType + '</span></div>' +
         '<table><thead><tr><th>CPT</th><th>Description</th><th>Mod</th><th class="right">Units</th><th class="right">Billed</th><th class="right">Paid</th><th></th></tr></thead><tbody>' + lines + '</tbody></table></div>' : '') +
         '<div class="card"><div style="font-weight:500;font-size:13px;margin-bottom:8px">Rule engine outcomes</div><div style="display:flex;flex-direction:column;gap:7px">' + rulesHtml + '</div></div>' +
+        // collusion network — a core panel on the case view (claim → provider → network, in-context)
+        '<div class="card" id="c-collusion-card">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px"><div style="font-weight:500;font-size:13px"><i class="ti ti-affiliate" style="color:var(--high)"></i> Provider collusion network</div>' +
+        '<span style="display:flex;gap:12px;align-items:center"><span class="muted" style="font-size:11px">claim → provider → network</span><span id="c-net-full" style="font-size:11.5px;color:var(--accent-d);cursor:pointer"><i class="ti ti-arrows-maximize"></i> Open full network</span></span></div>' +
+        '<div id="c-collusion-narr" style="margin-bottom:9px"></div>' +
+        '<div id="c-collusion-graph" style="background:var(--surface);border:0.5px solid var(--border);border-radius:8px;overflow:hidden"></div>' +
+        '<div id="c-collusion-legend" class="legend" style="margin:8px 2px 0"></div>' +
+        '</div>' +
         '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><div style="font-weight:500;font-size:13px">Similar adjudicated cases</div><span class="muted" style="font-size:11px">' + a.fwaType + ' · ' + simConfirmed + '/' + sims.length + ' confirmed</span></div>' + simsHtml + '<div id="c-prec"></div></div>' +
         '<div class="card"><div style="font-weight:500;font-size:13px;margin-bottom:8px">Case timeline</div>' + timelineHtml(id, a, cl) + '</div>' +
         '<div class="card" id="c-decision"></div>' +
@@ -98,6 +106,7 @@
 
       document.getElementById("c-back").addEventListener("click", function () { window.APP.goBack(); });
       document.getElementById("c-net").addEventListener("click", function () { window.APP.nav("network"); });
+      renderCollusion(p, id);
       var asg = document.getElementById("c-assign");
       if (asg) asg.addEventListener("change", function () { window.APP.assignCase(id, this.value === "__unassigned__" ? null : this.value); rerender(id); });
       document.getElementById("c-prov").addEventListener("click", function () { window.APP.openProvider(p.id); });
@@ -221,6 +230,38 @@
   }
 
   function rerender(id) { window.Views.claim.render(document.getElementById("view"), { id: id }); }
+
+  // In-context collusion panel: plain-language narrative + compact provider graph.
+  function renderCollusion(p, id) {
+    var card = document.getElementById("c-collusion-card");
+    if (!card || !window.Collusion || !p.id) { if (card) card.style.display = "none"; return; }
+    var s = window.Collusion.analyze(p.id);
+    document.getElementById("c-collusion-narr").innerHTML = window.Collusion.narrativeHtml(s);
+    var graph = document.getElementById("c-collusion-graph"), legend = document.getElementById("c-collusion-legend");
+    if (s && s.isRing) {
+      window.Collusion.render(graph, p.id, { height: 300 });
+      legend.innerHTML = collusionLegend(s);
+    } else {
+      graph.style.display = "none"; legend.style.display = "none";
+    }
+    var full = document.getElementById("c-net-full");
+    if (full) full.addEventListener("click", function () { window.APP.auditLog("NETWORK_VIEWED", "Flagged claim #" + id + " · " + p.name); window.APP.nav("network"); });
+  }
+  function collusionLegend(s) {
+    var out = [
+      lgDot("#0f6e56", "Provider in this case"),
+      lgDot(s.kind === "chain" ? "#c6362f" : "#c77d11", "Linked provider"),
+      lgDot("#378add", "Cross-billed veteran")
+    ];
+    if (s.sharedTin) out.push(lgLine("#c6362f", 3, "Shared TIN"));
+    if (s.sharedRegistration) out.push(lgLine("#b5730e", 2, "Same registration"));
+    if (s.sharedOfficer) out.push(lgLine("#7a3aa0", 2, "Same officer"));
+    if (s.referralCount) out.push(lgLine("#0f6e56", 2, "Referral"));
+    out.push(lgLine("#8a95a3", 2, "Shared patients"));
+    return out.join("");
+  }
+  function lgDot(color, label) { return '<span class="lg"><span class="dot" style="border-color:' + color + ';background:' + color + '26"></span>' + label + '</span>'; }
+  function lgLine(color, w, label) { return '<span class="lg"><span style="width:16px;height:0;border-top:' + w + 'px solid ' + color + '"></span>' + label + '</span>'; }
   function assignOptions(cur) { return '<option value="__unassigned__"' + (!cur ? " selected" : "") + '>Unassigned</option>' + window.APP.ANALYSTS.map(function (n) { return '<option value="' + n + '"' + (cur === n ? " selected" : "") + '>' + n + '</option>'; }).join(""); }
 
   function stat(l, v) { return '<div class="card" style="padding:8px 9px"><div class="l" style="font-size:10.5px;color:var(--text2)">' + l + '</div><div style="font-size:16px;font-weight:600;margin-top:2px">' + v + '</div></div>'; }

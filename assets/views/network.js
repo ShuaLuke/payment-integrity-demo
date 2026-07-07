@@ -29,24 +29,60 @@
 
   window.Views.network = {
     render: function (mount) {
+      var scnBtn = function (id, label, sub) { return '<button class="nscn" data-scn="' + id + '" style="border:none;background:none;border-radius:6px;padding:5px 11px;font-size:12px;cursor:pointer;color:var(--text2);font-family:var(--sans);display:flex;flex-direction:column;align-items:flex-start;line-height:1.2"><span style="font-weight:500">' + label + '</span><span style="font-size:9.5px;color:var(--text3)">' + sub + '</span></button>'; };
       mount.innerHTML =
         '<div class="page">' +
-        '<div class="page-head"><div><div class="page-title">Provider network</div><div class="page-sub">Shared identifiers, patients and referrals across flagged providers</div></div>' +
-        '<div style="display:flex;gap:7px"><button class="btn" id="n-ring"><i class="ti ti-focus-2"></i> Highlight ring</button><button class="btn" id="n-reset">Reset</button></div></div>' +
+        '<div class="page-head"><div><div class="page-title">Provider network</div><div class="page-sub">Two known collusion patterns — pick a scenario. Click any provider to open its report card.</div></div>' +
+        '<div style="display:flex;gap:10px;align-items:center">' +
+        '<div style="display:flex;background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:2px">' + scnBtn("ring", "Shared-TIN ring", "one billing entity") + scnBtn("chain", "Residential chain", "AZ → CA → NV") + '</div>' +
+        '<span id="n-ring-tools" style="display:flex;gap:7px"><button class="btn" id="n-ring"><i class="ti ti-focus-2"></i> Highlight ring</button><button class="btn" id="n-reset">Reset</button></span>' +
+        '</div></div>' +
         '<div class="canvas" id="n-canvas"></div>' +
-        '<div class="legend">' +
-        lg("#c6362f", "#fbe3e3", "Provider · high risk") + lg("#c77d11", "#fbe6cf", "Provider · medium") +
-        lg("#378add", "#e6f1fb", "Veteran") + lg("#8b1a13", "#fbe3e3", "Flagged claim") +
-        '<span class="lg"><span style="width:16px;height:0;border-top:3px solid #c6362f"></span>Shared TIN</span></div>' +
-        '<div style="display:flex;gap:10px;margin-top:4px">' +
-        '<div style="flex:1;background:var(--high-bg);border:0.5px solid #f3c9c9;border-radius:8px;padding:10px 12px"><div style="display:flex;align-items:center;gap:6px;font-weight:500;font-size:12.5px;color:var(--high-tx)"><i class="ti ti-alert-triangle"></i>Ring detected</div><div style="font-size:11.5px;color:#7a3a34;margin-top:3px;line-height:1.5">Alamo Internal Medicine &amp; Rio Grande Surgical share <span class="mono">TIN 00-6820473</span>, 9 referrals and 6 patients — two providers, one billing entity, coordinated anomalies.</div></div>' +
-        '<div style="flex:1;background:var(--low-bg);border:0.5px solid #bfe0c9;border-radius:8px;padding:10px 12px"><div style="display:flex;align-items:center;gap:6px;font-weight:500;font-size:12.5px;color:var(--low-tx)"><i class="ti ti-circle-check"></i>Benign by contrast</div><div style="font-size:11.5px;color:#2f5a44;margin-top:3px;line-height:1.5">Coastal Kidney Care links to a <span style="font-weight:500">single patient</span> (36 dialysis claims) — an isolated star, not a ring.</div></div>' +
-        '</div></div>';
+        '<div class="legend" id="n-legend"></div>' +
+        '<div id="n-boxes" style="display:flex;gap:10px;margin-top:4px"></div>' +
+        '</div>';
 
-      var G = buildSubgraph();
-      draw(G);
+      var current = "ring";
+      function setActive(scn) { mount.querySelectorAll(".nscn").forEach(function (b) { var on = b.getAttribute("data-scn") === scn; b.style.background = on ? "var(--card)" : "none"; b.style.color = on ? "var(--ink)" : "var(--text2)"; b.style.boxShadow = on ? "0 1px 2px rgba(16,36,59,.08)" : "none"; }); }
+      function paint(scn) {
+        current = scn; setActive(scn);
+        var legend = document.getElementById("n-legend"), boxes = document.getElementById("n-boxes"), tools = document.getElementById("n-ring-tools");
+        if (scn === "chain") {
+          tools.style.display = "none";
+          legend.innerHTML = legendChain();
+          boxes.innerHTML = boxesChain();
+          window.Collusion.render(document.getElementById("n-canvas"), "PR300", { height: 440 });
+        } else {
+          tools.style.display = "flex";
+          legend.innerHTML = legendRing();
+          boxes.innerHTML = boxesRing();
+          draw(buildSubgraph());
+        }
+      }
+      mount.querySelectorAll(".nscn").forEach(function (b) { b.onclick = function () { paint(b.getAttribute("data-scn")); }; });
+      paint("ring");
     }
   };
+
+  function legendRing() {
+    return lg("#c6362f", "#fbe3e3", "Provider · high risk") + lg("#c77d11", "#fbe6cf", "Provider · medium") +
+      lg("#378add", "#e6f1fb", "Veteran") + lg("#8b1a13", "#fbe3e3", "Flagged claim") +
+      lgLine("#c6362f", 3, null, "Shared TIN") + lgLine("#0f6e56", 1.6, "5,4", "Referral") + lgLine("#c2cad4", 1, null, "Shared patient");
+  }
+  function legendChain() {
+    return lg("#0f6e56", "#e6f7f4", "Facility in this case") + lg("#c6362f", "#fbe3e3", "Chain facility · high risk") +
+      lg("#378add", "#e6f1fb", "Cross-billed veteran") +
+      lgLine("#b5730e", 2, null, "Same registration") + lgLine("#7a3aa0", 2, null, "Same officer") + lgLine("#8a95a3", 1, null, "Shared patients");
+  }
+  function boxesRing() {
+    return '<div style="flex:1;background:var(--high-bg);border:0.5px solid #f3c9c9;border-radius:8px;padding:10px 12px"><div style="display:flex;align-items:center;gap:6px;font-weight:500;font-size:12.5px;color:var(--high-tx)"><i class="ti ti-alert-triangle"></i>Ring detected</div><div style="font-size:11.5px;color:#7a3a34;margin-top:3px;line-height:1.5">Alamo Internal Medicine &amp; Rio Grande Surgical share <span class="mono">TIN 00-6820473</span>, 9 referrals and 6 patients — two providers, one billing entity, coordinated anomalies.</div></div>' +
+      '<div style="flex:1;background:var(--low-bg);border:0.5px solid #bfe0c9;border-radius:8px;padding:10px 12px"><div style="display:flex;align-items:center;gap:6px;font-weight:500;font-size:12.5px;color:var(--low-tx)"><i class="ti ti-circle-check"></i>Benign by contrast</div><div style="font-size:11.5px;color:#2f5a44;margin-top:3px;line-height:1.5">Coastal Kidney Care links to a <span style="font-weight:500">single patient</span> (36 dialysis claims) — an isolated star, not a ring.</div></div>';
+  }
+  function boxesChain() {
+    var s = window.Collusion.analyze("PR300");
+    return '<div style="flex:1">' + window.Collusion.narrativeHtml(s) + '</div>' +
+      '<div style="flex:1;background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:10px 12px"><div style="display:flex;align-items:center;gap:6px;font-weight:500;font-size:12.5px;color:var(--ink)"><i class="ti ti-route"></i>How to read it</div><div style="font-size:11.5px;color:var(--text2);margin-top:3px;line-height:1.5">Each blue dot is a veteran; lines to multiple facilities show the same patient cycled across states. The facilities share an officer and a business registration but bill under <span style="font-weight:500">separate TINs</span> — which is what keeps the common ownership hidden from single-claim review. Click a facility to open its report card and flagged claims.</div></div>';
+  }
 
   function draw(G) {
     var el = document.getElementById("n-canvas");
@@ -110,4 +146,5 @@
   function shortName(n) { return n.replace(" Associates", "").replace(" Partners", ""); }
   function shortFwa(f) { return f === "Frequency / over-utilization" ? "Frequency" : f === "Authorization mismatch" ? "Auth mismatch" : f === "Deceased patient" ? "Deceased pt" : f === "Modifier misuse" ? "Modifier" : f; }
   function lg(stroke, bg, label) { return '<span class="lg"><span class="dot" style="border-color:' + stroke + ';background:' + bg + '"></span>' + label + '</span>'; }
+  function lgLine(color, w, dash, label) { return '<span class="lg"><span style="width:16px;height:0;border-top:' + w + 'px ' + (dash ? "dashed" : "solid") + ' ' + color + '"></span>' + label + '</span>'; }
 })();
