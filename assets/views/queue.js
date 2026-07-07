@@ -6,6 +6,7 @@
 
   window.Views.queue = {
     render: function (mount) {
+      if (window.APP.isPrepay()) return renderPrepay(mount);
       var st = window.APP.state.qfilters || (window.APP.state.qfilters = { scope: "all", status: "", fwa: "", assignee: "", sort: "risk", minRisk: 0, query: "" });
       var meName = window.APP.ROLES[window.APP.state.role].name;
       var all = window.DP.listAllegations();
@@ -78,4 +79,60 @@
     }
   };
   function kpi(l, v) { return '<div class="kpi"><div class="l">' + l + '</div><div class="v">' + v + '</div></div>'; }
+
+  // ---------- prepay (pre-payment triage) ----------
+  function renderPrepay(mount) {
+    var st = window.APP.state.ppfilters || (window.APP.state.ppfilters = { rec: "", sort: "risk" });
+    var stats = window.APP.prepayStats();
+    function ppSeg(v, l) { return '<button class="qscope ppseg' + (st.rec === v ? " active" : "") + '" data-rec="' + v + '">' + l + '</button>'; }
+    mount.innerHTML =
+      '<div class="page">' +
+      '<div class="page-head"><div><div class="page-title">Pre-payment triage</div><div class="page-sub">Claims scored <b>before</b> payment — decide Pay · Hold · Deny to stop improper payments before the money leaves</div></div>' +
+      '<div style="display:flex;gap:2px;background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:2px">' + ppSeg("", "All") + ppSeg("deny", "Deny") + ppSeg("hold", "Hold") + ppSeg("pay", "Pay") + '</div></div>' +
+      '<div class="kpis">' +
+      kpi("Pending to triage", stats.pending + " / " + stats.total) +
+      kpi("Amount at risk", window.DP.usd(stats.atRisk)) +
+      kpi("Payment prevented", '<span style="color:var(--low-tx)">' + window.DP.usd(stats.prevented) + '</span>') +
+      kpi("Cleared to pay", window.DP.usd(stats.released)) +
+      '</div>' +
+      '<div class="card" style="padding:0;overflow:hidden"><table><thead><tr><th>Risk</th><th>Pending claim</th><th>Provider</th><th class="right">Amount at risk</th><th>Model recommends</th><th style="width:206px">Decision</th></tr></thead><tbody id="pp-body"></tbody></table></div>' +
+      '<div style="margin-top:10px;font-size:12px;color:var(--text2)"><i class="ti ti-shield-check" style="color:var(--accent-d)"></i> Denying or holding here stops the payment up front. Clean claims flow straight through — most of the queue is low-touch.</div>' +
+      '</div>';
+    drawPrepay();
+    mount.querySelectorAll(".ppseg").forEach(function (b) { b.addEventListener("click", function () { st.rec = b.getAttribute("data-rec"); window.APP.nav("queue"); }); });
+  }
+
+  function drawPrepay() {
+    var st = window.APP.state.ppfilters;
+    var rows = window.DP.listAllegations({ mode: "prepay" });
+    if (st.rec) rows = rows.filter(function (r) { return r.recommendedAction === st.rec; });
+    rows.sort(function (a, b) { return b.riskScore - a.riskScore; });
+    document.getElementById("pp-body").innerHTML = rows.map(function (r) {
+      var dec = window.APP.prepayDecisionFor(r.id);
+      return '<tr class="pprow" data-id="' + r.id + '">' +
+        '<td>' + window.UI.riskChip(r.riskScore) + '</td>' +
+        '<td><div style="display:flex;gap:6px;align-items:center"><span class="mono" style="font-weight:500">#' + r.id + '</span><span class="tag">' + r.claimType + '</span></div>' +
+        '<div style="margin-top:3px"><span class="tag fwa">' + r.fwaType + '</span> ' + window.UI.srcTag(r.source) + '</div></td>' +
+        '<td><div style="font-weight:500">' + window.APP.esc(r.providerName) + '</div><div class="mono" style="font-size:10.5px;color:var(--text3)">NPI ' + r.providerNpi + ' · ' + r.providerState + '</div></td>' +
+        '<td class="right" style="font-weight:600">' + window.DP.usd(r.exposurePre || 0) + '</td>' +
+        '<td>' + recPill(r.recommendedAction) + '</td>' +
+        '<td>' + (dec ? decidedPill(dec.action) : triageBtns(r.id)) + '</td></tr>';
+    }).join("") || '<tr><td colspan="6" class="muted" style="padding:16px;text-align:center">No pending claims match this filter.</td></tr>';
+    wirePrepay();
+  }
+
+  function wirePrepay() {
+    var body = document.getElementById("pp-body");
+    body.querySelectorAll(".ppbtn").forEach(function (b) {
+      b.addEventListener("click", function (e) { e.stopPropagation(); window.APP.prepayDecide(b.getAttribute("data-id"), b.getAttribute("data-act")); window.APP.nav("queue"); });
+    });
+    body.querySelectorAll(".pprow").forEach(function (tr) { tr.addEventListener("click", function () { window.APP.openAllegation(tr.getAttribute("data-id")); }); });
+  }
+
+  function triageBtns(id) {
+    return '<div style="display:flex;gap:4px">' + ppBtn(id, "pay", "Pay", "check", "var(--low)") + ppBtn(id, "hold", "Hold", "clock-hour-4", "var(--med)") + ppBtn(id, "deny", "Deny", "ban", "var(--high)") + '</div>';
+  }
+  function ppBtn(id, act, label, icon, color) { return '<button class="ppbtn" data-id="' + id + '" data-act="' + act + '" style="border:0.5px solid ' + color + ';color:' + color + ';background:#fff;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:3px;font-family:var(--sans)"><i class="ti ti-' + icon + '"></i>' + label + '</button>'; }
+  function recPill(action) { if (!action) return '<span class="muted">—</span>'; var m = { pay: ["Pay", "var(--low-tx)"], hold: ["Hold", "var(--med-tx)"], deny: ["Deny", "var(--high-tx)"] }[action]; return '<span style="font-size:11.5px;font-weight:500;color:' + m[1] + '"><i class="ti ti-sparkles"></i> ' + m[0] + '</span>'; }
+  function decidedPill(action) { var m = { pay: ["Cleared to pay", "var(--low-tx)", "var(--low-bg)", "check"], hold: ["On hold", "var(--med-tx)", "var(--med-bg)", "clock-hour-4"], deny: ["Denied", "var(--high-tx)", "var(--high-bg)", "ban"] }[action]; return '<span class="pill" style="background:' + m[2] + ';color:' + m[1] + '"><i class="ti ti-' + m[3] + '"></i> ' + m[0] + '</span>'; }
 })();

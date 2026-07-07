@@ -7,10 +7,11 @@
     render: function (mount) {
       var A = window.DP.raw.allegations;
       var r = window.APP.ROLES[window.APP.state.role];
+      var modeSub = window.APP.isPrepay() ? " · Prepay — pre-payment triage" : " · Retrospective — post-payment review";
       mount.innerHTML = '<div class="page">' +
         '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px"><div class="avatar" style="width:34px;height:34px">' + r.initials + '</div>' +
-        '<div><div class="page-title" style="font-size:18px">Welcome back, ' + r.name + '</div><div class="page-sub">' + r.title + ' workspace · ' + window.DP.raw.meta.disclaimer.split("—")[0].trim() + '</div></div></div>' +
-        (window.APP.isSupervisor() ? supervisorHome(A) : analystHome(A)) +
+        '<div><div class="page-title" style="font-size:18px">Welcome back, ' + r.name + '</div><div class="page-sub">' + r.title + ' workspace' + modeSub + '</div></div></div>' +
+        (window.APP.isPrepay() ? prepayHome() : window.APP.isSupervisor() ? supervisorHome(A) : analystHome(A)) +
         recent() + '</div>';
       wire(mount);
     }
@@ -49,6 +50,34 @@
       '<div class="card" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div style="font-weight:500;font-size:13px">Team workload</div><button class="btn" id="h-team" style="font-size:11px;padding:4px 9px">Manage &amp; assign <i class="ti ti-arrow-right"></i></button></div>' + (teamHtml || '<div class="muted" style="font-size:12px">No assigned work.</div>') + '</div>';
   }
 
+  function prepayHome() {
+    var rows = window.DP.listAllegations({ mode: "prepay" });
+    var stats = window.APP.prepayStats();
+    var denies = rows.filter(function (r) { return r.recommendedAction === "deny"; }).length;
+    var holds = rows.filter(function (r) { return r.recommendedAction === "hold"; }).length;
+    var top = rows.slice().sort(function (a, b) { return b.riskScore - a.riskScore; });
+    return kpis([
+      ["Pending to triage", stats.pending + " / " + stats.total],
+      ["Amount at risk", window.DP.usdShort(stats.atRisk)],
+      ["Recommended: Deny", denies], ["Recommended: Hold", holds]
+    ]) +
+      '<div class="card" style="margin-bottom:10px;display:flex;align-items:center;gap:12px;border:0.5px solid #9fe1d8"><i class="ti ti-shield-check" style="color:var(--accent-d);font-size:24px"></i>' +
+      '<div style="flex:1"><div style="font-weight:500;font-size:13px">Pre-payment triage queue</div><div style="font-size:11.5px;color:var(--text2)">' + stats.pending + ' claims scored before payment — ' + window.DP.usd(stats.atRisk) + ' at risk. Deny or hold the improper ones before the money leaves the VA.</div></div>' +
+      '<button class="btn primary" id="h-triage"><i class="ti ti-player-play"></i> Start triage</button></div>' +
+      prepayList("Highest-risk pending claims", top.slice(0, 6));
+  }
+  function prepayList(title, rows) {
+    var recTx = { pay: "var(--low-tx)", hold: "var(--med-tx)", deny: "var(--high-tx)" };
+    var recLbl = { pay: "Pay", hold: "Hold", deny: "Deny" };
+    return '<div class="card" style="padding:0;overflow:hidden"><div style="padding:11px 13px 6px;font-weight:500;font-size:13px">' + title + ' <span class="muted" style="font-weight:400;font-size:11px">· ' + rows.length + '</span></div>' +
+      '<table><tbody>' + rows.map(function (a) {
+        var p = window.DP.getProvider(a.providerId);
+        return '<tr class="row" data-id="' + a.id + '"><td style="width:70px">' + window.UI.riskChip(a.riskScore) + '</td><td><span style="font-weight:500">' + window.APP.esc(p.name) + '</span> <span class="tag fwa">' + a.fwaType + '</span></td>' +
+          '<td class="right" style="font-weight:500">' + window.DP.usd(a.exposurePre || 0) + '</td>' +
+          '<td style="width:70px;color:' + recTx[a.recommendedAction] + ';font-weight:500;font-size:11.5px">' + (recLbl[a.recommendedAction] || "—") + '</td></tr>';
+      }).join("") + '</tbody></table></div>';
+  }
+
   function nextCard(a, sub) {
     return '<div class="card" style="margin-bottom:10px;display:flex;align-items:center;gap:12px;border:0.5px solid #9fe1d8">' +
       window.UI.riskChip(a.riskScore) +
@@ -77,6 +106,7 @@
     var next = document.getElementById("h-next"); if (next) next.addEventListener("click", function () { window.APP.openAllegation(next.getAttribute("data-id")); });
     var appr = document.getElementById("h-appr"); if (appr) appr.addEventListener("click", function () { window.APP.nav("approvals"); });
     var team = document.getElementById("h-team"); if (team) team.addEventListener("click", function () { window.APP.nav("team"); });
+    var triage = document.getElementById("h-triage"); if (triage) triage.addEventListener("click", function () { window.APP.nav("queue"); });
     mount.querySelectorAll(".tm-link").forEach(function (el) { el.addEventListener("click", function () { window.APP.openTeam(el.getAttribute("data-team")); }); });
     mount.querySelectorAll("tr.row, .row[data-id]").forEach(function (el) { el.addEventListener("click", function () { window.APP.openAllegation(el.getAttribute("data-id")); }); });
   }

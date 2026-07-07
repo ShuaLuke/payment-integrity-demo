@@ -2,7 +2,7 @@
 (function () {
   var mount;
   var APP = {
-    state: { view: "queue", allegationId: null, filters: {}, decisions: {}, audit: [], investigations: [], role: "analyst", watchlist: {} },
+    state: { view: "queue", allegationId: null, filters: {}, decisions: {}, audit: [], investigations: [], role: "analyst", watchlist: {}, mode: "retrospective", prepayDecisions: {} },
 
     ROLES: { analyst: { name: "Dana Whitmore", title: "Analyst", initials: "DW" }, supervisor: { name: "Karen Boyd", title: "Supervisor", initials: "KB" } },
     isSupervisor: function () { return APP.state.role === "supervisor"; },
@@ -120,6 +120,51 @@
       return on;
     },
 
+    // ---- prepay vs retrospective (global mode / lens) ----
+    // Retrospective = post-payment review & recoupment (the default "pay and report"
+    // world). Prepay = pending claims scored BEFORE payment; analyst decides Pay/Hold/Deny.
+    mode: function () { return APP.state.mode || "retrospective"; },
+    isPrepay: function () { return APP.mode() === "prepay"; },
+    setMode: function (m) {
+      if (APP.mode() === m) return;
+      APP.state.mode = m;
+      APP.setModeHeader();
+      APP.auditLog("MODE_SWITCH", m === "prepay" ? "Switched to Prepay — pre-payment triage" : "Switched to Retrospective — post-payment review");
+      // land on a surface that makes sense for the mode
+      var v = APP.state.view;
+      if (["queue", "home", "claim", "approvals", "analytics", "provider"].indexOf(v) < 0) v = "home";
+      if (APP.isPrepay() && (v === "approvals")) v = "queue";
+      APP.nav(v, { id: APP.state.allegationId });
+    },
+    setModeHeader: function () {
+      document.querySelectorAll(".modebtn").forEach(function (b) { b.classList.toggle("active", b.getAttribute("data-mode") === APP.mode()); });
+      document.body.setAttribute("data-mode", APP.mode());
+    },
+    prepayDecisionFor: function (id) { return APP.state.prepayDecisions[id] || null; },
+    // Analyst triages a pending claim before it is paid.
+    prepayDecide: function (id, action) {
+      var a = window.DP.raw.allegations.find(function (x) { return x.id === id; });
+      if (!a) return;
+      var claim = a.claimId ? window.DP.getClaim(a.claimId) : null;
+      a.status = { pay: "Cleared to pay", hold: "On hold", deny: "Denied" }[action];
+      if (claim) claim.claimStatus = { pay: "Approved for payment", hold: "On hold — records requested", deny: "Denied" }[action];
+      APP.state.prepayDecisions[id] = { action: action, ts: new Date(), atRisk: a.exposurePre || 0 };
+      APP.auditLog("PREPAY_" + action.toUpperCase(), "Pending claim #" + id + " · " + { pay: "cleared to pay", hold: "held for records", deny: "denied — payment prevented" }[action] + " · " + window.DP.usd(a.exposurePre || 0));
+    },
+    prepayStats: function () {
+      var rows = window.DP.listAllegations({ mode: "prepay" }), dec = APP.state.prepayDecisions;
+      var s = { total: rows.length, atRisk: 0, prevented: 0, released: 0, held: 0, pending: 0 };
+      rows.forEach(function (r) {
+        s.atRisk += r.exposurePre || 0;
+        var d = dec[r.id];
+        if (!d) s.pending++;
+        else if (d.action === "deny") s.prevented += r.exposurePre || 0;
+        else if (d.action === "pay") s.released += r.exposurePre || 0;
+        else s.held += r.exposurePre || 0;
+      });
+      return s;
+    },
+
     // ---- information architecture: 4 areas, each with sub-views ----
     SUBS: {
       home: [],
@@ -191,6 +236,8 @@
       });
       var rs = document.getElementById("role-switch");
       if (rs) rs.addEventListener("click", APP.toggleRole);
+      document.querySelectorAll(".modebtn").forEach(function (b) { b.addEventListener("click", function () { APP.setMode(b.getAttribute("data-mode")); }); });
+      APP.setModeHeader();
       APP.setRoleHeader();
       APP.auditLog("SESSION_START", APP.ROLES[APP.state.role].name + " signed in · " + (window.SB && window.SB.enabled ? "authenticated" : "PIV authenticated"));
       APP.nav("home");
@@ -207,7 +254,7 @@
       return '<span class="chip ' + cls + '"><span class="s">' + r + '</span> ' + lbl + '</span>';
     },
     statusPill: function (s) {
-      var m = { "New": "p-new", "Assigned": "p-asg", "Under review": "p-rev", "Recommended close": "p-rec", "Confirmed": "p-conf", "Dismissed": "p-dis", "Escalated": "p-esc", "Pending review": "p-pend", "Returned": "p-ret" };
+      var m = { "New": "p-new", "Assigned": "p-asg", "Under review": "p-rev", "Recommended close": "p-rec", "Confirmed": "p-conf", "Dismissed": "p-dis", "Escalated": "p-esc", "Pending review": "p-pend", "Returned": "p-ret", "Pending": "p-new", "Cleared to pay": "p-dis", "On hold": "p-esc", "Denied": "p-conf" };
       return '<span class="pill ' + (m[s] || "p-asg") + '">' + s + '</span>';
     },
     srcTag: function (s) { return '<span class="muted" style="font-size:10.5px">' + (s === "Pattern Recognition" ? "ML/AI" : s === "Rules Engine" ? "Rules" : "ML/AI + Rules") + '</span>'; }
