@@ -8,7 +8,7 @@
     var provIds = ["PR001", "PR002", "PR003"];
     var nodes = [], links = [], seen = {};
     provIds.forEach(function (id) { var p = P[id]; nodes.push({ id: id, type: "Provider", name: shortName(p.name), full: p.name, risk: p.riskScore, npi: p.npi, tin: p.tin, spec: p.taxonomyLabel }); seen[id] = 1; });
-    var shared = D.graph.edges.filter(function (e) { return e.type === "SHARES_PATIENT_WITH"; }).map(function (e) { return e.props.veteranId; });
+    var shared = D.graph.edges.filter(function (e) { return e.type === "SHARES_PATIENT_WITH" && e.props && e.props.veteranId; }).map(function (e) { return e.props.veteranId; });
     [].concat(shared).filter(function (v, i, arr) { return arr.indexOf(v) === i; }).forEach(function (vid) {
       var v = V[vid]; nodes.push({ id: vid, type: "Veteran", name: v.name, city: v.city }); seen[vid] = 1;
       links.push({ source: "PR001", target: vid, type: "treated" });

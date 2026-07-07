@@ -79,6 +79,43 @@
     getPrecedent: function (pid) { return (D.precedents || []).find(function (p) { return p.id === pid; }) || null; },
     listClaimsByProvider: function (providerId) { return D.claims.filter(function (c) { return c.providerId === providerId; }); },
     listAllegationsByProvider: function (providerId) { return D.allegations.filter(function (a) { return a.providerId === providerId; }); },
-    listInvestigations: function () { return D.allegations.filter(function (a) { return a.status === "Escalated"; }); }
+    listInvestigations: function () { return D.allegations.filter(function (a) { return a.status === "Escalated"; }); },
+
+    // ---- provider report card (radar spokes + drill-down) ----
+    getGroups: function () { var p = D.providers.find(function (x) { return x.groupScores; }); return p ? p.groupScores.map(function (g) { return g.group; }) : []; },
+    getReportCard: function (id) { var p = providers[id]; return p ? { groups: p.groupScores || [], attributes: p.groupAttributes || {} } : null; },
+    // Providers ranked by a single group's score (outlier comparison / ranking).
+    rankByGroup: function (group) {
+      return D.providers.filter(function (p) { return p.groupScores; })
+        .map(function (p) { var gs = p.groupScores.find(function (g) { return g.group === group; }); return { id: p.id, name: p.name, specialty: p.taxonomyLabel, role: p.role, score: gs ? gs.score : 0, peer: gs ? gs.peer : 0, outlier: gs ? gs.outlier : false }; })
+        .sort(function (a, b) { return b.score - a.score; });
+    },
+
+    // ---- collusion network: providers connected to `id` by shared identifiers ----
+    // Traverses SHARES_TIN / SHARES_OFFICER / SHARES_REGISTRATION / REFERRED_TO /
+    // SHARES_PATIENT_WITH (provider↔provider) plus TREATED_BY (veteran→provider).
+    getCollusionNetwork: function (id) {
+      var provEdge = { SHARES_TIN: 1, SHARES_OFFICER: 1, SHARES_REGISTRATION: 1, REFERRED_TO: 1, SHARES_PATIENT_WITH: 1 };
+      var E = D.graph.edges, adj = {};
+      E.forEach(function (e) {
+        if (provEdge[e.type] && providers[e.source] && providers[e.target]) {
+          (adj[e.source] = adj[e.source] || []).push(e.target);
+          (adj[e.target] = adj[e.target] || []).push(e.source);
+        }
+      });
+      var seen = {}, queue = [id]; seen[id] = 1;
+      while (queue.length) { var cur = queue.shift(); (adj[cur] || []).forEach(function (n) { if (!seen[n]) { seen[n] = 1; queue.push(n); } }); }
+      var provIds = Object.keys(seen);
+      var links = E.filter(function (e) { return provEdge[e.type] && seen[e.source] && seen[e.target]; });
+      var vetLinks = E.filter(function (e) { return e.type === "TREATED_BY" && seen[e.target] && veterans[e.source]; });
+      var vetSeen = {}; vetLinks.forEach(function (e) { vetSeen[e.source] = 1; });
+      return {
+        providers: provIds.map(function (x) { return providers[x]; }),
+        links: links,
+        veterans: Object.keys(vetSeen).map(function (x) { return veterans[x]; }),
+        vetLinks: vetLinks,
+        isRing: provIds.length > 1
+      };
+    }
   };
 })();

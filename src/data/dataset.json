@@ -6,12 +6,12 @@
     "riskScale": "0-100 (High >= 80, Medium 50-79, Low < 50)",
     "notes": "NPIs deliberately fail the NPI check digit; TINs use the 00- prefix. Amounts are illustrative CMS-allowed proxies.",
     "counts": {
-      "providers": 18,
-      "veterans": 38,
-      "claims": 567,
-      "allegations": 24,
-      "edges": 62,
-      "graphNodes": 50
+      "providers": 22,
+      "veterans": 45,
+      "claims": 584,
+      "allegations": 28,
+      "edges": 104,
+      "graphNodes": 65
     }
   },
   "providers": [
@@ -30,7 +30,117 @@
       "totalPaid": 61199,
       "em99215ShareComputed": 0.9,
       "openAllegations": 2,
-      "riskScore": 96
+      "riskScore": 96,
+      "groupScores": [
+        {
+          "group": "Charge & Payment",
+          "score": 74,
+          "peer": 38,
+          "outlier": true
+        },
+        {
+          "group": "Diagnostic Testing",
+          "score": 27,
+          "peer": 34,
+          "outlier": false
+        },
+        {
+          "group": "Distance / Travel",
+          "score": 23,
+          "peer": 30,
+          "outlier": false
+        },
+        {
+          "group": "Utilization",
+          "score": 44,
+          "peer": 40,
+          "outlier": false
+        },
+        {
+          "group": "Coding",
+          "score": 88,
+          "peer": 36,
+          "outlier": true
+        }
+      ],
+      "groupAttributes": {
+        "Charge & Payment": [
+          {
+            "label": "Charge & Payment index vs peers",
+            "value": "elevated",
+            "peer": "norm",
+            "outlier": true
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "97th",
+            "peer": "50th",
+            "outlier": true
+          }
+        ],
+        "Diagnostic Testing": [
+          {
+            "label": "Diagnostic Testing index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "60th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Distance / Travel": [
+          {
+            "label": "Distance / Travel index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "49th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Utilization": [
+          {
+            "label": "Utilization index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "53th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Coding": [
+          {
+            "label": "99215 share of established E/M",
+            "value": "90%",
+            "peer": "14%",
+            "outlier": true
+          },
+          {
+            "label": "Level-5 vs documented complexity",
+            "value": "5.8σ high",
+            "peer": "±1σ",
+            "outlier": true
+          },
+          {
+            "label": "Down-coding rate",
+            "value": "0.4%",
+            "peer": "6%",
+            "outlier": true
+          }
+        ]
+      }
     },
     {
       "id": "PR002",
@@ -46,7 +156,111 @@
       "claimCount": 31,
       "totalPaid": 31310,
       "openAllegations": 2,
-      "riskScore": 91
+      "riskScore": 91,
+      "groupScores": [
+        {
+          "group": "Charge & Payment",
+          "score": 71,
+          "peer": 38,
+          "outlier": true
+        },
+        {
+          "group": "Diagnostic Testing",
+          "score": 31,
+          "peer": 34,
+          "outlier": false
+        },
+        {
+          "group": "Distance / Travel",
+          "score": 38,
+          "peer": 30,
+          "outlier": false
+        },
+        {
+          "group": "Utilization",
+          "score": 38,
+          "peer": 40,
+          "outlier": false
+        },
+        {
+          "group": "Coding",
+          "score": 84,
+          "peer": 36,
+          "outlier": true
+        }
+      ],
+      "groupAttributes": {
+        "Charge & Payment": [
+          {
+            "label": "Charge & Payment index vs peers",
+            "value": "elevated",
+            "peer": "norm",
+            "outlier": true
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "97th",
+            "peer": "50th",
+            "outlier": true
+          }
+        ],
+        "Diagnostic Testing": [
+          {
+            "label": "Diagnostic Testing index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "40th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Distance / Travel": [
+          {
+            "label": "Distance / Travel index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "49th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Utilization": [
+          {
+            "label": "Utilization index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "50th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Coding": [
+          {
+            "label": "Coding index vs peers",
+            "value": "elevated",
+            "peer": "norm",
+            "outlier": true
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "97th",
+            "peer": "50th",
+            "outlier": true
+          }
+        ]
+      }
     },
     {
       "id": "PR003",
@@ -62,7 +276,117 @@
       "claimCount": 36,
       "totalPaid": 3168,
       "openAllegations": 2,
-      "riskScore": 78
+      "riskScore": 78,
+      "groupScores": [
+        {
+          "group": "Charge & Payment",
+          "score": 47,
+          "peer": 38,
+          "outlier": false
+        },
+        {
+          "group": "Diagnostic Testing",
+          "score": 36,
+          "peer": 34,
+          "outlier": false
+        },
+        {
+          "group": "Distance / Travel",
+          "score": 29,
+          "peer": 30,
+          "outlier": false
+        },
+        {
+          "group": "Utilization",
+          "score": 86,
+          "peer": 40,
+          "outlier": true
+        },
+        {
+          "group": "Coding",
+          "score": 44,
+          "peer": 36,
+          "outlier": false
+        }
+      ],
+      "groupAttributes": {
+        "Charge & Payment": [
+          {
+            "label": "Charge & Payment index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "60th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Diagnostic Testing": [
+          {
+            "label": "Diagnostic Testing index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "56th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Distance / Travel": [
+          {
+            "label": "Distance / Travel index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "68th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Utilization": [
+          {
+            "label": "Per-patient procedure frequency",
+            "value": "36 / 90 days",
+            "peer": "9 / 90 days",
+            "outlier": true
+          },
+          {
+            "label": "Single-patient concentration",
+            "value": "100%",
+            "peer": "18%",
+            "outlier": true
+          },
+          {
+            "label": "Clinical justification on file",
+            "value": "ESRD dialysis order",
+            "peer": "—",
+            "outlier": false
+          }
+        ],
+        "Coding": [
+          {
+            "label": "Coding index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "64th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ]
+      }
     },
     {
       "id": "PR100",
@@ -80,7 +404,111 @@
       "totalPaid": 1565,
       "em99215ShareComputed": 0.08,
       "openAllegations": 0,
-      "riskScore": 0
+      "riskScore": 0,
+      "groupScores": [
+        {
+          "group": "Charge & Payment",
+          "score": 44,
+          "peer": 38,
+          "outlier": false
+        },
+        {
+          "group": "Diagnostic Testing",
+          "score": 35,
+          "peer": 34,
+          "outlier": false
+        },
+        {
+          "group": "Distance / Travel",
+          "score": 38,
+          "peer": 30,
+          "outlier": false
+        },
+        {
+          "group": "Utilization",
+          "score": 44,
+          "peer": 40,
+          "outlier": false
+        },
+        {
+          "group": "Coding",
+          "score": 37,
+          "peer": 36,
+          "outlier": false
+        }
+      ],
+      "groupAttributes": {
+        "Charge & Payment": [
+          {
+            "label": "Charge & Payment index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "41th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Diagnostic Testing": [
+          {
+            "label": "Diagnostic Testing index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "53th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Distance / Travel": [
+          {
+            "label": "Distance / Travel index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "48th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Utilization": [
+          {
+            "label": "Utilization index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "41th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Coding": [
+          {
+            "label": "Coding index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "57th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ]
+      }
     },
     {
       "id": "PR101",
@@ -98,7 +526,111 @@
       "totalPaid": 1286,
       "em99215ShareComputed": 0.18,
       "openAllegations": 0,
-      "riskScore": 0
+      "riskScore": 0,
+      "groupScores": [
+        {
+          "group": "Charge & Payment",
+          "score": 36,
+          "peer": 38,
+          "outlier": false
+        },
+        {
+          "group": "Diagnostic Testing",
+          "score": 31,
+          "peer": 34,
+          "outlier": false
+        },
+        {
+          "group": "Distance / Travel",
+          "score": 25,
+          "peer": 30,
+          "outlier": false
+        },
+        {
+          "group": "Utilization",
+          "score": 32,
+          "peer": 40,
+          "outlier": false
+        },
+        {
+          "group": "Coding",
+          "score": 33,
+          "peer": 36,
+          "outlier": false
+        }
+      ],
+      "groupAttributes": {
+        "Charge & Payment": [
+          {
+            "label": "Charge & Payment index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "44th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Diagnostic Testing": [
+          {
+            "label": "Diagnostic Testing index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "55th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Distance / Travel": [
+          {
+            "label": "Distance / Travel index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "38th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Utilization": [
+          {
+            "label": "Utilization index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "58th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Coding": [
+          {
+            "label": "Coding index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "66th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ]
+      }
     },
     {
       "id": "PR102",
@@ -116,7 +648,111 @@
       "totalPaid": 893,
       "em99215ShareComputed": 0,
       "openAllegations": 0,
-      "riskScore": 0
+      "riskScore": 0,
+      "groupScores": [
+        {
+          "group": "Charge & Payment",
+          "score": 42,
+          "peer": 38,
+          "outlier": false
+        },
+        {
+          "group": "Diagnostic Testing",
+          "score": 29,
+          "peer": 34,
+          "outlier": false
+        },
+        {
+          "group": "Distance / Travel",
+          "score": 33,
+          "peer": 30,
+          "outlier": false
+        },
+        {
+          "group": "Utilization",
+          "score": 35,
+          "peer": 40,
+          "outlier": false
+        },
+        {
+          "group": "Coding",
+          "score": 44,
+          "peer": 36,
+          "outlier": false
+        }
+      ],
+      "groupAttributes": {
+        "Charge & Payment": [
+          {
+            "label": "Charge & Payment index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "50th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Diagnostic Testing": [
+          {
+            "label": "Diagnostic Testing index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "37th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Distance / Travel": [
+          {
+            "label": "Distance / Travel index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "38th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Utilization": [
+          {
+            "label": "Utilization index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "38th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Coding": [
+          {
+            "label": "Coding index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "36th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ]
+      }
     },
     {
       "id": "PR103",
@@ -134,7 +770,111 @@
       "totalPaid": 1119,
       "em99215ShareComputed": 0,
       "openAllegations": 0,
-      "riskScore": 0
+      "riskScore": 0,
+      "groupScores": [
+        {
+          "group": "Charge & Payment",
+          "score": 43,
+          "peer": 38,
+          "outlier": false
+        },
+        {
+          "group": "Diagnostic Testing",
+          "score": 33,
+          "peer": 34,
+          "outlier": false
+        },
+        {
+          "group": "Distance / Travel",
+          "score": 36,
+          "peer": 30,
+          "outlier": false
+        },
+        {
+          "group": "Utilization",
+          "score": 37,
+          "peer": 40,
+          "outlier": false
+        },
+        {
+          "group": "Coding",
+          "score": 36,
+          "peer": 36,
+          "outlier": false
+        }
+      ],
+      "groupAttributes": {
+        "Charge & Payment": [
+          {
+            "label": "Charge & Payment index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "46th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Diagnostic Testing": [
+          {
+            "label": "Diagnostic Testing index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "61th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Distance / Travel": [
+          {
+            "label": "Distance / Travel index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "53th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Utilization": [
+          {
+            "label": "Utilization index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "64th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Coding": [
+          {
+            "label": "Coding index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "70th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ]
+      }
     },
     {
       "id": "PR104",
@@ -152,7 +892,111 @@
       "totalPaid": 1229,
       "em99215ShareComputed": 0,
       "openAllegations": 0,
-      "riskScore": 0
+      "riskScore": 0,
+      "groupScores": [
+        {
+          "group": "Charge & Payment",
+          "score": 43,
+          "peer": 38,
+          "outlier": false
+        },
+        {
+          "group": "Diagnostic Testing",
+          "score": 41,
+          "peer": 34,
+          "outlier": false
+        },
+        {
+          "group": "Distance / Travel",
+          "score": 35,
+          "peer": 30,
+          "outlier": false
+        },
+        {
+          "group": "Utilization",
+          "score": 35,
+          "peer": 40,
+          "outlier": false
+        },
+        {
+          "group": "Coding",
+          "score": 28,
+          "peer": 36,
+          "outlier": false
+        }
+      ],
+      "groupAttributes": {
+        "Charge & Payment": [
+          {
+            "label": "Charge & Payment index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "65th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Diagnostic Testing": [
+          {
+            "label": "Diagnostic Testing index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "69th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Distance / Travel": [
+          {
+            "label": "Distance / Travel index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "43th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Utilization": [
+          {
+            "label": "Utilization index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "38th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Coding": [
+          {
+            "label": "Coding index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "64th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ]
+      }
     },
     {
       "id": "PR105",
@@ -170,7 +1014,111 @@
       "totalPaid": 1283,
       "em99215ShareComputed": 0.25,
       "openAllegations": 0,
-      "riskScore": 0
+      "riskScore": 0,
+      "groupScores": [
+        {
+          "group": "Charge & Payment",
+          "score": 34,
+          "peer": 38,
+          "outlier": false
+        },
+        {
+          "group": "Diagnostic Testing",
+          "score": 26,
+          "peer": 34,
+          "outlier": false
+        },
+        {
+          "group": "Distance / Travel",
+          "score": 22,
+          "peer": 30,
+          "outlier": false
+        },
+        {
+          "group": "Utilization",
+          "score": 36,
+          "peer": 40,
+          "outlier": false
+        },
+        {
+          "group": "Coding",
+          "score": 45,
+          "peer": 36,
+          "outlier": false
+        }
+      ],
+      "groupAttributes": {
+        "Charge & Payment": [
+          {
+            "label": "Charge & Payment index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "59th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Diagnostic Testing": [
+          {
+            "label": "Diagnostic Testing index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "57th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Distance / Travel": [
+          {
+            "label": "Distance / Travel index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "36th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Utilization": [
+          {
+            "label": "Utilization index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "62th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Coding": [
+          {
+            "label": "Coding index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "53th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ]
+      }
     },
     {
       "id": "PR200",
@@ -187,7 +1135,111 @@
       "claimCount": 10,
       "totalPaid": 520,
       "openAllegations": 4,
-      "riskScore": 83
+      "riskScore": 83,
+      "groupScores": [
+        {
+          "group": "Charge & Payment",
+          "score": 36,
+          "peer": 38,
+          "outlier": false
+        },
+        {
+          "group": "Diagnostic Testing",
+          "score": 40,
+          "peer": 34,
+          "outlier": false
+        },
+        {
+          "group": "Distance / Travel",
+          "score": 35,
+          "peer": 30,
+          "outlier": false
+        },
+        {
+          "group": "Utilization",
+          "score": 43,
+          "peer": 40,
+          "outlier": false
+        },
+        {
+          "group": "Coding",
+          "score": 62,
+          "peer": 36,
+          "outlier": true
+        }
+      ],
+      "groupAttributes": {
+        "Charge & Payment": [
+          {
+            "label": "Charge & Payment index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "59th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Diagnostic Testing": [
+          {
+            "label": "Diagnostic Testing index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "53th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Distance / Travel": [
+          {
+            "label": "Distance / Travel index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "35th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Utilization": [
+          {
+            "label": "Utilization index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "63th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Coding": [
+          {
+            "label": "Coding index vs peers",
+            "value": "elevated",
+            "peer": "norm",
+            "outlier": true
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "97th",
+            "peer": "50th",
+            "outlier": true
+          }
+        ]
+      }
     },
     {
       "id": "PR201",
@@ -204,7 +1256,111 @@
       "claimCount": 10,
       "totalPaid": 2100,
       "openAllegations": 1,
-      "riskScore": 71
+      "riskScore": 71,
+      "groupScores": [
+        {
+          "group": "Charge & Payment",
+          "score": 64,
+          "peer": 38,
+          "outlier": true
+        },
+        {
+          "group": "Diagnostic Testing",
+          "score": 38,
+          "peer": 34,
+          "outlier": false
+        },
+        {
+          "group": "Distance / Travel",
+          "score": 34,
+          "peer": 30,
+          "outlier": false
+        },
+        {
+          "group": "Utilization",
+          "score": 48,
+          "peer": 40,
+          "outlier": false
+        },
+        {
+          "group": "Coding",
+          "score": 39,
+          "peer": 36,
+          "outlier": false
+        }
+      ],
+      "groupAttributes": {
+        "Charge & Payment": [
+          {
+            "label": "Charge & Payment index vs peers",
+            "value": "elevated",
+            "peer": "norm",
+            "outlier": true
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "97th",
+            "peer": "50th",
+            "outlier": true
+          }
+        ],
+        "Diagnostic Testing": [
+          {
+            "label": "Diagnostic Testing index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "69th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Distance / Travel": [
+          {
+            "label": "Distance / Travel index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "52th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Utilization": [
+          {
+            "label": "Utilization index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "47th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Coding": [
+          {
+            "label": "Coding index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "58th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ]
+      }
     },
     {
       "id": "PR202",
@@ -221,7 +1377,111 @@
       "claimCount": 11,
       "totalPaid": 1320,
       "openAllegations": 1,
-      "riskScore": 88
+      "riskScore": 88,
+      "groupScores": [
+        {
+          "group": "Charge & Payment",
+          "score": 46,
+          "peer": 38,
+          "outlier": false
+        },
+        {
+          "group": "Diagnostic Testing",
+          "score": 33,
+          "peer": 34,
+          "outlier": false
+        },
+        {
+          "group": "Distance / Travel",
+          "score": 28,
+          "peer": 30,
+          "outlier": false
+        },
+        {
+          "group": "Utilization",
+          "score": 33,
+          "peer": 40,
+          "outlier": false
+        },
+        {
+          "group": "Coding",
+          "score": 62,
+          "peer": 36,
+          "outlier": true
+        }
+      ],
+      "groupAttributes": {
+        "Charge & Payment": [
+          {
+            "label": "Charge & Payment index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "47th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Diagnostic Testing": [
+          {
+            "label": "Diagnostic Testing index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "43th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Distance / Travel": [
+          {
+            "label": "Distance / Travel index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "46th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Utilization": [
+          {
+            "label": "Utilization index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "65th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Coding": [
+          {
+            "label": "Coding index vs peers",
+            "value": "elevated",
+            "peer": "norm",
+            "outlier": true
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "97th",
+            "peer": "50th",
+            "outlier": true
+          }
+        ]
+      }
     },
     {
       "id": "PR203",
@@ -238,7 +1498,111 @@
       "claimCount": 8,
       "totalPaid": 540,
       "openAllegations": 1,
-      "riskScore": 64
+      "riskScore": 64,
+      "groupScores": [
+        {
+          "group": "Charge & Payment",
+          "score": 33,
+          "peer": 38,
+          "outlier": false
+        },
+        {
+          "group": "Diagnostic Testing",
+          "score": 38,
+          "peer": 34,
+          "outlier": false
+        },
+        {
+          "group": "Distance / Travel",
+          "score": 24,
+          "peer": 30,
+          "outlier": false
+        },
+        {
+          "group": "Utilization",
+          "score": 36,
+          "peer": 40,
+          "outlier": false
+        },
+        {
+          "group": "Coding",
+          "score": 63,
+          "peer": 36,
+          "outlier": true
+        }
+      ],
+      "groupAttributes": {
+        "Charge & Payment": [
+          {
+            "label": "Charge & Payment index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "43th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Diagnostic Testing": [
+          {
+            "label": "Diagnostic Testing index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "61th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Distance / Travel": [
+          {
+            "label": "Distance / Travel index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "68th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Utilization": [
+          {
+            "label": "Utilization index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "50th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Coding": [
+          {
+            "label": "Coding index vs peers",
+            "value": "elevated",
+            "peer": "norm",
+            "outlier": true
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "97th",
+            "peer": "50th",
+            "outlier": true
+          }
+        ]
+      }
     },
     {
       "id": "PR204",
@@ -255,8 +1619,112 @@
       "claimCount": 9,
       "totalPaid": 727,
       "em99215ShareComputed": 0,
-      "openAllegations": 3,
-      "riskScore": 80
+      "openAllegations": 6,
+      "riskScore": 80,
+      "groupScores": [
+        {
+          "group": "Charge & Payment",
+          "score": 38,
+          "peer": 38,
+          "outlier": false
+        },
+        {
+          "group": "Diagnostic Testing",
+          "score": 36,
+          "peer": 34,
+          "outlier": false
+        },
+        {
+          "group": "Distance / Travel",
+          "score": 26,
+          "peer": 30,
+          "outlier": false
+        },
+        {
+          "group": "Utilization",
+          "score": 38,
+          "peer": 40,
+          "outlier": false
+        },
+        {
+          "group": "Coding",
+          "score": 63,
+          "peer": 36,
+          "outlier": true
+        }
+      ],
+      "groupAttributes": {
+        "Charge & Payment": [
+          {
+            "label": "Charge & Payment index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "55th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Diagnostic Testing": [
+          {
+            "label": "Diagnostic Testing index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "63th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Distance / Travel": [
+          {
+            "label": "Distance / Travel index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "58th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Utilization": [
+          {
+            "label": "Utilization index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "40th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Coding": [
+          {
+            "label": "Coding index vs peers",
+            "value": "elevated",
+            "peer": "norm",
+            "outlier": true
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "97th",
+            "peer": "50th",
+            "outlier": true
+          }
+        ]
+      }
     },
     {
       "id": "PR205",
@@ -272,8 +1740,112 @@
       "flagged": true,
       "claimCount": 11,
       "totalPaid": 352,
-      "openAllegations": 4,
-      "riskScore": 90
+      "openAllegations": 3,
+      "riskScore": 90,
+      "groupScores": [
+        {
+          "group": "Charge & Payment",
+          "score": 68,
+          "peer": 38,
+          "outlier": true
+        },
+        {
+          "group": "Diagnostic Testing",
+          "score": 31,
+          "peer": 34,
+          "outlier": false
+        },
+        {
+          "group": "Distance / Travel",
+          "score": 37,
+          "peer": 30,
+          "outlier": false
+        },
+        {
+          "group": "Utilization",
+          "score": 49,
+          "peer": 40,
+          "outlier": false
+        },
+        {
+          "group": "Coding",
+          "score": 38,
+          "peer": 36,
+          "outlier": false
+        }
+      ],
+      "groupAttributes": {
+        "Charge & Payment": [
+          {
+            "label": "Charge & Payment index vs peers",
+            "value": "elevated",
+            "peer": "norm",
+            "outlier": true
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "97th",
+            "peer": "50th",
+            "outlier": true
+          }
+        ],
+        "Diagnostic Testing": [
+          {
+            "label": "Diagnostic Testing index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "56th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Distance / Travel": [
+          {
+            "label": "Distance / Travel index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "35th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Utilization": [
+          {
+            "label": "Utilization index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "58th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Coding": [
+          {
+            "label": "Coding index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "60th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ]
+      }
     },
     {
       "id": "PR206",
@@ -290,8 +1862,112 @@
       "claimCount": 9,
       "totalPaid": 981,
       "em99215ShareComputed": 0,
-      "openAllegations": 0,
-      "riskScore": 0
+      "openAllegations": 1,
+      "riskScore": 49,
+      "groupScores": [
+        {
+          "group": "Charge & Payment",
+          "score": 42,
+          "peer": 38,
+          "outlier": false
+        },
+        {
+          "group": "Diagnostic Testing",
+          "score": 39,
+          "peer": 34,
+          "outlier": false
+        },
+        {
+          "group": "Distance / Travel",
+          "score": 26,
+          "peer": 30,
+          "outlier": false
+        },
+        {
+          "group": "Utilization",
+          "score": 47,
+          "peer": 40,
+          "outlier": false
+        },
+        {
+          "group": "Coding",
+          "score": 42,
+          "peer": 36,
+          "outlier": false
+        }
+      ],
+      "groupAttributes": {
+        "Charge & Payment": [
+          {
+            "label": "Charge & Payment index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "60th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Diagnostic Testing": [
+          {
+            "label": "Diagnostic Testing index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "53th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Distance / Travel": [
+          {
+            "label": "Distance / Travel index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "54th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Utilization": [
+          {
+            "label": "Utilization index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "67th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Coding": [
+          {
+            "label": "Coding index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "38th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ]
+      }
     },
     {
       "id": "PR207",
@@ -308,8 +1984,112 @@
       "claimCount": 9,
       "totalPaid": 1101,
       "em99215ShareComputed": 0,
-      "openAllegations": 1,
-      "riskScore": 58
+      "openAllegations": 0,
+      "riskScore": 0,
+      "groupScores": [
+        {
+          "group": "Charge & Payment",
+          "score": 47,
+          "peer": 38,
+          "outlier": false
+        },
+        {
+          "group": "Diagnostic Testing",
+          "score": 38,
+          "peer": 34,
+          "outlier": false
+        },
+        {
+          "group": "Distance / Travel",
+          "score": 23,
+          "peer": 30,
+          "outlier": false
+        },
+        {
+          "group": "Utilization",
+          "score": 42,
+          "peer": 40,
+          "outlier": false
+        },
+        {
+          "group": "Coding",
+          "score": 36,
+          "peer": 36,
+          "outlier": false
+        }
+      ],
+      "groupAttributes": {
+        "Charge & Payment": [
+          {
+            "label": "Charge & Payment index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "56th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Diagnostic Testing": [
+          {
+            "label": "Diagnostic Testing index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "35th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Distance / Travel": [
+          {
+            "label": "Distance / Travel index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "54th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Utilization": [
+          {
+            "label": "Utilization index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "47th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Coding": [
+          {
+            "label": "Coding index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "50th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ]
+      }
     },
     {
       "id": "PR208",
@@ -326,8 +2106,656 @@
       "claimCount": 9,
       "totalPaid": 2131,
       "em99215ShareComputed": 0,
-      "openAllegations": 3,
-      "riskScore": 68
+      "openAllegations": 1,
+      "riskScore": 68,
+      "groupScores": [
+        {
+          "group": "Charge & Payment",
+          "score": 31,
+          "peer": 38,
+          "outlier": false
+        },
+        {
+          "group": "Diagnostic Testing",
+          "score": 29,
+          "peer": 34,
+          "outlier": false
+        },
+        {
+          "group": "Distance / Travel",
+          "score": 25,
+          "peer": 30,
+          "outlier": false
+        },
+        {
+          "group": "Utilization",
+          "score": 38,
+          "peer": 40,
+          "outlier": false
+        },
+        {
+          "group": "Coding",
+          "score": 35,
+          "peer": 36,
+          "outlier": false
+        }
+      ],
+      "groupAttributes": {
+        "Charge & Payment": [
+          {
+            "label": "Charge & Payment index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "36th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Diagnostic Testing": [
+          {
+            "label": "Diagnostic Testing index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "46th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Distance / Travel": [
+          {
+            "label": "Distance / Travel index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "57th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Utilization": [
+          {
+            "label": "Utilization index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "57th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Coding": [
+          {
+            "label": "Coding index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "55th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "PR300",
+      "name": "Sonoran Recovery Center",
+      "npi": "1896200636",
+      "tin": "00-1001015",
+      "taxonomyCode": "324500000X",
+      "taxonomyLabel": "Substance Abuse Rehabilitation Facility",
+      "city": "Phoenix",
+      "state": "AZ",
+      "peerGroup": "residential_treatment",
+      "role": "chain",
+      "flagged": true,
+      "officer": "Marcus D. Feld",
+      "registration": "Meridian Behavioral Holdings LLC",
+      "registrationId": "REG-AZ-0098124",
+      "claimCount": 3,
+      "totalPaid": 45440,
+      "openAllegations": 1,
+      "riskScore": 92,
+      "groupScores": [
+        {
+          "group": "Charge & Payment",
+          "score": 68,
+          "peer": 38,
+          "outlier": true
+        },
+        {
+          "group": "Diagnostic Testing",
+          "score": 39,
+          "peer": 34,
+          "outlier": false
+        },
+        {
+          "group": "Distance / Travel",
+          "score": 92,
+          "peer": 30,
+          "outlier": true
+        },
+        {
+          "group": "Utilization",
+          "score": 83,
+          "peer": 40,
+          "outlier": true
+        },
+        {
+          "group": "Coding",
+          "score": 31,
+          "peer": 36,
+          "outlier": false
+        }
+      ],
+      "groupAttributes": {
+        "Charge & Payment": [
+          {
+            "label": "Charge & Payment index vs peers",
+            "value": "elevated",
+            "peer": "norm",
+            "outlier": true
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "97th",
+            "peer": "50th",
+            "outlier": true
+          }
+        ],
+        "Diagnostic Testing": [
+          {
+            "label": "Diagnostic Testing index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "43th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Distance / Travel": [
+          {
+            "label": "Cross-state stays / patient",
+            "value": "2–3 (AZ·CA·NV)",
+            "peer": "0",
+            "outlier": true
+          },
+          {
+            "label": "Avg miles between stays",
+            "value": "540 mi",
+            "peer": "35 mi",
+            "outlier": true
+          },
+          {
+            "label": "Shared-registration facilities",
+            "value": "4",
+            "peer": "1",
+            "outlier": true
+          }
+        ],
+        "Utilization": [
+          {
+            "label": "Avg length of stay",
+            "value": "25 days",
+            "peer": "14 days",
+            "outlier": true
+          },
+          {
+            "label": "Stays under 30-day threshold",
+            "value": "100%",
+            "peer": "22%",
+            "outlier": true
+          },
+          {
+            "label": "30-day readmission rate",
+            "value": "71%",
+            "peer": "9%",
+            "outlier": true
+          }
+        ],
+        "Coding": [
+          {
+            "label": "Coding index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "46th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "PR301",
+      "name": "Pacific Sands Treatment",
+      "npi": "1505152145",
+      "tin": "00-1001016",
+      "taxonomyCode": "324500000X",
+      "taxonomyLabel": "Substance Abuse Rehabilitation Facility",
+      "city": "San Diego",
+      "state": "CA",
+      "peerGroup": "residential_treatment",
+      "role": "chain",
+      "flagged": true,
+      "officer": "Marcus D. Feld",
+      "registration": "Meridian Behavioral Holdings LLC",
+      "registrationId": "REG-AZ-0098124",
+      "claimCount": 5,
+      "totalPaid": 78080,
+      "openAllegations": 1,
+      "riskScore": 89,
+      "groupScores": [
+        {
+          "group": "Charge & Payment",
+          "score": 66,
+          "peer": 38,
+          "outlier": true
+        },
+        {
+          "group": "Diagnostic Testing",
+          "score": 41,
+          "peer": 34,
+          "outlier": false
+        },
+        {
+          "group": "Distance / Travel",
+          "score": 90,
+          "peer": 30,
+          "outlier": true
+        },
+        {
+          "group": "Utilization",
+          "score": 81,
+          "peer": 40,
+          "outlier": true
+        },
+        {
+          "group": "Coding",
+          "score": 38,
+          "peer": 36,
+          "outlier": false
+        }
+      ],
+      "groupAttributes": {
+        "Charge & Payment": [
+          {
+            "label": "Charge & Payment index vs peers",
+            "value": "elevated",
+            "peer": "norm",
+            "outlier": true
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "97th",
+            "peer": "50th",
+            "outlier": true
+          }
+        ],
+        "Diagnostic Testing": [
+          {
+            "label": "Diagnostic Testing index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "60th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Distance / Travel": [
+          {
+            "label": "Cross-state stays / patient",
+            "value": "2–3 (AZ·CA·NV)",
+            "peer": "0",
+            "outlier": true
+          },
+          {
+            "label": "Avg miles between stays",
+            "value": "540 mi",
+            "peer": "35 mi",
+            "outlier": true
+          },
+          {
+            "label": "Shared-registration facilities",
+            "value": "4",
+            "peer": "1",
+            "outlier": true
+          }
+        ],
+        "Utilization": [
+          {
+            "label": "Avg length of stay",
+            "value": "25 days",
+            "peer": "14 days",
+            "outlier": true
+          },
+          {
+            "label": "Stays under 30-day threshold",
+            "value": "100%",
+            "peer": "22%",
+            "outlier": true
+          },
+          {
+            "label": "30-day readmission rate",
+            "value": "71%",
+            "peer": "9%",
+            "outlier": true
+          }
+        ],
+        "Coding": [
+          {
+            "label": "Coding index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "65th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "PR302",
+      "name": "Silver State Wellness",
+      "npi": "1060831117",
+      "tin": "00-1001017",
+      "taxonomyCode": "324500000X",
+      "taxonomyLabel": "Substance Abuse Rehabilitation Facility",
+      "city": "Las Vegas",
+      "state": "NV",
+      "peerGroup": "residential_treatment",
+      "role": "chain",
+      "flagged": true,
+      "officer": "Marcus D. Feld",
+      "registration": "Meridian Behavioral Holdings LLC",
+      "registrationId": "REG-AZ-0098124",
+      "claimCount": 4,
+      "totalPaid": 67200,
+      "openAllegations": 1,
+      "riskScore": 90,
+      "groupScores": [
+        {
+          "group": "Charge & Payment",
+          "score": 69,
+          "peer": 38,
+          "outlier": true
+        },
+        {
+          "group": "Diagnostic Testing",
+          "score": 38,
+          "peer": 34,
+          "outlier": false
+        },
+        {
+          "group": "Distance / Travel",
+          "score": 91,
+          "peer": 30,
+          "outlier": true
+        },
+        {
+          "group": "Utilization",
+          "score": 84,
+          "peer": 40,
+          "outlier": true
+        },
+        {
+          "group": "Coding",
+          "score": 35,
+          "peer": 36,
+          "outlier": false
+        }
+      ],
+      "groupAttributes": {
+        "Charge & Payment": [
+          {
+            "label": "Charge & Payment index vs peers",
+            "value": "elevated",
+            "peer": "norm",
+            "outlier": true
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "97th",
+            "peer": "50th",
+            "outlier": true
+          }
+        ],
+        "Diagnostic Testing": [
+          {
+            "label": "Diagnostic Testing index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "41th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Distance / Travel": [
+          {
+            "label": "Cross-state stays / patient",
+            "value": "2–3 (AZ·CA·NV)",
+            "peer": "0",
+            "outlier": true
+          },
+          {
+            "label": "Avg miles between stays",
+            "value": "540 mi",
+            "peer": "35 mi",
+            "outlier": true
+          },
+          {
+            "label": "Shared-registration facilities",
+            "value": "4",
+            "peer": "1",
+            "outlier": true
+          }
+        ],
+        "Utilization": [
+          {
+            "label": "Avg length of stay",
+            "value": "25 days",
+            "peer": "14 days",
+            "outlier": true
+          },
+          {
+            "label": "Stays under 30-day threshold",
+            "value": "100%",
+            "peer": "22%",
+            "outlier": true
+          },
+          {
+            "label": "30-day readmission rate",
+            "value": "71%",
+            "peer": "9%",
+            "outlier": true
+          }
+        ],
+        "Coding": [
+          {
+            "label": "Coding index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "54th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "PR303",
+      "name": "Desert Bloom Behavioral",
+      "npi": "1425189821",
+      "tin": "00-1001018",
+      "taxonomyCode": "324500000X",
+      "taxonomyLabel": "Substance Abuse Rehabilitation Facility",
+      "city": "Tucson",
+      "state": "AZ",
+      "peerGroup": "residential_treatment",
+      "role": "chain",
+      "flagged": true,
+      "officer": "Marcus D. Feld",
+      "registration": "Meridian Behavioral Holdings LLC",
+      "registrationId": "REG-AZ-0098124",
+      "claimCount": 5,
+      "totalPaid": 82560,
+      "openAllegations": 1,
+      "riskScore": 86,
+      "groupScores": [
+        {
+          "group": "Charge & Payment",
+          "score": 64,
+          "peer": 38,
+          "outlier": true
+        },
+        {
+          "group": "Diagnostic Testing",
+          "score": 32,
+          "peer": 34,
+          "outlier": false
+        },
+        {
+          "group": "Distance / Travel",
+          "score": 88,
+          "peer": 30,
+          "outlier": true
+        },
+        {
+          "group": "Utilization",
+          "score": 79,
+          "peer": 40,
+          "outlier": true
+        },
+        {
+          "group": "Coding",
+          "score": 42,
+          "peer": 36,
+          "outlier": false
+        }
+      ],
+      "groupAttributes": {
+        "Charge & Payment": [
+          {
+            "label": "Charge & Payment index vs peers",
+            "value": "elevated",
+            "peer": "norm",
+            "outlier": true
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "97th",
+            "peer": "50th",
+            "outlier": true
+          }
+        ],
+        "Diagnostic Testing": [
+          {
+            "label": "Diagnostic Testing index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "52th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ],
+        "Distance / Travel": [
+          {
+            "label": "Cross-state stays / patient",
+            "value": "2–3 (AZ·CA·NV)",
+            "peer": "0",
+            "outlier": true
+          },
+          {
+            "label": "Avg miles between stays",
+            "value": "540 mi",
+            "peer": "35 mi",
+            "outlier": true
+          },
+          {
+            "label": "Shared-registration facilities",
+            "value": "4",
+            "peer": "1",
+            "outlier": true
+          }
+        ],
+        "Utilization": [
+          {
+            "label": "Avg length of stay",
+            "value": "25 days",
+            "peer": "14 days",
+            "outlier": true
+          },
+          {
+            "label": "Stays under 30-day threshold",
+            "value": "100%",
+            "peer": "22%",
+            "outlier": true
+          },
+          {
+            "label": "30-day readmission rate",
+            "value": "71%",
+            "peer": "9%",
+            "outlier": true
+          }
+        ],
+        "Coding": [
+          {
+            "label": "Coding index vs peers",
+            "value": "in range",
+            "peer": "norm",
+            "outlier": false
+          },
+          {
+            "label": "Percentile within specialty",
+            "value": "49th",
+            "peer": "50th",
+            "outlier": false
+          }
+        ]
+      }
     }
   ],
   "veterans": [
@@ -710,6 +3138,76 @@
       "state": "TX",
       "memberId": "MBR-758511",
       "ssn": "000-00-1594"
+    },
+    {
+      "id": "V0004",
+      "name": "Curtis Holloway",
+      "dob": "1956-06-01",
+      "sex": "F",
+      "city": "Phoenix",
+      "state": "TX",
+      "memberId": "MBR-453177",
+      "ssn": "000-00-1633"
+    },
+    {
+      "id": "V0005",
+      "name": "Beatrice Vega",
+      "dob": "1957-09-09",
+      "sex": "M",
+      "city": "Phoenix",
+      "state": "TX",
+      "memberId": "MBR-277004",
+      "ssn": "000-00-2077"
+    },
+    {
+      "id": "V0006",
+      "name": "Franklin Ridley",
+      "dob": "1984-11-16",
+      "sex": "M",
+      "city": "Phoenix",
+      "state": "TX",
+      "memberId": "MBR-361422",
+      "ssn": "000-00-7321"
+    },
+    {
+      "id": "V0007",
+      "name": "Estelle Munoz",
+      "dob": "1972-07-17",
+      "sex": "F",
+      "city": "Phoenix",
+      "state": "TX",
+      "memberId": "MBR-661132",
+      "ssn": "000-00-2719"
+    },
+    {
+      "id": "V0008",
+      "name": "Leon Ackerman",
+      "dob": "1984-05-07",
+      "sex": "F",
+      "city": "Phoenix",
+      "state": "TX",
+      "memberId": "MBR-224829",
+      "ssn": "000-00-4169"
+    },
+    {
+      "id": "V0009",
+      "name": "Gloria Sturgeon",
+      "dob": "1945-07-13",
+      "sex": "M",
+      "city": "Phoenix",
+      "state": "TX",
+      "memberId": "MBR-197554",
+      "ssn": "000-00-1618"
+    },
+    {
+      "id": "V0010",
+      "name": "Hector Ocampo",
+      "dob": "1985-07-19",
+      "sex": "F",
+      "city": "Phoenix",
+      "state": "TX",
+      "memberId": "MBR-953326",
+      "ssn": "000-00-1156"
     }
   ],
   "claims": [
@@ -16816,7 +19314,7 @@
       "authorizationId": "A00482",
       "paymentId": "P00482",
       "diagnosisCodes": [
-        "E11.9"
+        "N18.6"
       ],
       "lines": [
         {
@@ -16847,7 +19345,7 @@
       "authorizationId": "A00483",
       "paymentId": "P00483",
       "diagnosisCodes": [
-        "R07.9"
+        "Z00.00"
       ],
       "lines": [
         {
@@ -16940,7 +19438,7 @@
       "authorizationId": "A00486",
       "paymentId": "P00486",
       "diagnosisCodes": [
-        "N18.6"
+        "K21.9"
       ],
       "lines": [
         {
@@ -17002,7 +19500,7 @@
       "authorizationId": "A00488",
       "paymentId": "P00488",
       "diagnosisCodes": [
-        "M54.5"
+        "J45.909"
       ],
       "lines": [
         {
@@ -17033,7 +19531,7 @@
       "authorizationId": "A00489",
       "paymentId": "P00489",
       "diagnosisCodes": [
-        "N18.6"
+        "K21.9"
       ],
       "lines": [
         {
@@ -17064,7 +19562,7 @@
       "authorizationId": "A00490",
       "paymentId": "P00490",
       "diagnosisCodes": [
-        "Z00.00"
+        "F10.20"
       ],
       "lines": [
         {
@@ -17219,7 +19717,7 @@
       "authorizationId": "A00495",
       "paymentId": "P00495",
       "diagnosisCodes": [
-        "R07.9"
+        "Z00.00"
       ],
       "lines": [
         {
@@ -17250,7 +19748,7 @@
       "authorizationId": "A00496",
       "paymentId": "P00496",
       "diagnosisCodes": [
-        "J45.909"
+        "R07.9"
       ],
       "lines": [
         {
@@ -17281,7 +19779,7 @@
       "authorizationId": "A00497",
       "paymentId": "P00497",
       "diagnosisCodes": [
-        "N18.6"
+        "K21.9"
       ],
       "lines": [
         {
@@ -17374,7 +19872,7 @@
       "authorizationId": "A00500",
       "paymentId": "P00500",
       "diagnosisCodes": [
-        "Z00.00"
+        "F10.20"
       ],
       "lines": [
         {
@@ -17498,7 +19996,7 @@
       "authorizationId": "A00504",
       "paymentId": "P00504",
       "diagnosisCodes": [
-        "Z00.00"
+        "F10.20"
       ],
       "lines": [
         {
@@ -17529,7 +20027,7 @@
       "authorizationId": "A00505",
       "paymentId": "P00505",
       "diagnosisCodes": [
-        "I10"
+        "E11.9"
       ],
       "lines": [
         {
@@ -17560,7 +20058,7 @@
       "authorizationId": "A00506",
       "paymentId": "P00506",
       "diagnosisCodes": [
-        "J45.909"
+        "R07.9"
       ],
       "lines": [
         {
@@ -17684,7 +20182,7 @@
       "authorizationId": "A00510",
       "paymentId": "P00510",
       "diagnosisCodes": [
-        "Z00.00"
+        "F10.20"
       ],
       "lines": [
         {
@@ -17715,7 +20213,7 @@
       "authorizationId": "A00511",
       "paymentId": "P00511",
       "diagnosisCodes": [
-        "I10"
+        "E11.9"
       ],
       "lines": [
         {
@@ -17901,7 +20399,7 @@
       "authorizationId": "A00517",
       "paymentId": "P00517",
       "diagnosisCodes": [
-        "N18.6"
+        "K21.9"
       ],
       "lines": [
         {
@@ -17963,7 +20461,7 @@
       "authorizationId": "A00519",
       "paymentId": "P00519",
       "diagnosisCodes": [
-        "I10"
+        "E11.9"
       ],
       "lines": [
         {
@@ -18025,7 +20523,7 @@
       "authorizationId": "A00521",
       "paymentId": "P00521",
       "diagnosisCodes": [
-        "Z00.00"
+        "F10.20"
       ],
       "lines": [
         {
@@ -18118,7 +20616,7 @@
       "authorizationId": "A00524",
       "paymentId": "P00524",
       "diagnosisCodes": [
-        "M54.5"
+        "J45.909"
       ],
       "lines": [
         {
@@ -18242,7 +20740,7 @@
       "authorizationId": "A00528",
       "paymentId": "P00528",
       "diagnosisCodes": [
-        "E11.9"
+        "N18.6"
       ],
       "lines": [
         {
@@ -18304,7 +20802,7 @@
       "authorizationId": "A00530",
       "paymentId": "P00530",
       "diagnosisCodes": [
-        "R07.9"
+        "Z00.00"
       ],
       "lines": [
         {
@@ -18366,7 +20864,7 @@
       "authorizationId": "A00532",
       "paymentId": "P00532",
       "diagnosisCodes": [
-        "K21.9"
+        "M54.5"
       ],
       "lines": [
         {
@@ -18397,7 +20895,7 @@
       "authorizationId": "A00533",
       "paymentId": "P00533",
       "diagnosisCodes": [
-        "R07.9"
+        "Z00.00"
       ],
       "lines": [
         {
@@ -18428,7 +20926,7 @@
       "authorizationId": "A00534",
       "paymentId": "P00534",
       "diagnosisCodes": [
-        "Z00.00"
+        "F10.20"
       ],
       "lines": [
         {
@@ -18459,7 +20957,7 @@
       "authorizationId": "A00535",
       "paymentId": "P00535",
       "diagnosisCodes": [
-        "M54.5"
+        "J45.909"
       ],
       "lines": [
         {
@@ -18521,7 +21019,7 @@
       "authorizationId": "A00537",
       "paymentId": "P00537",
       "diagnosisCodes": [
-        "R07.9"
+        "Z00.00"
       ],
       "lines": [
         {
@@ -18552,7 +21050,7 @@
       "authorizationId": "A00538",
       "paymentId": "P00538",
       "diagnosisCodes": [
-        "E11.9"
+        "N18.6"
       ],
       "lines": [
         {
@@ -18738,7 +21236,7 @@
       "authorizationId": "A00544",
       "paymentId": "P00544",
       "diagnosisCodes": [
-        "E11.9"
+        "N18.6"
       ],
       "lines": [
         {
@@ -18831,7 +21329,7 @@
       "authorizationId": "A00547",
       "paymentId": "P00547",
       "diagnosisCodes": [
-        "E11.9"
+        "N18.6"
       ],
       "lines": [
         {
@@ -18893,7 +21391,7 @@
       "authorizationId": "A00549",
       "paymentId": "P00549",
       "diagnosisCodes": [
-        "J45.909"
+        "R07.9"
       ],
       "lines": [
         {
@@ -18924,7 +21422,7 @@
       "authorizationId": "A00550",
       "paymentId": "P00550",
       "diagnosisCodes": [
-        "J45.909"
+        "R07.9"
       ],
       "lines": [
         {
@@ -19017,7 +21515,7 @@
       "authorizationId": "A00553",
       "paymentId": "P00553",
       "diagnosisCodes": [
-        "Z00.00"
+        "F10.20"
       ],
       "lines": [
         {
@@ -19048,7 +21546,7 @@
       "authorizationId": "A00554",
       "paymentId": "P00554",
       "diagnosisCodes": [
-        "J45.909"
+        "R07.9"
       ],
       "lines": [
         {
@@ -19141,7 +21639,7 @@
       "authorizationId": "A00557",
       "paymentId": "P00557",
       "diagnosisCodes": [
-        "Z00.00"
+        "F10.20"
       ],
       "lines": [
         {
@@ -19172,7 +21670,7 @@
       "authorizationId": "A00558",
       "paymentId": "P00558",
       "diagnosisCodes": [
-        "M54.5"
+        "J45.909"
       ],
       "lines": [
         {
@@ -19203,7 +21701,7 @@
       "authorizationId": "A00559",
       "paymentId": "P00559",
       "diagnosisCodes": [
-        "M54.5"
+        "J45.909"
       ],
       "lines": [
         {
@@ -19327,7 +21825,7 @@
       "authorizationId": "A00563",
       "paymentId": "P00563",
       "diagnosisCodes": [
-        "Z00.00"
+        "F10.20"
       ],
       "lines": [
         {
@@ -19451,7 +21949,7 @@
       "authorizationId": "A00567",
       "paymentId": "P00567",
       "diagnosisCodes": [
-        "M54.5"
+        "J45.909"
       ],
       "lines": [
         {
@@ -19464,6 +21962,567 @@
           "paid": 250,
           "description": "MRI brain without contrast",
           "violatesRuleIds": []
+        }
+      ]
+    },
+    {
+      "id": "C00568",
+      "claimNumber": "S613X41K3-05-22",
+      "type": "837I",
+      "providerId": "PR300",
+      "veteranId": "V0004",
+      "dateOfService": "2025-01-03",
+      "billedAmount": 15360,
+      "allowedAmount": 15360,
+      "paidAmount": 15360,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00568",
+      "paymentId": "P00568",
+      "diagnosisCodes": [
+        "F10.20"
+      ],
+      "lines": [
+        {
+          "lineId": "C00568-L1",
+          "cpt": "H0018",
+          "modifiers": [],
+          "units": 24,
+          "billed": 15360,
+          "allowed": 15360,
+          "paid": 15360,
+          "description": "Behavioral health, short-term residential, per diem",
+          "violatesRuleIds": [
+            "model_los"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C00569",
+      "claimNumber": "U569X49K8-07-09",
+      "type": "837I",
+      "providerId": "PR301",
+      "veteranId": "V0004",
+      "dateOfService": "2025-02-04",
+      "billedAmount": 17920,
+      "allowedAmount": 17920,
+      "paidAmount": 17920,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00569",
+      "paymentId": "P00569",
+      "diagnosisCodes": [
+        "F10.20"
+      ],
+      "lines": [
+        {
+          "lineId": "C00569-L1",
+          "cpt": "H0018",
+          "modifiers": [],
+          "units": 28,
+          "billed": 17920,
+          "allowed": 17920,
+          "paid": 17920,
+          "description": "Behavioral health, short-term residential, per diem",
+          "violatesRuleIds": [
+            "model_los"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C00570",
+      "claimNumber": "C879X51K8-03-26",
+      "type": "837I",
+      "providerId": "PR301",
+      "veteranId": "V0005",
+      "dateOfService": "2025-01-03",
+      "billedAmount": 15360,
+      "allowedAmount": 15360,
+      "paidAmount": 15360,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00570",
+      "paymentId": "P00570",
+      "diagnosisCodes": [
+        "F10.20"
+      ],
+      "lines": [
+        {
+          "lineId": "C00570-L1",
+          "cpt": "H0018",
+          "modifiers": [],
+          "units": 24,
+          "billed": 15360,
+          "allowed": 15360,
+          "paid": 15360,
+          "description": "Behavioral health, short-term residential, per diem",
+          "violatesRuleIds": [
+            "model_los"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C00571",
+      "claimNumber": "I280X63K7-05-28",
+      "type": "837I",
+      "providerId": "PR302",
+      "veteranId": "V0005",
+      "dateOfService": "2025-02-06",
+      "billedAmount": 18560,
+      "allowedAmount": 18560,
+      "paidAmount": 18560,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00571",
+      "paymentId": "P00571",
+      "diagnosisCodes": [
+        "F10.20"
+      ],
+      "lines": [
+        {
+          "lineId": "C00571-L1",
+          "cpt": "H0018",
+          "modifiers": [],
+          "units": 29,
+          "billed": 18560,
+          "allowed": 18560,
+          "paid": 18560,
+          "description": "Behavioral health, short-term residential, per diem",
+          "violatesRuleIds": [
+            "model_los"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C00572",
+      "claimNumber": "A188X88K8-09-18",
+      "type": "837I",
+      "providerId": "PR303",
+      "veteranId": "V0005",
+      "dateOfService": "2025-03-02",
+      "billedAmount": 14720,
+      "allowedAmount": 14720,
+      "paidAmount": 14720,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00572",
+      "paymentId": "P00572",
+      "diagnosisCodes": [
+        "F10.20"
+      ],
+      "lines": [
+        {
+          "lineId": "C00572-L1",
+          "cpt": "H0018",
+          "modifiers": [],
+          "units": 23,
+          "billed": 14720,
+          "allowed": 14720,
+          "paid": 14720,
+          "description": "Behavioral health, short-term residential, per diem",
+          "violatesRuleIds": [
+            "model_los"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C00573",
+      "claimNumber": "Y312X50K7-09-37",
+      "type": "837I",
+      "providerId": "PR302",
+      "veteranId": "V0006",
+      "dateOfService": "2025-01-03",
+      "billedAmount": 15360,
+      "allowedAmount": 15360,
+      "paidAmount": 15360,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00573",
+      "paymentId": "P00573",
+      "diagnosisCodes": [
+        "F10.20"
+      ],
+      "lines": [
+        {
+          "lineId": "C00573-L1",
+          "cpt": "H0018",
+          "modifiers": [],
+          "units": 24,
+          "billed": 15360,
+          "allowed": 15360,
+          "paid": 15360,
+          "description": "Behavioral health, short-term residential, per diem",
+          "violatesRuleIds": [
+            "model_los"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C00574",
+      "claimNumber": "Z355X11K3-09-03",
+      "type": "837I",
+      "providerId": "PR303",
+      "veteranId": "V0006",
+      "dateOfService": "2025-02-08",
+      "billedAmount": 17920,
+      "allowedAmount": 17920,
+      "paidAmount": 17920,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00574",
+      "paymentId": "P00574",
+      "diagnosisCodes": [
+        "F10.20"
+      ],
+      "lines": [
+        {
+          "lineId": "C00574-L1",
+          "cpt": "H0018",
+          "modifiers": [],
+          "units": 28,
+          "billed": 17920,
+          "allowed": 17920,
+          "paid": 17920,
+          "description": "Behavioral health, short-term residential, per diem",
+          "violatesRuleIds": [
+            "model_los"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C00575",
+      "claimNumber": "N617X95K2-08-10",
+      "type": "837I",
+      "providerId": "PR303",
+      "veteranId": "V0007",
+      "dateOfService": "2025-01-03",
+      "billedAmount": 16640,
+      "allowedAmount": 16640,
+      "paidAmount": 16640,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00575",
+      "paymentId": "P00575",
+      "diagnosisCodes": [
+        "F10.20"
+      ],
+      "lines": [
+        {
+          "lineId": "C00575-L1",
+          "cpt": "H0018",
+          "modifiers": [],
+          "units": 26,
+          "billed": 16640,
+          "allowed": 16640,
+          "paid": 16640,
+          "description": "Behavioral health, short-term residential, per diem",
+          "violatesRuleIds": [
+            "model_los"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C00576",
+      "claimNumber": "K459X59K9-00-17",
+      "type": "837I",
+      "providerId": "PR300",
+      "veteranId": "V0007",
+      "dateOfService": "2025-02-05",
+      "billedAmount": 15360,
+      "allowedAmount": 15360,
+      "paidAmount": 15360,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00576",
+      "paymentId": "P00576",
+      "diagnosisCodes": [
+        "F10.20"
+      ],
+      "lines": [
+        {
+          "lineId": "C00576-L1",
+          "cpt": "H0018",
+          "modifiers": [],
+          "units": 24,
+          "billed": 15360,
+          "allowed": 15360,
+          "paid": 15360,
+          "description": "Behavioral health, short-term residential, per diem",
+          "violatesRuleIds": [
+            "model_los"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C00577",
+      "claimNumber": "B193X18K4-06-26",
+      "type": "837I",
+      "providerId": "PR301",
+      "veteranId": "V0007",
+      "dateOfService": "2025-03-06",
+      "billedAmount": 14080,
+      "allowedAmount": 14080,
+      "paidAmount": 14080,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00577",
+      "paymentId": "P00577",
+      "diagnosisCodes": [
+        "F10.20"
+      ],
+      "lines": [
+        {
+          "lineId": "C00577-L1",
+          "cpt": "H0018",
+          "modifiers": [],
+          "units": 22,
+          "billed": 14080,
+          "allowed": 14080,
+          "paid": 14080,
+          "description": "Behavioral health, short-term residential, per diem",
+          "violatesRuleIds": [
+            "model_los"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C00578",
+      "claimNumber": "T549X44K1-08-37",
+      "type": "837I",
+      "providerId": "PR300",
+      "veteranId": "V0008",
+      "dateOfService": "2025-01-03",
+      "billedAmount": 14720,
+      "allowedAmount": 14720,
+      "paidAmount": 14720,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00578",
+      "paymentId": "P00578",
+      "diagnosisCodes": [
+        "F10.20"
+      ],
+      "lines": [
+        {
+          "lineId": "C00578-L1",
+          "cpt": "H0018",
+          "modifiers": [],
+          "units": 23,
+          "billed": 14720,
+          "allowed": 14720,
+          "paid": 14720,
+          "description": "Behavioral health, short-term residential, per diem",
+          "violatesRuleIds": [
+            "model_los"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C00579",
+      "claimNumber": "Q897X63K4-04-37",
+      "type": "837I",
+      "providerId": "PR301",
+      "veteranId": "V0008",
+      "dateOfService": "2025-02-04",
+      "billedAmount": 16640,
+      "allowedAmount": 16640,
+      "paidAmount": 16640,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00579",
+      "paymentId": "P00579",
+      "diagnosisCodes": [
+        "F10.20"
+      ],
+      "lines": [
+        {
+          "lineId": "C00579-L1",
+          "cpt": "H0018",
+          "modifiers": [],
+          "units": 26,
+          "billed": 16640,
+          "allowed": 16640,
+          "paid": 16640,
+          "description": "Behavioral health, short-term residential, per diem",
+          "violatesRuleIds": [
+            "model_los"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C00580",
+      "claimNumber": "B101X17K4-08-14",
+      "type": "837I",
+      "providerId": "PR301",
+      "veteranId": "V0009",
+      "dateOfService": "2025-01-03",
+      "billedAmount": 14080,
+      "allowedAmount": 14080,
+      "paidAmount": 14080,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00580",
+      "paymentId": "P00580",
+      "diagnosisCodes": [
+        "F10.20"
+      ],
+      "lines": [
+        {
+          "lineId": "C00580-L1",
+          "cpt": "H0018",
+          "modifiers": [],
+          "units": 22,
+          "billed": 14080,
+          "allowed": 14080,
+          "paid": 14080,
+          "description": "Behavioral health, short-term residential, per diem",
+          "violatesRuleIds": [
+            "model_los"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C00581",
+      "claimNumber": "K386X75K3-08-02",
+      "type": "837I",
+      "providerId": "PR302",
+      "veteranId": "V0009",
+      "dateOfService": "2025-02-03",
+      "billedAmount": 17920,
+      "allowedAmount": 17920,
+      "paidAmount": 17920,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00581",
+      "paymentId": "P00581",
+      "diagnosisCodes": [
+        "F10.20"
+      ],
+      "lines": [
+        {
+          "lineId": "C00581-L1",
+          "cpt": "H0018",
+          "modifiers": [],
+          "units": 28,
+          "billed": 17920,
+          "allowed": 17920,
+          "paid": 17920,
+          "description": "Behavioral health, short-term residential, per diem",
+          "violatesRuleIds": [
+            "model_los"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C00582",
+      "claimNumber": "Q525X95K9-09-19",
+      "type": "837I",
+      "providerId": "PR303",
+      "veteranId": "V0009",
+      "dateOfService": "2025-03-07",
+      "billedAmount": 16640,
+      "allowedAmount": 16640,
+      "paidAmount": 16640,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00582",
+      "paymentId": "P00582",
+      "diagnosisCodes": [
+        "F10.20"
+      ],
+      "lines": [
+        {
+          "lineId": "C00582-L1",
+          "cpt": "H0018",
+          "modifiers": [],
+          "units": 26,
+          "billed": 16640,
+          "allowed": 16640,
+          "paid": 16640,
+          "description": "Behavioral health, short-term residential, per diem",
+          "violatesRuleIds": [
+            "model_los"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C00583",
+      "claimNumber": "Q203X16K4-06-32",
+      "type": "837I",
+      "providerId": "PR302",
+      "veteranId": "V0010",
+      "dateOfService": "2025-01-03",
+      "billedAmount": 15360,
+      "allowedAmount": 15360,
+      "paidAmount": 15360,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00583",
+      "paymentId": "P00583",
+      "diagnosisCodes": [
+        "F10.20"
+      ],
+      "lines": [
+        {
+          "lineId": "C00583-L1",
+          "cpt": "H0018",
+          "modifiers": [],
+          "units": 24,
+          "billed": 15360,
+          "allowed": 15360,
+          "paid": 15360,
+          "description": "Behavioral health, short-term residential, per diem",
+          "violatesRuleIds": [
+            "model_los"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C00584",
+      "claimNumber": "U903X70K7-06-37",
+      "type": "837I",
+      "providerId": "PR303",
+      "veteranId": "V0010",
+      "dateOfService": "2025-02-10",
+      "billedAmount": 16640,
+      "allowedAmount": 16640,
+      "paidAmount": 16640,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00584",
+      "paymentId": "P00584",
+      "diagnosisCodes": [
+        "F10.20"
+      ],
+      "lines": [
+        {
+          "lineId": "C00584-L1",
+          "cpt": "H0018",
+          "modifiers": [],
+          "units": 26,
+          "billed": 16640,
+          "allowed": 16640,
+          "paid": 16640,
+          "description": "Behavioral health, short-term residential, per diem",
+          "violatesRuleIds": [
+            "model_los"
+          ]
         }
       ]
     }
@@ -25138,6 +28197,176 @@
       "validFrom": "2025-01-01",
       "validTo": "2025-12-31",
       "status": "Active"
+    },
+    {
+      "id": "A00568",
+      "authId": "AUTH-381592",
+      "veteranId": "V0004",
+      "providerId": "PR300",
+      "service": "Behavioral health, short-term residential, per diem",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00569",
+      "authId": "AUTH-262766",
+      "veteranId": "V0004",
+      "providerId": "PR301",
+      "service": "Behavioral health, short-term residential, per diem",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00570",
+      "authId": "AUTH-298396",
+      "veteranId": "V0005",
+      "providerId": "PR301",
+      "service": "Behavioral health, short-term residential, per diem",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00571",
+      "authId": "AUTH-330450",
+      "veteranId": "V0005",
+      "providerId": "PR302",
+      "service": "Behavioral health, short-term residential, per diem",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00572",
+      "authId": "AUTH-452673",
+      "veteranId": "V0005",
+      "providerId": "PR303",
+      "service": "Behavioral health, short-term residential, per diem",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00573",
+      "authId": "AUTH-449978",
+      "veteranId": "V0006",
+      "providerId": "PR302",
+      "service": "Behavioral health, short-term residential, per diem",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00574",
+      "authId": "AUTH-509155",
+      "veteranId": "V0006",
+      "providerId": "PR303",
+      "service": "Behavioral health, short-term residential, per diem",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00575",
+      "authId": "AUTH-795785",
+      "veteranId": "V0007",
+      "providerId": "PR303",
+      "service": "Behavioral health, short-term residential, per diem",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00576",
+      "authId": "AUTH-921802",
+      "veteranId": "V0007",
+      "providerId": "PR300",
+      "service": "Behavioral health, short-term residential, per diem",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00577",
+      "authId": "AUTH-556993",
+      "veteranId": "V0007",
+      "providerId": "PR301",
+      "service": "Behavioral health, short-term residential, per diem",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00578",
+      "authId": "AUTH-399108",
+      "veteranId": "V0008",
+      "providerId": "PR300",
+      "service": "Behavioral health, short-term residential, per diem",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00579",
+      "authId": "AUTH-127650",
+      "veteranId": "V0008",
+      "providerId": "PR301",
+      "service": "Behavioral health, short-term residential, per diem",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00580",
+      "authId": "AUTH-130545",
+      "veteranId": "V0009",
+      "providerId": "PR301",
+      "service": "Behavioral health, short-term residential, per diem",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00581",
+      "authId": "AUTH-934751",
+      "veteranId": "V0009",
+      "providerId": "PR302",
+      "service": "Behavioral health, short-term residential, per diem",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00582",
+      "authId": "AUTH-242179",
+      "veteranId": "V0009",
+      "providerId": "PR303",
+      "service": "Behavioral health, short-term residential, per diem",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00583",
+      "authId": "AUTH-454774",
+      "veteranId": "V0010",
+      "providerId": "PR302",
+      "service": "Behavioral health, short-term residential, per diem",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00584",
+      "authId": "AUTH-973868",
+      "veteranId": "V0010",
+      "providerId": "PR303",
+      "service": "Behavioral health, short-term residential, per diem",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
     }
   ],
   "payments": [
@@ -29676,6 +32905,142 @@
       "amount": 250,
       "date": "2025-05-13",
       "remittance835": "835-162070"
+    },
+    {
+      "id": "P00568",
+      "paymentId": "RA-9037745",
+      "claimId": "C00568",
+      "amount": 15360,
+      "date": "2025-01-03",
+      "remittance835": "835-113421"
+    },
+    {
+      "id": "P00569",
+      "paymentId": "RA-8153634",
+      "claimId": "C00569",
+      "amount": 17920,
+      "date": "2025-02-04",
+      "remittance835": "835-274779"
+    },
+    {
+      "id": "P00570",
+      "paymentId": "RA-9294660",
+      "claimId": "C00570",
+      "amount": 15360,
+      "date": "2025-01-03",
+      "remittance835": "835-855389"
+    },
+    {
+      "id": "P00571",
+      "paymentId": "RA-5894706",
+      "claimId": "C00571",
+      "amount": 18560,
+      "date": "2025-02-06",
+      "remittance835": "835-419310"
+    },
+    {
+      "id": "P00572",
+      "paymentId": "RA-2545356",
+      "claimId": "C00572",
+      "amount": 14720,
+      "date": "2025-03-02",
+      "remittance835": "835-635051"
+    },
+    {
+      "id": "P00573",
+      "paymentId": "RA-2814287",
+      "claimId": "C00573",
+      "amount": 15360,
+      "date": "2025-01-03",
+      "remittance835": "835-732361"
+    },
+    {
+      "id": "P00574",
+      "paymentId": "RA-5951728",
+      "claimId": "C00574",
+      "amount": 17920,
+      "date": "2025-02-08",
+      "remittance835": "835-219381"
+    },
+    {
+      "id": "P00575",
+      "paymentId": "RA-8768789",
+      "claimId": "C00575",
+      "amount": 16640,
+      "date": "2025-01-03",
+      "remittance835": "835-820464"
+    },
+    {
+      "id": "P00576",
+      "paymentId": "RA-4255194",
+      "claimId": "C00576",
+      "amount": 15360,
+      "date": "2025-02-05",
+      "remittance835": "835-231234"
+    },
+    {
+      "id": "P00577",
+      "paymentId": "RA-8327095",
+      "claimId": "C00577",
+      "amount": 14080,
+      "date": "2025-03-06",
+      "remittance835": "835-552600"
+    },
+    {
+      "id": "P00578",
+      "paymentId": "RA-5288500",
+      "claimId": "C00578",
+      "amount": 14720,
+      "date": "2025-01-03",
+      "remittance835": "835-542257"
+    },
+    {
+      "id": "P00579",
+      "paymentId": "RA-3849149",
+      "claimId": "C00579",
+      "amount": 16640,
+      "date": "2025-02-04",
+      "remittance835": "835-200526"
+    },
+    {
+      "id": "P00580",
+      "paymentId": "RA-6811028",
+      "claimId": "C00580",
+      "amount": 14080,
+      "date": "2025-01-03",
+      "remittance835": "835-755990"
+    },
+    {
+      "id": "P00581",
+      "paymentId": "RA-4423685",
+      "claimId": "C00581",
+      "amount": 17920,
+      "date": "2025-02-03",
+      "remittance835": "835-318866"
+    },
+    {
+      "id": "P00582",
+      "paymentId": "RA-8068863",
+      "claimId": "C00582",
+      "amount": 16640,
+      "date": "2025-03-07",
+      "remittance835": "835-211880"
+    },
+    {
+      "id": "P00583",
+      "paymentId": "RA-1986859",
+      "claimId": "C00583",
+      "amount": 15360,
+      "date": "2025-01-03",
+      "remittance835": "835-996373"
+    },
+    {
+      "id": "P00584",
+      "paymentId": "RA-5837633",
+      "claimId": "C00584",
+      "amount": 16640,
+      "date": "2025-02-10",
+      "remittance835": "835-794136"
     }
   ],
   "rules": [
@@ -29786,6 +33151,12 @@
       "name": "Modifier Abuse Pattern",
       "type": "Anomaly Detection",
       "description": "Flags abnormal modifier-59 override rates vs peers."
+    },
+    {
+      "id": "model_los",
+      "name": "Residential LOS & Network",
+      "type": "Anomaly Detection",
+      "description": "Flags clusters of just-under-threshold residential stays with shared patients/registration across facilities."
     }
   ],
   "allegations": [
@@ -29830,7 +33201,7 @@
       "decision": null,
       "modelId": "model_em_peer",
       "ruleIds": [],
-      "createdDate": "2025-10-27"
+      "createdDate": "2025-10-02"
     },
     {
       "id": "20517",
@@ -29876,7 +33247,7 @@
         "rule_ncci_43235_43239",
         "rule_mod59"
       ],
-      "createdDate": "2025-09-07"
+      "createdDate": "2025-06-19"
     },
     {
       "id": "20463",
@@ -29918,7 +33289,7 @@
       "decision": null,
       "modelId": "model_freq",
       "ruleIds": [],
-      "createdDate": "2025-06-01"
+      "createdDate": "2025-08-06"
     },
     {
       "id": "20390",
@@ -29943,7 +33314,7 @@
       "decision": null,
       "modelId": null,
       "ruleIds": [],
-      "createdDate": "2025-09-11"
+      "createdDate": "2025-09-02"
     },
     {
       "id": "20355",
@@ -29970,7 +33341,7 @@
       "ruleIds": [
         "rule_dup"
       ],
-      "createdDate": "2025-08-01"
+      "createdDate": "2025-10-11"
     },
     {
       "id": "20318",
@@ -29995,7 +33366,7 @@
       "decision": null,
       "modelId": null,
       "ruleIds": [],
-      "createdDate": "2025-08-05"
+      "createdDate": "2025-09-15"
     },
     {
       "id": "20274",
@@ -30020,7 +33391,7 @@
       "decision": null,
       "modelId": null,
       "ruleIds": [],
-      "createdDate": "2025-08-07"
+      "createdDate": "2025-06-10"
     },
     {
       "id": "20208",
@@ -30047,7 +33418,7 @@
       "ruleIds": [
         "rule_ncci_43235_43239"
       ],
-      "createdDate": "2025-06-12"
+      "createdDate": "2025-08-01"
     },
     {
       "id": "20155",
@@ -30072,7 +33443,7 @@
       "decision": null,
       "modelId": null,
       "ruleIds": [],
-      "createdDate": "2025-06-18"
+      "createdDate": "2025-10-18"
     },
     {
       "id": "20092",
@@ -30097,7 +33468,7 @@
       "decision": null,
       "modelId": null,
       "ruleIds": [],
-      "createdDate": "2025-06-24"
+      "createdDate": "2025-08-04"
     },
     {
       "id": "20061",
@@ -30124,7 +33495,7 @@
       "ruleIds": [
         "rule_auth"
       ],
-      "createdDate": "2025-07-04"
+      "createdDate": "2025-06-06"
     },
     {
       "id": "20033",
@@ -30149,271 +33520,230 @@
       "decision": null,
       "modelId": null,
       "ruleIds": [],
-      "createdDate": "2025-06-06"
+      "createdDate": "2025-10-16"
     },
     {
-      "id": "20601",
-      "providerId": "PR205",
-      "claimId": null,
-      "fwaType": "Unbundling",
-      "riskScore": 61,
-      "confidence": 65,
-      "source": "Rules Engine",
-      "status": "Under review",
-      "assignee": null,
-      "claimType": "837P",
-      "exposurePre": 0,
-      "exposurePost": 3731,
-      "submittedForRecovery": 0,
-      "verifiedRecoupment": 0,
-      "narrative": "",
-      "xai": {
-        "summary": "Unbundling flagged for review.",
-        "factors": []
-      },
-      "decision": null,
-      "modelId": null,
-      "ruleIds": [],
-      "createdDate": "2025-07-14"
-    },
-    {
-      "id": "20602",
-      "providerId": "PR200",
-      "claimId": null,
-      "fwaType": "Deceased patient",
-      "riskScore": 55,
-      "confidence": 62,
-      "source": "Pattern Recognition",
-      "status": "Under review",
-      "assignee": "Dana Whitmore",
-      "claimType": "837P",
-      "exposurePre": 0,
-      "exposurePost": 3002,
-      "submittedForRecovery": 0,
-      "verifiedRecoupment": 0,
-      "narrative": "",
-      "xai": {
-        "summary": "Deceased patient flagged for review.",
-        "factors": []
-      },
-      "decision": null,
-      "modelId": null,
-      "ruleIds": [],
-      "createdDate": "2025-06-28"
-    },
-    {
-      "id": "20603",
-      "providerId": "PR208",
-      "claimId": null,
-      "fwaType": "Frequency / over-utilization",
-      "riskScore": 41,
-      "confidence": 69,
-      "source": "Rules Engine",
-      "status": "Under review",
-      "assignee": null,
-      "claimType": "837P",
-      "exposurePre": 0,
-      "exposurePost": 7481,
-      "submittedForRecovery": 0,
-      "verifiedRecoupment": 0,
-      "narrative": "",
-      "xai": {
-        "summary": "Frequency / over-utilization flagged for review.",
-        "factors": []
-      },
-      "decision": null,
-      "modelId": null,
-      "ruleIds": [],
-      "createdDate": "2025-10-18"
-    },
-    {
-      "id": "20604",
-      "providerId": "PR204",
-      "claimId": null,
-      "fwaType": "Authorization mismatch",
-      "riskScore": 54,
-      "confidence": 66,
-      "source": "Rules Engine",
-      "status": "New",
-      "assignee": "Dana Whitmore",
-      "claimType": "837P",
-      "exposurePre": 0,
-      "exposurePost": 6414,
-      "submittedForRecovery": 0,
-      "verifiedRecoupment": 0,
-      "narrative": "",
-      "xai": {
-        "summary": "Authorization mismatch flagged for review.",
-        "factors": []
-      },
-      "decision": null,
-      "modelId": null,
-      "ruleIds": [],
-      "createdDate": "2025-08-03"
-    },
-    {
-      "id": "20605",
-      "providerId": "PR200",
-      "claimId": null,
-      "fwaType": "Upcoding",
-      "riskScore": 79,
-      "confidence": 77,
-      "source": "Rules Engine",
-      "status": "Assigned",
-      "assignee": null,
-      "claimType": "837P",
-      "exposurePre": 0,
-      "exposurePost": 995,
-      "submittedForRecovery": 0,
-      "verifiedRecoupment": 0,
-      "narrative": "",
-      "xai": {
-        "summary": "Upcoding flagged for review.",
-        "factors": []
-      },
-      "decision": null,
-      "modelId": null,
-      "ruleIds": [],
-      "createdDate": "2025-07-09"
-    },
-    {
-      "id": "20606",
-      "providerId": "PR208",
-      "claimId": null,
-      "fwaType": "Upcoding",
-      "riskScore": 68,
-      "confidence": 77,
-      "source": "Pattern Recognition",
+      "id": "20544",
+      "providerId": "PR300",
+      "claimId": "C00568",
+      "fwaType": "Residential length-of-stay abuse",
+      "riskScore": 92,
+      "confidence": 87,
+      "source": "Both",
       "status": "New",
       "assignee": null,
-      "claimType": "837P",
+      "claimType": "837I",
       "exposurePre": 0,
-      "exposurePost": 6835,
+      "exposurePost": 22720,
       "submittedForRecovery": 0,
       "verifiedRecoupment": 0,
       "narrative": "",
       "xai": {
-        "summary": "Upcoding flagged for review.",
-        "factors": []
+        "summary": "Sonoran Recovery Center is one of 4 residential facilities under a single holding company (Meridian Behavioral Holdings LLC, officer Marcus D. Feld) that cycle the same veterans across AZ/CA/NV for back-to-back stays kept just under the 30-day threshold — banking near-full per-diem charges on each readmission. Shared patients with 4 cross-facility overlaps; separate TINs mask the common ownership.",
+        "factors": [
+          {
+            "label": "Chain facilities",
+            "value": "4 across AZ · CA · NV"
+          },
+          {
+            "label": "Shared registration",
+            "value": "Meridian Behavioral Holdings LLC",
+            "benchmark": "separate TINs"
+          },
+          {
+            "label": "Avg length of stay",
+            "value": "~25 days",
+            "benchmark": "30-day threshold"
+          },
+          {
+            "label": "Cross-facility shared patients",
+            "value": "4"
+          }
+        ]
       },
       "decision": null,
-      "modelId": null,
-      "ruleIds": [],
+      "modelId": "model_los",
+      "ruleIds": [
+        "rule_fee"
+      ],
       "createdDate": "2025-07-25"
     },
     {
-      "id": "20607",
+      "id": "20538",
+      "providerId": "PR301",
+      "claimId": "C00569",
+      "fwaType": "Residential length-of-stay abuse",
+      "riskScore": 89,
+      "confidence": 85,
+      "source": "Both",
+      "status": "New",
+      "assignee": null,
+      "claimType": "837I",
+      "exposurePre": 0,
+      "exposurePost": 39040,
+      "submittedForRecovery": 0,
+      "verifiedRecoupment": 0,
+      "narrative": "",
+      "xai": {
+        "summary": "Pacific Sands Treatment is one of 4 residential facilities under a single holding company (Meridian Behavioral Holdings LLC, officer Marcus D. Feld) that cycle the same veterans across AZ/CA/NV for back-to-back stays kept just under the 30-day threshold — banking near-full per-diem charges on each readmission. Shared patients with 8 cross-facility overlaps; separate TINs mask the common ownership.",
+        "factors": [
+          {
+            "label": "Chain facilities",
+            "value": "4 across AZ · CA · NV"
+          },
+          {
+            "label": "Shared registration",
+            "value": "Meridian Behavioral Holdings LLC",
+            "benchmark": "separate TINs"
+          },
+          {
+            "label": "Avg length of stay",
+            "value": "~25 days",
+            "benchmark": "30-day threshold"
+          },
+          {
+            "label": "Cross-facility shared patients",
+            "value": "8"
+          }
+        ]
+      },
+      "decision": null,
+      "modelId": "model_los",
+      "ruleIds": [
+        "rule_fee"
+      ],
+      "createdDate": "2025-08-09"
+    },
+    {
+      "id": "20531",
+      "providerId": "PR302",
+      "claimId": "C00571",
+      "fwaType": "Residential length-of-stay abuse",
+      "riskScore": 90,
+      "confidence": 84,
+      "source": "Both",
+      "status": "Assigned",
+      "assignee": "Devon Carter",
+      "claimType": "837I",
+      "exposurePre": 0,
+      "exposurePost": 33600,
+      "submittedForRecovery": 0,
+      "verifiedRecoupment": 0,
+      "narrative": "",
+      "xai": {
+        "summary": "Silver State Wellness is one of 4 residential facilities under a single holding company (Meridian Behavioral Holdings LLC, officer Marcus D. Feld) that cycle the same veterans across AZ/CA/NV for back-to-back stays kept just under the 30-day threshold — banking near-full per-diem charges on each readmission. Shared patients with 6 cross-facility overlaps; separate TINs mask the common ownership.",
+        "factors": [
+          {
+            "label": "Chain facilities",
+            "value": "4 across AZ · CA · NV"
+          },
+          {
+            "label": "Shared registration",
+            "value": "Meridian Behavioral Holdings LLC",
+            "benchmark": "separate TINs"
+          },
+          {
+            "label": "Avg length of stay",
+            "value": "~25 days",
+            "benchmark": "30-day threshold"
+          },
+          {
+            "label": "Cross-facility shared patients",
+            "value": "6"
+          }
+        ]
+      },
+      "decision": null,
+      "modelId": "model_los",
+      "ruleIds": [
+        "rule_fee"
+      ],
+      "createdDate": "2025-09-22"
+    },
+    {
+      "id": "20525",
+      "providerId": "PR303",
+      "claimId": "C00572",
+      "fwaType": "Residential length-of-stay abuse",
+      "riskScore": 86,
+      "confidence": 82,
+      "source": "Both",
+      "status": "Assigned",
+      "assignee": "Priya Nair",
+      "claimType": "837I",
+      "exposurePre": 0,
+      "exposurePost": 41280,
+      "submittedForRecovery": 0,
+      "verifiedRecoupment": 0,
+      "narrative": "",
+      "xai": {
+        "summary": "Desert Bloom Behavioral is one of 4 residential facilities under a single holding company (Meridian Behavioral Holdings LLC, officer Marcus D. Feld) that cycle the same veterans across AZ/CA/NV for back-to-back stays kept just under the 30-day threshold — banking near-full per-diem charges on each readmission. Shared patients with 8 cross-facility overlaps; separate TINs mask the common ownership.",
+        "factors": [
+          {
+            "label": "Chain facilities",
+            "value": "4 across AZ · CA · NV"
+          },
+          {
+            "label": "Shared registration",
+            "value": "Meridian Behavioral Holdings LLC",
+            "benchmark": "separate TINs"
+          },
+          {
+            "label": "Avg length of stay",
+            "value": "~25 days",
+            "benchmark": "30-day threshold"
+          },
+          {
+            "label": "Cross-facility shared patients",
+            "value": "8"
+          }
+        ]
+      },
+      "decision": null,
+      "modelId": "model_los",
+      "ruleIds": [
+        "rule_fee"
+      ],
+      "createdDate": "2025-09-08"
+    },
+    {
+      "id": "20601",
       "providerId": "PR204",
       "claimId": null,
-      "fwaType": "Phantom billing",
-      "riskScore": 47,
-      "confidence": 84,
-      "source": "Rules Engine",
-      "status": "Assigned",
-      "assignee": null,
-      "claimType": "837P",
-      "exposurePre": 0,
-      "exposurePost": 8877,
-      "submittedForRecovery": 0,
-      "verifiedRecoupment": 0,
-      "narrative": "",
-      "xai": {
-        "summary": "Phantom billing flagged for review.",
-        "factors": []
-      },
-      "decision": null,
-      "modelId": null,
-      "ruleIds": [],
-      "createdDate": "2025-07-21"
-    },
-    {
-      "id": "20608",
-      "providerId": "PR205",
-      "claimId": null,
-      "fwaType": "Unbundling",
-      "riskScore": 76,
-      "confidence": 86,
-      "source": "Pattern Recognition",
-      "status": "Under review",
-      "assignee": "Priya Nair",
-      "claimType": "837P",
-      "exposurePre": 0,
-      "exposurePost": 4696,
-      "submittedForRecovery": 0,
-      "verifiedRecoupment": 0,
-      "narrative": "",
-      "xai": {
-        "summary": "Unbundling flagged for review.",
-        "factors": []
-      },
-      "decision": null,
-      "modelId": null,
-      "ruleIds": [],
-      "createdDate": "2025-09-13"
-    },
-    {
-      "id": "20609",
-      "providerId": "PR208",
-      "claimId": null,
       "fwaType": "Modifier misuse",
-      "riskScore": 61,
-      "confidence": 70,
+      "riskScore": 74,
+      "confidence": 74,
       "source": "Pattern Recognition",
-      "status": "New",
-      "assignee": null,
-      "claimType": "837P",
-      "exposurePre": 0,
-      "exposurePost": 8855,
-      "submittedForRecovery": 0,
-      "verifiedRecoupment": 0,
-      "narrative": "",
-      "xai": {
-        "summary": "Modifier misuse flagged for review.",
-        "factors": []
-      },
-      "decision": null,
-      "modelId": null,
-      "ruleIds": [],
-      "createdDate": "2025-08-20"
-    },
-    {
-      "id": "20610",
-      "providerId": "PR200",
-      "claimId": null,
-      "fwaType": "Modifier misuse",
-      "riskScore": 55,
-      "confidence": 65,
-      "source": "Rules Engine",
-      "status": "New",
-      "assignee": "Priya Nair",
-      "claimType": "837P",
-      "exposurePre": 0,
-      "exposurePost": 10699,
-      "submittedForRecovery": 0,
-      "verifiedRecoupment": 0,
-      "narrative": "",
-      "xai": {
-        "summary": "Modifier misuse flagged for review.",
-        "factors": []
-      },
-      "decision": null,
-      "modelId": null,
-      "ruleIds": [],
-      "createdDate": "2025-10-13"
-    },
-    {
-      "id": "20611",
-      "providerId": "PR205",
-      "claimId": null,
-      "fwaType": "Duplicate claim",
-      "riskScore": 55,
-      "confidence": 66,
-      "source": "Rules Engine",
       "status": "Under review",
       "assignee": "Maria Delgado",
       "claimType": "837P",
       "exposurePre": 0,
-      "exposurePost": 8308,
+      "exposurePost": 5619,
+      "submittedForRecovery": 0,
+      "verifiedRecoupment": 0,
+      "narrative": "",
+      "xai": {
+        "summary": "Modifier misuse flagged for review.",
+        "factors": []
+      },
+      "decision": null,
+      "modelId": null,
+      "ruleIds": [],
+      "createdDate": "2025-10-05"
+    },
+    {
+      "id": "20602",
+      "providerId": "PR205",
+      "claimId": null,
+      "fwaType": "Duplicate claim",
+      "riskScore": 56,
+      "confidence": 69,
+      "source": "Pattern Recognition",
+      "status": "Under review",
+      "assignee": "Dana Whitmore",
+      "claimType": "837P",
+      "exposurePre": 0,
+      "exposurePost": 934,
       "submittedForRecovery": 0,
       "verifiedRecoupment": 0,
       "narrative": "",
@@ -30424,32 +33754,257 @@
       "decision": null,
       "modelId": null,
       "ruleIds": [],
-      "createdDate": "2025-10-26"
+      "createdDate": "2025-07-27"
     },
     {
-      "id": "20612",
-      "providerId": "PR207",
+      "id": "20603",
+      "providerId": "PR200",
       "claimId": null,
-      "fwaType": "Phantom billing",
-      "riskScore": 58,
-      "confidence": 77,
+      "fwaType": "Unbundling",
+      "riskScore": 76,
+      "confidence": 85,
       "source": "Pattern Recognition",
-      "status": "Under review",
-      "assignee": "Dana Whitmore",
+      "status": "New",
+      "assignee": "Devon Carter",
       "claimType": "837P",
       "exposurePre": 0,
-      "exposurePost": 3605,
+      "exposurePost": 10901,
       "submittedForRecovery": 0,
       "verifiedRecoupment": 0,
       "narrative": "",
       "xai": {
-        "summary": "Phantom billing flagged for review.",
+        "summary": "Unbundling flagged for review.",
+        "factors": []
+      },
+      "decision": null,
+      "modelId": null,
+      "ruleIds": [],
+      "createdDate": "2025-08-21"
+    },
+    {
+      "id": "20604",
+      "providerId": "PR204",
+      "claimId": null,
+      "fwaType": "Upcoding",
+      "riskScore": 43,
+      "confidence": 85,
+      "source": "Pattern Recognition",
+      "status": "Under review",
+      "assignee": "Maria Delgado",
+      "claimType": "837P",
+      "exposurePre": 0,
+      "exposurePost": 11637,
+      "submittedForRecovery": 0,
+      "verifiedRecoupment": 0,
+      "narrative": "",
+      "xai": {
+        "summary": "Upcoding flagged for review.",
+        "factors": []
+      },
+      "decision": null,
+      "modelId": null,
+      "ruleIds": [],
+      "createdDate": "2025-08-02"
+    },
+    {
+      "id": "20605",
+      "providerId": "PR208",
+      "claimId": null,
+      "fwaType": "Modifier misuse",
+      "riskScore": 68,
+      "confidence": 72,
+      "source": "Pattern Recognition",
+      "status": "New",
+      "assignee": null,
+      "claimType": "837P",
+      "exposurePre": 0,
+      "exposurePost": 10223,
+      "submittedForRecovery": 0,
+      "verifiedRecoupment": 0,
+      "narrative": "",
+      "xai": {
+        "summary": "Modifier misuse flagged for review.",
+        "factors": []
+      },
+      "decision": null,
+      "modelId": null,
+      "ruleIds": [],
+      "createdDate": "2025-06-02"
+    },
+    {
+      "id": "20606",
+      "providerId": "PR204",
+      "claimId": null,
+      "fwaType": "Unbundling",
+      "riskScore": 65,
+      "confidence": 60,
+      "source": "Pattern Recognition",
+      "status": "Assigned",
+      "assignee": "Maria Delgado",
+      "claimType": "837P",
+      "exposurePre": 0,
+      "exposurePost": 10053,
+      "submittedForRecovery": 0,
+      "verifiedRecoupment": 0,
+      "narrative": "",
+      "xai": {
+        "summary": "Unbundling flagged for review.",
+        "factors": []
+      },
+      "decision": null,
+      "modelId": null,
+      "ruleIds": [],
+      "createdDate": "2025-06-14"
+    },
+    {
+      "id": "20607",
+      "providerId": "PR200",
+      "claimId": null,
+      "fwaType": "Modifier misuse",
+      "riskScore": 61,
+      "confidence": 87,
+      "source": "Pattern Recognition",
+      "status": "New",
+      "assignee": null,
+      "claimType": "837P",
+      "exposurePre": 0,
+      "exposurePost": 3902,
+      "submittedForRecovery": 0,
+      "verifiedRecoupment": 0,
+      "narrative": "",
+      "xai": {
+        "summary": "Modifier misuse flagged for review.",
+        "factors": []
+      },
+      "decision": null,
+      "modelId": null,
+      "ruleIds": [],
+      "createdDate": "2025-08-25"
+    },
+    {
+      "id": "20608",
+      "providerId": "PR206",
+      "claimId": null,
+      "fwaType": "Authorization mismatch",
+      "riskScore": 49,
+      "confidence": 79,
+      "source": "Pattern Recognition",
+      "status": "Assigned",
+      "assignee": null,
+      "claimType": "837P",
+      "exposurePre": 0,
+      "exposurePost": 10628,
+      "submittedForRecovery": 0,
+      "verifiedRecoupment": 0,
+      "narrative": "",
+      "xai": {
+        "summary": "Authorization mismatch flagged for review.",
+        "factors": []
+      },
+      "decision": null,
+      "modelId": null,
+      "ruleIds": [],
+      "createdDate": "2025-07-01"
+    },
+    {
+      "id": "20609",
+      "providerId": "PR200",
+      "claimId": null,
+      "fwaType": "Deceased patient",
+      "riskScore": 51,
+      "confidence": 74,
+      "source": "Pattern Recognition",
+      "status": "Under review",
+      "assignee": null,
+      "claimType": "837P",
+      "exposurePre": 0,
+      "exposurePost": 3768,
+      "submittedForRecovery": 0,
+      "verifiedRecoupment": 0,
+      "narrative": "",
+      "xai": {
+        "summary": "Deceased patient flagged for review.",
+        "factors": []
+      },
+      "decision": null,
+      "modelId": null,
+      "ruleIds": [],
+      "createdDate": "2025-07-19"
+    },
+    {
+      "id": "20610",
+      "providerId": "PR205",
+      "claimId": null,
+      "fwaType": "Deceased patient",
+      "riskScore": 75,
+      "confidence": 67,
+      "source": "Pattern Recognition",
+      "status": "New",
+      "assignee": null,
+      "claimType": "837P",
+      "exposurePre": 0,
+      "exposurePost": 4327,
+      "submittedForRecovery": 0,
+      "verifiedRecoupment": 0,
+      "narrative": "",
+      "xai": {
+        "summary": "Deceased patient flagged for review.",
         "factors": []
       },
       "decision": null,
       "modelId": null,
       "ruleIds": [],
       "createdDate": "2025-10-03"
+    },
+    {
+      "id": "20611",
+      "providerId": "PR204",
+      "claimId": null,
+      "fwaType": "Modifier misuse",
+      "riskScore": 46,
+      "confidence": 60,
+      "source": "Rules Engine",
+      "status": "New",
+      "assignee": null,
+      "claimType": "837P",
+      "exposurePre": 0,
+      "exposurePost": 5656,
+      "submittedForRecovery": 0,
+      "verifiedRecoupment": 0,
+      "narrative": "",
+      "xai": {
+        "summary": "Modifier misuse flagged for review.",
+        "factors": []
+      },
+      "decision": null,
+      "modelId": null,
+      "ruleIds": [],
+      "createdDate": "2025-09-07"
+    },
+    {
+      "id": "20612",
+      "providerId": "PR204",
+      "claimId": null,
+      "fwaType": "Authorization mismatch",
+      "riskScore": 67,
+      "confidence": 65,
+      "source": "Rules Engine",
+      "status": "Assigned",
+      "assignee": "Dana Whitmore",
+      "claimType": "837P",
+      "exposurePre": 0,
+      "exposurePost": 4967,
+      "submittedForRecovery": 0,
+      "verifiedRecoupment": 0,
+      "narrative": "",
+      "xai": {
+        "summary": "Authorization mismatch flagged for review.",
+        "factors": []
+      },
+      "decision": null,
+      "modelId": null,
+      "ruleIds": [],
+      "createdDate": "2025-09-17"
     }
   ],
   "precedents": [
@@ -30644,7 +34199,7 @@
     {
       "month": "2025-03",
       "flagged": 24,
-      "exposure": 202341,
+      "exposure": 348098,
       "recovered": 39400
     }
   ],
@@ -30655,10 +34210,10 @@
     }
   },
   "kpis": {
-    "openAllegations": 24,
+    "openAllegations": 28,
     "closedAllegations": 8734,
     "exposurePre": 514902.4,
-    "exposurePost": 202341,
+    "exposurePost": 348098,
     "submittedForRecovery": 4126540,
     "verifiedRecoupment": 168430,
     "mostAgedAllegationId": "20044",
@@ -30666,15 +34221,16 @@
     "avgTimeToCompletionDays": 71
   },
   "anomalyBreakdown": {
-    "Upcoding": 4,
+    "Upcoding": 3,
     "Unbundling": 4,
-    "Frequency / over-utilization": 2,
-    "Modifier misuse": 4,
+    "Frequency / over-utilization": 1,
+    "Modifier misuse": 6,
     "Duplicate claim": 2,
     "Billing outside specialty": 1,
-    "Phantom billing": 3,
-    "Deceased patient": 2,
-    "Authorization mismatch": 2
+    "Phantom billing": 1,
+    "Deceased patient": 3,
+    "Authorization mismatch": 3,
+    "Residential length-of-stay abuse": 4
   },
   "graph": {
     "nodes": [
@@ -30866,7 +34422,7 @@
           "npi": "1973884898",
           "tin": "00-1001012",
           "specialty": "Surgery",
-          "risk": 0,
+          "risk": 49,
           "role": "background"
         }
       },
@@ -30878,7 +34434,7 @@
           "npi": "1501351840",
           "tin": "00-1001013",
           "specialty": "Internal Medicine",
-          "risk": 58,
+          "risk": 0,
           "role": "background"
         }
       },
@@ -30895,11 +34451,60 @@
         }
       },
       {
+        "id": "PR300",
+        "type": "Provider",
+        "label": "Sonoran Recovery Center",
+        "props": {
+          "npi": "1896200636",
+          "tin": "00-1001015",
+          "specialty": "Substance Abuse Rehabilitation Facility",
+          "risk": 92,
+          "role": "chain"
+        }
+      },
+      {
+        "id": "PR301",
+        "type": "Provider",
+        "label": "Pacific Sands Treatment",
+        "props": {
+          "npi": "1505152145",
+          "tin": "00-1001016",
+          "specialty": "Substance Abuse Rehabilitation Facility",
+          "risk": 89,
+          "role": "chain"
+        }
+      },
+      {
+        "id": "PR302",
+        "type": "Provider",
+        "label": "Silver State Wellness",
+        "props": {
+          "npi": "1060831117",
+          "tin": "00-1001017",
+          "specialty": "Substance Abuse Rehabilitation Facility",
+          "risk": 90,
+          "role": "chain"
+        }
+      },
+      {
+        "id": "PR303",
+        "type": "Provider",
+        "label": "Desert Bloom Behavioral",
+        "props": {
+          "npi": "1425189821",
+          "tin": "00-1001018",
+          "specialty": "Substance Abuse Rehabilitation Facility",
+          "risk": 86,
+          "role": "chain"
+        }
+      },
+      {
         "id": "V0001",
         "type": "Veteran",
         "label": "Robert Hayes",
         "props": {
-          "city": "San Antonio"
+          "city": "San Antonio",
+          "state": "TX"
         }
       },
       {
@@ -30907,7 +34512,8 @@
         "type": "Veteran",
         "label": "Danielle Cross",
         "props": {
-          "city": "San Antonio"
+          "city": "San Antonio",
+          "state": "TX"
         }
       },
       {
@@ -30915,7 +34521,8 @@
         "type": "Veteran",
         "label": "Walter Briggs",
         "props": {
-          "city": "Corpus Christi"
+          "city": "Corpus Christi",
+          "state": "TX"
         }
       },
       {
@@ -30923,7 +34530,8 @@
         "type": "Veteran",
         "label": "Leon Kowalski",
         "props": {
-          "city": "Waco"
+          "city": "Waco",
+          "state": "TX"
         }
       },
       {
@@ -30931,7 +34539,8 @@
         "type": "Veteran",
         "label": "Curtis Broussard",
         "props": {
-          "city": "Houston"
+          "city": "Houston",
+          "state": "TX"
         }
       },
       {
@@ -30939,7 +34548,8 @@
         "type": "Veteran",
         "label": "Denise Broussard",
         "props": {
-          "city": "San Antonio"
+          "city": "San Antonio",
+          "state": "TX"
         }
       },
       {
@@ -30947,7 +34557,8 @@
         "type": "Veteran",
         "label": "Rosa Ocampo",
         "props": {
-          "city": "Austin"
+          "city": "Austin",
+          "state": "TX"
         }
       },
       {
@@ -30955,7 +34566,71 @@
         "type": "Veteran",
         "label": "Clifford Whitfield",
         "props": {
-          "city": "Odessa"
+          "city": "Odessa",
+          "state": "TX"
+        }
+      },
+      {
+        "id": "V0004",
+        "type": "Veteran",
+        "label": "Curtis Holloway",
+        "props": {
+          "city": "Phoenix",
+          "state": "TX"
+        }
+      },
+      {
+        "id": "V0005",
+        "type": "Veteran",
+        "label": "Beatrice Vega",
+        "props": {
+          "city": "Phoenix",
+          "state": "TX"
+        }
+      },
+      {
+        "id": "V0006",
+        "type": "Veteran",
+        "label": "Franklin Ridley",
+        "props": {
+          "city": "Phoenix",
+          "state": "TX"
+        }
+      },
+      {
+        "id": "V0007",
+        "type": "Veteran",
+        "label": "Estelle Munoz",
+        "props": {
+          "city": "Phoenix",
+          "state": "TX"
+        }
+      },
+      {
+        "id": "V0008",
+        "type": "Veteran",
+        "label": "Leon Ackerman",
+        "props": {
+          "city": "Phoenix",
+          "state": "TX"
+        }
+      },
+      {
+        "id": "V0009",
+        "type": "Veteran",
+        "label": "Gloria Sturgeon",
+        "props": {
+          "city": "Phoenix",
+          "state": "TX"
+        }
+      },
+      {
+        "id": "V0010",
+        "type": "Veteran",
+        "label": "Hector Ocampo",
+        "props": {
+          "city": "Phoenix",
+          "state": "TX"
         }
       },
       {
@@ -31079,87 +34754,107 @@
         }
       },
       {
+        "id": "ALLG-20544",
+        "type": "Allegation",
+        "label": "Residential length-of-stay abuse (92)",
+        "props": {
+          "fwaType": "Residential length-of-stay abuse",
+          "risk": 92,
+          "status": "New"
+        }
+      },
+      {
+        "id": "ALLG-20538",
+        "type": "Allegation",
+        "label": "Residential length-of-stay abuse (89)",
+        "props": {
+          "fwaType": "Residential length-of-stay abuse",
+          "risk": 89,
+          "status": "New"
+        }
+      },
+      {
+        "id": "ALLG-20531",
+        "type": "Allegation",
+        "label": "Residential length-of-stay abuse (90)",
+        "props": {
+          "fwaType": "Residential length-of-stay abuse",
+          "risk": 90,
+          "status": "Assigned"
+        }
+      },
+      {
+        "id": "ALLG-20525",
+        "type": "Allegation",
+        "label": "Residential length-of-stay abuse (86)",
+        "props": {
+          "fwaType": "Residential length-of-stay abuse",
+          "risk": 86,
+          "status": "Assigned"
+        }
+      },
+      {
         "id": "ALLG-20601",
         "type": "Allegation",
-        "label": "Unbundling (61)",
+        "label": "Modifier misuse (74)",
         "props": {
-          "fwaType": "Unbundling",
-          "risk": 61,
+          "fwaType": "Modifier misuse",
+          "risk": 74,
           "status": "Under review"
         }
       },
       {
         "id": "ALLG-20602",
         "type": "Allegation",
-        "label": "Deceased patient (55)",
+        "label": "Duplicate claim (56)",
         "props": {
-          "fwaType": "Deceased patient",
-          "risk": 55,
+          "fwaType": "Duplicate claim",
+          "risk": 56,
           "status": "Under review"
         }
       },
       {
         "id": "ALLG-20603",
         "type": "Allegation",
-        "label": "Frequency / over-utilization (41)",
+        "label": "Unbundling (76)",
         "props": {
-          "fwaType": "Frequency / over-utilization",
-          "risk": 41,
-          "status": "Under review"
+          "fwaType": "Unbundling",
+          "risk": 76,
+          "status": "New"
         }
       },
       {
         "id": "ALLG-20604",
         "type": "Allegation",
-        "label": "Authorization mismatch (54)",
+        "label": "Upcoding (43)",
         "props": {
-          "fwaType": "Authorization mismatch",
-          "risk": 54,
-          "status": "New"
+          "fwaType": "Upcoding",
+          "risk": 43,
+          "status": "Under review"
         }
       },
       {
         "id": "ALLG-20605",
         "type": "Allegation",
-        "label": "Upcoding (79)",
+        "label": "Modifier misuse (68)",
         "props": {
-          "fwaType": "Upcoding",
-          "risk": 79,
-          "status": "Assigned"
-        }
-      },
-      {
-        "id": "ALLG-20606",
-        "type": "Allegation",
-        "label": "Upcoding (68)",
-        "props": {
-          "fwaType": "Upcoding",
+          "fwaType": "Modifier misuse",
           "risk": 68,
           "status": "New"
         }
       },
       {
-        "id": "ALLG-20607",
+        "id": "ALLG-20606",
         "type": "Allegation",
-        "label": "Phantom billing (47)",
+        "label": "Unbundling (65)",
         "props": {
-          "fwaType": "Phantom billing",
-          "risk": 47,
+          "fwaType": "Unbundling",
+          "risk": 65,
           "status": "Assigned"
         }
       },
       {
-        "id": "ALLG-20608",
-        "type": "Allegation",
-        "label": "Unbundling (76)",
-        "props": {
-          "fwaType": "Unbundling",
-          "risk": 76,
-          "status": "Under review"
-        }
-      },
-      {
-        "id": "ALLG-20609",
+        "id": "ALLG-20607",
         "type": "Allegation",
         "label": "Modifier misuse (61)",
         "props": {
@@ -31169,33 +34864,53 @@
         }
       },
       {
+        "id": "ALLG-20608",
+        "type": "Allegation",
+        "label": "Authorization mismatch (49)",
+        "props": {
+          "fwaType": "Authorization mismatch",
+          "risk": 49,
+          "status": "Assigned"
+        }
+      },
+      {
+        "id": "ALLG-20609",
+        "type": "Allegation",
+        "label": "Deceased patient (51)",
+        "props": {
+          "fwaType": "Deceased patient",
+          "risk": 51,
+          "status": "Under review"
+        }
+      },
+      {
         "id": "ALLG-20610",
         "type": "Allegation",
-        "label": "Modifier misuse (55)",
+        "label": "Deceased patient (75)",
         "props": {
-          "fwaType": "Modifier misuse",
-          "risk": 55,
+          "fwaType": "Deceased patient",
+          "risk": 75,
           "status": "New"
         }
       },
       {
         "id": "ALLG-20611",
         "type": "Allegation",
-        "label": "Duplicate claim (55)",
+        "label": "Modifier misuse (46)",
         "props": {
-          "fwaType": "Duplicate claim",
-          "risk": 55,
-          "status": "Under review"
+          "fwaType": "Modifier misuse",
+          "risk": 46,
+          "status": "New"
         }
       },
       {
         "id": "ALLG-20612",
         "type": "Allegation",
-        "label": "Phantom billing (58)",
+        "label": "Authorization mismatch (67)",
         "props": {
-          "fwaType": "Phantom billing",
-          "risk": 58,
-          "status": "Under review"
+          "fwaType": "Authorization mismatch",
+          "risk": 67,
+          "status": "Assigned"
         }
       }
     ],
@@ -31283,6 +34998,284 @@
         "source": "PR105",
         "target": "PR001",
         "props": {}
+      },
+      {
+        "type": "SHARES_OFFICER",
+        "source": "PR300",
+        "target": "PR301",
+        "props": {
+          "officer": "Marcus D. Feld"
+        }
+      },
+      {
+        "type": "SHARES_REGISTRATION",
+        "source": "PR300",
+        "target": "PR301",
+        "props": {
+          "registration": "Meridian Behavioral Holdings LLC",
+          "regId": "REG-AZ-0098124"
+        }
+      },
+      {
+        "type": "SHARES_OFFICER",
+        "source": "PR300",
+        "target": "PR302",
+        "props": {
+          "officer": "Marcus D. Feld"
+        }
+      },
+      {
+        "type": "SHARES_REGISTRATION",
+        "source": "PR300",
+        "target": "PR302",
+        "props": {
+          "registration": "Meridian Behavioral Holdings LLC",
+          "regId": "REG-AZ-0098124"
+        }
+      },
+      {
+        "type": "SHARES_OFFICER",
+        "source": "PR300",
+        "target": "PR303",
+        "props": {
+          "officer": "Marcus D. Feld"
+        }
+      },
+      {
+        "type": "SHARES_REGISTRATION",
+        "source": "PR300",
+        "target": "PR303",
+        "props": {
+          "registration": "Meridian Behavioral Holdings LLC",
+          "regId": "REG-AZ-0098124"
+        }
+      },
+      {
+        "type": "SHARES_OFFICER",
+        "source": "PR301",
+        "target": "PR302",
+        "props": {
+          "officer": "Marcus D. Feld"
+        }
+      },
+      {
+        "type": "SHARES_REGISTRATION",
+        "source": "PR301",
+        "target": "PR302",
+        "props": {
+          "registration": "Meridian Behavioral Holdings LLC",
+          "regId": "REG-AZ-0098124"
+        }
+      },
+      {
+        "type": "SHARES_OFFICER",
+        "source": "PR301",
+        "target": "PR303",
+        "props": {
+          "officer": "Marcus D. Feld"
+        }
+      },
+      {
+        "type": "SHARES_REGISTRATION",
+        "source": "PR301",
+        "target": "PR303",
+        "props": {
+          "registration": "Meridian Behavioral Holdings LLC",
+          "regId": "REG-AZ-0098124"
+        }
+      },
+      {
+        "type": "SHARES_OFFICER",
+        "source": "PR302",
+        "target": "PR303",
+        "props": {
+          "officer": "Marcus D. Feld"
+        }
+      },
+      {
+        "type": "SHARES_REGISTRATION",
+        "source": "PR302",
+        "target": "PR303",
+        "props": {
+          "registration": "Meridian Behavioral Holdings LLC",
+          "regId": "REG-AZ-0098124"
+        }
+      },
+      {
+        "type": "TREATED_BY",
+        "source": "V0004",
+        "target": "PR300",
+        "props": {
+          "stayDays": 24
+        }
+      },
+      {
+        "type": "TREATED_BY",
+        "source": "V0004",
+        "target": "PR301",
+        "props": {
+          "stayDays": 28
+        }
+      },
+      {
+        "type": "TREATED_BY",
+        "source": "V0005",
+        "target": "PR301",
+        "props": {
+          "stayDays": 24
+        }
+      },
+      {
+        "type": "TREATED_BY",
+        "source": "V0005",
+        "target": "PR302",
+        "props": {
+          "stayDays": 29
+        }
+      },
+      {
+        "type": "TREATED_BY",
+        "source": "V0005",
+        "target": "PR303",
+        "props": {
+          "stayDays": 23
+        }
+      },
+      {
+        "type": "TREATED_BY",
+        "source": "V0006",
+        "target": "PR302",
+        "props": {
+          "stayDays": 24
+        }
+      },
+      {
+        "type": "TREATED_BY",
+        "source": "V0006",
+        "target": "PR303",
+        "props": {
+          "stayDays": 28
+        }
+      },
+      {
+        "type": "TREATED_BY",
+        "source": "V0007",
+        "target": "PR303",
+        "props": {
+          "stayDays": 26
+        }
+      },
+      {
+        "type": "TREATED_BY",
+        "source": "V0007",
+        "target": "PR300",
+        "props": {
+          "stayDays": 24
+        }
+      },
+      {
+        "type": "TREATED_BY",
+        "source": "V0007",
+        "target": "PR301",
+        "props": {
+          "stayDays": 22
+        }
+      },
+      {
+        "type": "TREATED_BY",
+        "source": "V0008",
+        "target": "PR300",
+        "props": {
+          "stayDays": 23
+        }
+      },
+      {
+        "type": "TREATED_BY",
+        "source": "V0008",
+        "target": "PR301",
+        "props": {
+          "stayDays": 26
+        }
+      },
+      {
+        "type": "TREATED_BY",
+        "source": "V0009",
+        "target": "PR301",
+        "props": {
+          "stayDays": 22
+        }
+      },
+      {
+        "type": "TREATED_BY",
+        "source": "V0009",
+        "target": "PR302",
+        "props": {
+          "stayDays": 28
+        }
+      },
+      {
+        "type": "TREATED_BY",
+        "source": "V0009",
+        "target": "PR303",
+        "props": {
+          "stayDays": 26
+        }
+      },
+      {
+        "type": "TREATED_BY",
+        "source": "V0010",
+        "target": "PR302",
+        "props": {
+          "stayDays": 24
+        }
+      },
+      {
+        "type": "TREATED_BY",
+        "source": "V0010",
+        "target": "PR303",
+        "props": {
+          "stayDays": 26
+        }
+      },
+      {
+        "type": "SHARES_PATIENT_WITH",
+        "source": "PR300",
+        "target": "PR301",
+        "props": {
+          "sharedVeterans": 3
+        }
+      },
+      {
+        "type": "SHARES_PATIENT_WITH",
+        "source": "PR301",
+        "target": "PR302",
+        "props": {
+          "sharedVeterans": 2
+        }
+      },
+      {
+        "type": "SHARES_PATIENT_WITH",
+        "source": "PR301",
+        "target": "PR303",
+        "props": {
+          "sharedVeterans": 3
+        }
+      },
+      {
+        "type": "SHARES_PATIENT_WITH",
+        "source": "PR302",
+        "target": "PR303",
+        "props": {
+          "sharedVeterans": 4
+        }
+      },
+      {
+        "type": "SHARES_PATIENT_WITH",
+        "source": "PR300",
+        "target": "PR303",
+        "props": {
+          "sharedVeterans": 1
+        }
       },
       {
         "type": "FLAGS",
@@ -31399,27 +35392,83 @@
         }
       },
       {
+        "type": "FLAGS",
+        "source": "ALLG-20544",
+        "target": "C00568",
+        "props": {}
+      },
+      {
         "type": "HAS_ALLEGATION",
-        "source": "PR205",
+        "source": "PR300",
+        "target": "ALLG-20544",
+        "props": {
+          "fwaType": "Residential length-of-stay abuse"
+        }
+      },
+      {
+        "type": "FLAGS",
+        "source": "ALLG-20538",
+        "target": "C00569",
+        "props": {}
+      },
+      {
+        "type": "HAS_ALLEGATION",
+        "source": "PR301",
+        "target": "ALLG-20538",
+        "props": {
+          "fwaType": "Residential length-of-stay abuse"
+        }
+      },
+      {
+        "type": "FLAGS",
+        "source": "ALLG-20531",
+        "target": "C00571",
+        "props": {}
+      },
+      {
+        "type": "HAS_ALLEGATION",
+        "source": "PR302",
+        "target": "ALLG-20531",
+        "props": {
+          "fwaType": "Residential length-of-stay abuse"
+        }
+      },
+      {
+        "type": "FLAGS",
+        "source": "ALLG-20525",
+        "target": "C00572",
+        "props": {}
+      },
+      {
+        "type": "HAS_ALLEGATION",
+        "source": "PR303",
+        "target": "ALLG-20525",
+        "props": {
+          "fwaType": "Residential length-of-stay abuse"
+        }
+      },
+      {
+        "type": "HAS_ALLEGATION",
+        "source": "PR204",
         "target": "ALLG-20601",
         "props": {
-          "fwaType": "Unbundling"
+          "fwaType": "Modifier misuse"
+        }
+      },
+      {
+        "type": "HAS_ALLEGATION",
+        "source": "PR205",
+        "target": "ALLG-20602",
+        "props": {
+          "fwaType": "Duplicate claim"
         }
       },
       {
         "type": "HAS_ALLEGATION",
         "source": "PR200",
-        "target": "ALLG-20602",
-        "props": {
-          "fwaType": "Deceased patient"
-        }
-      },
-      {
-        "type": "HAS_ALLEGATION",
-        "source": "PR208",
         "target": "ALLG-20603",
         "props": {
-          "fwaType": "Frequency / over-utilization"
+          "fwaType": "Unbundling"
         }
       },
       {
@@ -31427,71 +35476,71 @@
         "source": "PR204",
         "target": "ALLG-20604",
         "props": {
-          "fwaType": "Authorization mismatch"
-        }
-      },
-      {
-        "type": "HAS_ALLEGATION",
-        "source": "PR200",
-        "target": "ALLG-20605",
-        "props": {
           "fwaType": "Upcoding"
         }
       },
       {
         "type": "HAS_ALLEGATION",
         "source": "PR208",
-        "target": "ALLG-20606",
+        "target": "ALLG-20605",
         "props": {
-          "fwaType": "Upcoding"
+          "fwaType": "Modifier misuse"
         }
       },
       {
         "type": "HAS_ALLEGATION",
         "source": "PR204",
-        "target": "ALLG-20607",
-        "props": {
-          "fwaType": "Phantom billing"
-        }
-      },
-      {
-        "type": "HAS_ALLEGATION",
-        "source": "PR205",
-        "target": "ALLG-20608",
+        "target": "ALLG-20606",
         "props": {
           "fwaType": "Unbundling"
         }
       },
       {
         "type": "HAS_ALLEGATION",
-        "source": "PR208",
-        "target": "ALLG-20609",
+        "source": "PR200",
+        "target": "ALLG-20607",
         "props": {
           "fwaType": "Modifier misuse"
+        }
+      },
+      {
+        "type": "HAS_ALLEGATION",
+        "source": "PR206",
+        "target": "ALLG-20608",
+        "props": {
+          "fwaType": "Authorization mismatch"
         }
       },
       {
         "type": "HAS_ALLEGATION",
         "source": "PR200",
+        "target": "ALLG-20609",
+        "props": {
+          "fwaType": "Deceased patient"
+        }
+      },
+      {
+        "type": "HAS_ALLEGATION",
+        "source": "PR205",
         "target": "ALLG-20610",
+        "props": {
+          "fwaType": "Deceased patient"
+        }
+      },
+      {
+        "type": "HAS_ALLEGATION",
+        "source": "PR204",
+        "target": "ALLG-20611",
         "props": {
           "fwaType": "Modifier misuse"
         }
       },
       {
         "type": "HAS_ALLEGATION",
-        "source": "PR205",
-        "target": "ALLG-20611",
-        "props": {
-          "fwaType": "Duplicate claim"
-        }
-      },
-      {
-        "type": "HAS_ALLEGATION",
-        "source": "PR207",
+        "source": "PR204",
         "target": "ALLG-20612",
         "props": {
-          "fwaType": "Phantom billing"
+          "fwaType": "Authorization mismatch"
         }
       },
       {

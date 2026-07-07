@@ -73,7 +73,8 @@ const CPT = {
   "99283": { desc: "Emergency dept visit, level 3", allowed: 120 },
   "E1390": { desc: "Oxygen concentrator (DME)", allowed: 210 },
   "D0120": { desc: "Periodic oral evaluation", allowed: 40 },
-  "D1110": { desc: "Prophylaxis, adult cleaning", allowed: 95 }
+  "D1110": { desc: "Prophylaxis, adult cleaning", allowed: 95 },
+  "H0018": { desc: "Behavioral health, short-term residential, per diem", allowed: 640 }
 };
 const DX = {
   I10: "Essential hypertension",
@@ -83,7 +84,8 @@ const DX = {
   "M54.5": "Low back pain",
   "J45.909": "Asthma, unspecified",
   "R07.9": "Chest pain, unspecified",
-  "Z00.00": "General adult medical exam"
+  "Z00.00": "General adult medical exam",
+  "F10.20": "Alcohol dependence, uncomplicated"
 };
 const TAXONOMY = {
   "207R00000X": "Internal Medicine",
@@ -94,7 +96,8 @@ const TAXONOMY = {
   "251E00000X": "Home Health Agency",
   "1223G0001X": "Dentist, General Practice",
   "332B00000X": "Durable Medical Equipment",
-  "282N00000X": "General Acute Care Hospital"
+  "282N00000X": "General Acute Care Hospital",
+  "324500000X": "Substance Abuse Rehabilitation Facility"
 };
 const FIRST = ["Robert","Danielle","Walter","Marcus","Linda","James","Patricia","Angela","Victor","Rosa","Derek","Sandra","Theodore","Gloria","Nathan","Yolanda","Curtis","Beatrice","Hector","Denise","Raymond","Estelle","Franklin","Camille","Oscar","Vivian","Leon","Marguerite","Clifford","Dolores"];
 const LAST = ["Hayes","Cross","Briggs","Ellison","Navarro","Pruitt","Alvarado","Whitfield","Barrera","Kowalski","Sizemore","Delacroix","Ferris","Ackerman","Vega","Lombardi","Sturgeon","Mancini","Ocampo","Redding","Thibodeaux","Yancey","Holloway","Escobar","Ridley","Fontaine","Broussard","Galloway","Winslow","Cavazos"];
@@ -109,8 +112,13 @@ const FWA = {
   OUTSIDE_SPECIALTY: "Billing outside specialty",
   DECEASED: "Deceased patient",
   PHANTOM: "Phantom billing",
-  AUTH_MISMATCH: "Authorization mismatch"
+  AUTH_MISMATCH: "Authorization mismatch",
+  RESIDENTIAL_LOS: "Residential length-of-stay abuse"
 };
+
+// FAMS composite anomaly groups — the spokes on the provider report-card radar.
+// Each provider gets a 0-100 score per group (vs a peer norm); outliers spike.
+const GROUPS = ["Charge & Payment", "Diagnostic Testing", "Distance / Travel", "Utilization", "Coding"];
 const RULES = [
   { id: "rule_ncci_43235_43239", code: "NCCI-PTP 43235/43239", name: "NCCI Procedure-to-Procedure edit", source: "CMS NCCI", category: "Coding", description: "43235 is a component of 43239 and not separately payable in the same session.", version: "2.3", effectiveDate: "2025-01-01", environment: "Production" },
   { id: "rule_mue", code: "MUE", name: "Medically Unlikely Edit", source: "CMS", category: "Coding", description: "Units billed exceed the medically unlikely threshold for the code.", version: "1.7", effectiveDate: "2024-10-01", environment: "Production" },
@@ -124,7 +132,8 @@ const RULES = [
 const MODELS = [
   { id: "model_em_peer", name: "E/M Peer-Group Profile", type: "Anomaly Detection", description: "Flags providers whose E/M level distribution deviates from specialty peers." },
   { id: "model_freq", name: "Per-Patient Frequency", type: "Anomaly Detection", description: "Flags procedure frequency far above per-patient norms." },
-  { id: "model_mod", name: "Modifier Abuse Pattern", type: "Anomaly Detection", description: "Flags abnormal modifier-59 override rates vs peers." }
+  { id: "model_mod", name: "Modifier Abuse Pattern", type: "Anomaly Detection", description: "Flags abnormal modifier-59 override rates vs peers." },
+  { id: "model_los", name: "Residential LOS & Network", type: "Anomaly Detection", description: "Flags clusters of just-under-threshold residential stays with shared patients/registration across facilities." }
 ];
 
 // ---------- date helpers (deterministic; no Date.now) ----------
@@ -306,6 +315,70 @@ BG.forEach((b) => {
   }
 });
 
+// ========== COLLUSION CHAIN: cross-state residential-treatment shuffling ==========
+// A ring of residential/substance-abuse facilities under one holding company (shared
+// business registration + shared officer) shuffles the SAME veterans across AZ→CA→NV
+// for back-to-back <30-day stays, banking near-full 30-day per-diem charges each time.
+// Distinct from the P1/P2 shared-TIN ring — this is a multi-state chain with shared
+// registration/officer and shared patients but SEPARATE TINs (a harder-to-see ring).
+const CHAIN_REG = { officer: "Marcus D. Feld", registration: "Meridian Behavioral Holdings LLC", regId: "REG-AZ-0098124" };
+const CHAIN = [
+  { id: "PR300", name: "Sonoran Recovery Center", city: "Phoenix", state: "AZ" },
+  { id: "PR301", name: "Pacific Sands Treatment", city: "San Diego", state: "CA" },
+  { id: "PR302", name: "Silver State Wellness", city: "Las Vegas", state: "NV" },
+  { id: "PR303", name: "Desert Bloom Behavioral", city: "Tucson", state: "AZ" }
+];
+const chainProviders = CHAIN.map((c) => {
+  const p = { id: c.id, name: c.name, npi: makeInvalidNpi(), tin: makeTin(), taxonomyCode: "324500000X", taxonomyLabel: TAXONOMY["324500000X"], city: c.city, state: c.state, peerGroup: "residential_treatment", role: "chain", flagged: true, officer: CHAIN_REG.officer, registration: CHAIN_REG.registration, registrationId: CHAIN_REG.regId };
+  providers.push(p);
+  return p;
+});
+// shared officer + shared business registration across every pair in the chain
+for (let i = 0; i < chainProviders.length; i++) {
+  for (let j = i + 1; j < chainProviders.length; j++) {
+    edges.push({ type: "SHARES_OFFICER", source: chainProviders[i].id, target: chainProviders[j].id, props: { officer: CHAIN_REG.officer } });
+    edges.push({ type: "SHARES_REGISTRATION", source: chainProviders[i].id, target: chainProviders[j].id, props: { registration: CHAIN_REG.registration, regId: CHAIN_REG.regId } });
+  }
+}
+// 7 veterans cycled through the chain: each does 2-3 back-to-back <30-day stays in
+// different states within a quarter. Track shared-patient overlap between facilities.
+const chainVets = [];
+const chainVetNames = [["V0004", "Curtis Holloway"], ["V0005", "Beatrice Vega"], ["V0006", "Franklin Ridley"], ["V0007", "Estelle Munoz"], ["V0008", "Leon Ackerman"], ["V0009", "Gloria Sturgeon"], ["V0010", "Hector Ocampo"]];
+chainVetNames.forEach(([id, name]) => chainVets.push(addVeteran({ id, name, state: "AZ", city: "Phoenix" })));
+const chainPairCounts = {}; // "PR300|PR301" -> shared veteran count
+let chainExposureByProvider = {}; chainProviders.forEach((p) => (chainExposureByProvider[p.id] = 0));
+let chainStayTotal = 0, chainShortStays = 0;
+chainVets.forEach((v, vi) => {
+  const hops = 2 + (vi % 2); // 2 or 3 facilities
+  const visited = [];
+  let month = 1, day = 3;
+  for (let h = 0; h < hops; h++) {
+    const fac = chainProviders[(vi + h) % chainProviders.length];
+    visited.push(fac.id);
+    const stayDays = int(21, 29); // deliberately just under the 30-day threshold
+    chainStayTotal++; chainShortStays++;
+    // one per-diem residential claim covering the stay (units = days)
+    const line = cptLine("H0018", { dx: "F10.20", units: stayDays, billed: 640 * stayDays, allowed: 640 * stayDays, paid: 640 * stayDays, violatesRuleIds: ["model_los"] });
+    addClaim({ provider: fac, veteran: v, type: "837I", dos: isoDate(2025, month, Math.min(day, 28)), lines: [line] });
+    chainExposureByProvider[fac.id] += Math.round(640 * stayDays * 0.5); // ~half deemed improper (over-length / medically unnecessary readmission)
+    // advance ~1 month for the next back-to-back stay
+    month += 1; day = int(2, 10);
+    edges.push({ type: "TREATED_BY", source: v.id, target: fac.id, props: { stayDays } });
+  }
+  // record shared-patient overlap for each facility pair this veteran links
+  for (let a = 0; a < visited.length; a++) {
+    for (let b = a + 1; b < visited.length; b++) {
+      const key = [visited[a], visited[b]].sort().join("|");
+      chainPairCounts[key] = (chainPairCounts[key] || 0) + 1;
+    }
+  }
+});
+// SHARES_PATIENT_WITH edges between chain facilities (weighted by shared-veteran count)
+Object.keys(chainPairCounts).forEach((key) => {
+  const [s, t] = key.split("|");
+  edges.push({ type: "SHARES_PATIENT_WITH", source: s, target: t, props: { sharedVeterans: chainPairCounts[key] } });
+});
+
 // ========== ALLEGATIONS ==========
 function addAllegation({ providerId, claimId = null, fwaType, riskScore, confidence, source, status, assignee = null, claimType = "837P", exposurePre = 0, exposurePost, submittedForRecovery = 0, verifiedRecoupment = 0, narrative = "", xai = null, decision = null, model = null, rules = [], id = null }) {
   const aid = id || String(++allgSeq);
@@ -389,11 +462,40 @@ bgAllegs.forEach((b) => addAllegation({
   status: b.status, assignee: b.who, claimType: b.type || "837P", exposurePost: b.exp, rules: b.rules || [],
   xai: { summary: `${b.fwa} flagged for review. Estimated post-payment exposure $${b.exp.toLocaleString()}.`, factors: [] }
 }));
-// a few more generic ones to fill the queue to 24
+// ---- collusion-chain allegations (one per residential facility) ----
+const chainSharedTotal = Object.values(chainPairCounts).reduce((s, n) => s + n, 0);
+const CHAIN_ALLEGS = [
+  { id: "20544", p: "PR300", risk: 92, conf: 87, status: "New", who: null },
+  { id: "20538", p: "PR301", risk: 89, conf: 85, status: "New", who: null },
+  { id: "20531", p: "PR302", risk: 90, conf: 84, status: "Assigned", who: "Devon Carter" },
+  { id: "20525", p: "PR303", risk: 86, conf: 82, status: "Assigned", who: "Priya Nair" }
+];
+CHAIN_ALLEGS.forEach((c) => {
+  const fac = providers.find((p) => p.id === c.p);
+  const claim = claims.find((cl) => cl.providerId === c.p && cl.lines.some((l) => l.cpt === "H0018"));
+  const sharedWith = Object.keys(chainPairCounts).filter((k) => k.indexOf(c.p) >= 0).reduce((s, k) => s + chainPairCounts[k], 0);
+  addAllegation({
+    id: c.id, providerId: c.p, claimId: claim ? claim.id : null, fwaType: FWA.RESIDENTIAL_LOS,
+    riskScore: c.risk, confidence: c.conf, source: "Both", status: c.status, assignee: c.who,
+    claimType: "837I", exposurePost: chainExposureByProvider[c.p], model: "model_los", rules: ["rule_fee"],
+    xai: {
+      summary: `${fac.name} is one of ${chainProviders.length} residential facilities under a single holding company (${CHAIN_REG.registration}, officer ${CHAIN_REG.officer}) that cycle the same veterans across AZ/CA/NV for back-to-back stays kept just under the 30-day threshold — banking near-full per-diem charges on each readmission. Shared patients with ${sharedWith} cross-facility overlaps; separate TINs mask the common ownership.`,
+      factors: [
+        { label: "Chain facilities", value: `${chainProviders.length} across AZ · CA · NV` },
+        { label: "Shared registration", value: CHAIN_REG.registration, benchmark: "separate TINs" },
+        { label: "Avg length of stay", value: "~25 days", benchmark: "30-day threshold" },
+        { label: "Cross-facility shared patients", value: `${sharedWith}` }
+      ]
+    }
+  });
+});
+
+// a few more generic ones to fill the queue to 24+ (excludes the chain-only FWA type)
 const genProviders = ["PR200", "PR204", "PR205", "PR206", "PR207", "PR208"];
-while (allegations.length < 24) {
+const genFwa = Object.values(FWA).filter((f) => f !== FWA.RESIDENTIAL_LOS);
+while (allegations.length < 28) {
   const p = pick(genProviders);
-  const fwa = pick(Object.values(FWA));
+  const fwa = pick(genFwa);
   addAllegation({ providerId: p, fwaType: fwa, riskScore: int(40, 79), confidence: int(60, 90), source: pick(["Pattern Recognition", "Rules Engine"]), status: pick(["New", "Assigned", "Under review"]), assignee: chance(0.5) ? pick(ANALYSTS) : null, exposurePost: int(800, 12000), xai: { summary: `${fwa} flagged for review.`, factors: [] } });
 }
 
@@ -414,15 +516,78 @@ providers.forEach((p) => {
   p.riskScore = pAllegs.length ? Math.max(...pAllegs.map((a) => a.riskScore)) : 0;
 });
 
+// ========== provider report-card group scores (radar spokes + drill-down) ==========
+// Each provider scores 0-100 per FAMS composite group vs a peer norm. Scenario
+// providers spike on the group matching their anomaly; peers/clean sit near the norm.
+const PEER_NORM = { "Charge & Payment": 38, "Diagnostic Testing": 34, "Distance / Travel": 30, "Utilization": 40, "Coding": 36 };
+const SPIKE = {
+  PR001: { "Coding": 88, "Charge & Payment": 74 },
+  PR002: { "Coding": 84, "Charge & Payment": 71 },
+  PR003: { "Utilization": 86 },
+  PR300: { "Distance / Travel": 92, "Utilization": 83, "Charge & Payment": 68 },
+  PR301: { "Distance / Travel": 90, "Utilization": 81, "Charge & Payment": 66 },
+  PR302: { "Distance / Travel": 91, "Utilization": 84, "Charge & Payment": 69 },
+  PR303: { "Distance / Travel": 88, "Utilization": 79, "Charge & Payment": 64 }
+};
+// map a background provider's primary FWA to the group it spikes
+const FWA_GROUP = {
+  [FWA.UPCODING]: "Coding", [FWA.UNBUNDLING]: "Coding", [FWA.MODIFIER]: "Coding",
+  [FWA.OUTSIDE_SPECIALTY]: "Coding", [FWA.DUPLICATE]: "Charge & Payment",
+  [FWA.PHANTOM]: "Charge & Payment", [FWA.DECEASED]: "Charge & Payment",
+  [FWA.AUTH_MISMATCH]: "Charge & Payment", [FWA.FREQUENCY]: "Utilization",
+  [FWA.RESIDENTIAL_LOS]: "Distance / Travel"
+};
+const OUTLIER_DELTA = 22; // score - peer at/above this = outlier spoke
+function attrRows(p, group, outlier) {
+  // scenario-specific attribute drill-downs where we have a story; else generic.
+  if (p.id === "PR001" && group === "Coding") return [
+    { label: "99215 share of established E/M", value: "90%", peer: "14%", outlier: true },
+    { label: "Level-5 vs documented complexity", value: "5.8σ high", peer: "±1σ", outlier: true },
+    { label: "Down-coding rate", value: "0.4%", peer: "6%", outlier: true }
+  ];
+  if (p.id === "PR003" && group === "Utilization") return [
+    { label: "Per-patient procedure frequency", value: "36 / 90 days", peer: "9 / 90 days", outlier: true },
+    { label: "Single-patient concentration", value: "100%", peer: "18%", outlier: true },
+    { label: "Clinical justification on file", value: "ESRD dialysis order", peer: "—", outlier: false }
+  ];
+  if ((p.role === "chain") && group === "Distance / Travel") return [
+    { label: "Cross-state stays / patient", value: "2–3 (AZ·CA·NV)", peer: "0", outlier: true },
+    { label: "Avg miles between stays", value: "540 mi", peer: "35 mi", outlier: true },
+    { label: "Shared-registration facilities", value: `${chainProviders.length}`, peer: "1", outlier: true }
+  ];
+  if ((p.role === "chain") && group === "Utilization") return [
+    { label: "Avg length of stay", value: "25 days", peer: "14 days", outlier: true },
+    { label: "Stays under 30-day threshold", value: "100%", peer: "22%", outlier: true },
+    { label: "30-day readmission rate", value: "71%", peer: "9%", outlier: true }
+  ];
+  // generic rows
+  return [
+    { label: group + " index vs peers", value: outlier ? "elevated" : "in range", peer: "norm", outlier: !!outlier },
+    { label: "Percentile within specialty", value: outlier ? "97th" : "" + int(35, 70) + "th", peer: "50th", outlier: !!outlier }
+  ];
+}
+providers.forEach((p) => {
+  const primaryFwa = (allegations.filter((a) => a.providerId === p.id).sort((a, b) => b.riskScore - a.riskScore)[0] || {}).fwaType;
+  const spike = SPIKE[p.id] || (p.flagged && primaryFwa && FWA_GROUP[primaryFwa] ? { [FWA_GROUP[primaryFwa]]: int(60, 68) } : {});
+  p.groupScores = GROUPS.map((g) => {
+    const peer = PEER_NORM[g];
+    const score = spike[g] != null ? spike[g] : Math.max(8, Math.min(96, peer + int(-8, 9)));
+    return { group: g, score, peer, outlier: score - peer >= OUTLIER_DELTA };
+  });
+  p.groupAttributes = {};
+  p.groupScores.forEach((gs) => { p.groupAttributes[gs.group] = attrRows(p, gs.group, gs.outlier); });
+});
+
 // ========== graph nodes (curated for the network view) ==========
 const graphNodes = [];
 providers.forEach((p) => graphNodes.push({ id: p.id, type: "Provider", label: p.name, props: { npi: p.npi, tin: p.tin, specialty: p.taxonomyLabel, risk: p.riskScore, role: p.role } }));
-// include key veterans (shared ring + dialysis)
-[robert, danielle, walter, ...s2Vets].forEach((v) => {
-  if (!graphNodes.find((n) => n.id === v.id)) graphNodes.push({ id: v.id, type: "Veteran", label: v.name, props: { city: v.city } });
+// include key veterans (shared ring + dialysis + collusion chain)
+[robert, danielle, walter, ...s2Vets, ...chainVets].forEach((v) => {
+  if (!graphNodes.find((n) => n.id === v.id)) graphNodes.push({ id: v.id, type: "Veteran", label: v.name, props: { city: v.city, state: v.state } });
 });
 allegations.forEach((a) => graphNodes.push({ id: `ALLG-${a.id}`, type: "Allegation", label: `${a.fwaType} (${a.riskScore})`, props: { fwaType: a.fwaType, risk: a.riskScore, status: a.status } }));
-// veteran<->provider edges for graph (shared ring + dialysis)
+// veteran<->provider edges for graph (shared ring + dialysis); chain TREATED_BY edges
+// were already pushed during chain generation.
 s2Vets.forEach((v) => { edges.push({ type: "TREATED_BY", source: v.id, target: P1.id, props: {} }); edges.push({ type: "TREATED_BY", source: v.id, target: P2.id, props: {} }); });
 edges.push({ type: "TREATED_BY", source: walter.id, target: P3.id, props: { claims: 36 } });
 
