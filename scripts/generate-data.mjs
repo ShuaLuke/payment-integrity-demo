@@ -175,21 +175,23 @@ function addVeteran(explicit = {}) {
   return v;
 }
 
-function addClaim({ provider, veteran, type = "837P", dos, lines, claimStatus = "Paid", paymentType = "POST" }) {
+function addClaim({ provider, veteran, type = "837P", dos, lines, claimStatus = "Paid", paymentType = "POST", pending = false }) {
   claimSeq++;
+  // a pending (pre-payment) claim has nothing paid yet — allowed is the amount at risk.
+  if (pending) lines.forEach((l) => { l.paid = 0; });
   const billed = round2(lines.reduce((s, l) => s + l.billed, 0));
   const allowed = round2(lines.reduce((s, l) => s + l.allowed, 0));
   const paid = round2(lines.reduce((s, l) => s + l.paid, 0));
   const id = `C${String(claimSeq).padStart(5, "0")}`;
-  // authorization + payment
+  // authorization always on file; payment only exists once the claim is paid
   authSeq++; const authId = `A${String(authSeq).padStart(5, "0")}`;
   authorizations.push({ id: authId, authId: `AUTH-${int(100000, 999999)}`, veteranId: veteran.id, providerId: provider.id, service: lines[0].description, validFrom: "2025-01-01", validTo: "2025-12-31", status: "Active" });
-  paySeq++; const payId = `P${String(paySeq).padStart(5, "0")}`;
-  payments.push({ id: payId, paymentId: `RA-${int(1000000, 9999999)}`, claimId: id, amount: paid, date: dos, remittance835: `835-${int(100000, 999999)}` });
+  let payId = null;
+  if (!pending) { paySeq++; payId = `P${String(paySeq).padStart(5, "0")}`; payments.push({ id: payId, paymentId: `RA-${int(1000000, 9999999)}`, claimId: id, amount: paid, date: dos, remittance835: `835-${int(100000, 999999)}` }); }
   const claim = {
     id, claimNumber: claimNumber(), type, providerId: provider.id, veteranId: veteran.id,
     dateOfService: dos, billedAmount: billed, allowedAmount: allowed, paidAmount: paid,
-    claimStatus, paymentType, authorizationId: authId, paymentId: payId,
+    claimStatus: pending ? "Pending" : claimStatus, paymentType: pending ? "PRE" : paymentType, authorizationId: authId, paymentId: payId,
     diagnosisCodes: lines[0].dx ? [lines[0].dx] : [],
     lines: lines.map((l, i) => ({
       lineId: `${id}-L${i + 1}`, cpt: l.cpt, modifiers: l.modifiers || [], units: l.units || 1,
@@ -380,9 +382,9 @@ Object.keys(chainPairCounts).forEach((key) => {
 });
 
 // ========== ALLEGATIONS ==========
-function addAllegation({ providerId, claimId = null, fwaType, riskScore, confidence, source, status, assignee = null, claimType = "837P", exposurePre = 0, exposurePost, submittedForRecovery = 0, verifiedRecoupment = 0, narrative = "", xai = null, decision = null, model = null, rules = [], id = null }) {
+function addAllegation({ providerId, claimId = null, fwaType, riskScore, confidence, source, status, assignee = null, claimType = "837P", exposurePre = 0, exposurePost, submittedForRecovery = 0, verifiedRecoupment = 0, narrative = "", xai = null, decision = null, model = null, rules = [], id = null, mode = "retrospective", recommendedAction = null }) {
   const aid = id || String(++allgSeq);
-  const a = { id: aid, providerId, claimId, fwaType, riskScore, confidence, source, status, assignee, claimType, exposurePre, exposurePost, submittedForRecovery, verifiedRecoupment, narrative, xai, decision, modelId: model, ruleIds: rules, createdDate: isoDate(2025, int(6, 10), int(1, 28)) };
+  const a = { id: aid, providerId, claimId, fwaType, riskScore, confidence, source, status, assignee, claimType, exposurePre, exposurePost, submittedForRecovery, verifiedRecoupment, narrative, xai, decision, modelId: model, ruleIds: rules, mode, recommendedAction, createdDate: isoDate(2025, int(6, 10), int(1, 28)) };
   allegations.push(a);
   if (claimId) edges.push({ type: "FLAGS", source: `ALLG-${aid}`, target: claimId, props: {} });
   edges.push({ type: "HAS_ALLEGATION", source: providerId, target: `ALLG-${aid}`, props: { fwaType } });
@@ -640,6 +642,55 @@ function totalExposurePostForTrend() { return round2(allegations.reduce((s, a) =
 
 // ========== seed a couple of pre-existing investigations (escalated) ==========
 ["20155", "20092"].forEach((id) => { var a = allegations.find((x) => x.id === id); if (a) a.status = "Escalated"; });
+
+// ========== PREPAY: pre-payment triage (pending claims scored BEFORE payment) ==========
+// A parallel "prepay" mode. Claims are scored before money goes out and the analyst
+// decides Pay / Hold / Deny. Several come from providers already flagged post-pay (stop
+// the NEXT improper payment); a couple are clean auto-pay candidates. Kept out of the
+// retrospective KPIs/graph/report-cards on purpose (this block runs after those).
+const provById = (id) => providers.find((p) => p.id === id);
+const PREPAY = [
+  { pid: "PR300", type: "837I", cpt: "H0018", units: 27, fwa: FWA.RESIDENTIAL_LOS, risk: 93, conf: 88, rec: "deny", model: "model_los", rules: ["rule_fee"], note: "New 27-day residential stay from a facility in the flagged Meridian Behavioral chain — the same veteran was discharged from the AZ facility 26 days ago. Deny before the per-diem is paid." },
+  { pid: "PR002", type: "837P", cpts: [["43239", { dx: "K21.9" }], ["43235", { dx: "K21.9", modifiers: ["59"] }]], fwa: FWA.UNBUNDLING, risk: 88, conf: 90, rec: "deny", rules: ["rule_ncci_43235_43239", "rule_mod59"], note: "43235 unbundled from 43239 with modifier 59 — the same NCCI-PTP pattern this TIN was flagged for post-pay. Deny the component line." },
+  { pid: "PR001", type: "837P", cpt: "99215", dx: "I10", fwa: FWA.UPCODING, risk: 82, conf: 74, rec: "hold", model: "model_em_peer", note: "Level-5 E/M on an established hypertension visit from a provider billing 99215 on ~90% of visits. Hold for records before paying." },
+  { pid: "PR201", type: "837P", cpt: "E1390", fwa: FWA.DUPLICATE, risk: 77, conf: 85, rec: "deny", rules: ["rule_dup"], note: "Oxygen concentrator billed twice within 30 days for the same veteran. Duplicate — deny the second." },
+  { pid: "PR205", type: "837I", cpt: "97110", units: 8, fwa: FWA.PHANTOM, risk: 84, conf: 66, rec: "hold", model: "model_freq", note: "8 therapeutic-exercise units billed for a home-health visit with no matching visit note on file. Hold pending documentation." },
+  { pid: "PR200", type: "837P", cpt: "70551", fwa: FWA.FREQUENCY, risk: 70, conf: 72, rec: "hold", model: "model_freq", note: "Third brain MRI for this veteran in 60 days. Hold for prior-imaging review." },
+  { pid: "PR204", type: "837P", cpts: [["93000", {}], ["99214", { dx: "R07.9" }]], fwa: FWA.MODIFIER, risk: 44, conf: 61, rec: "pay", note: "EKG + E/M billed same day; modifier logic checks out and the amount matches the fee schedule. Low risk — clear to pay." },
+  { pid: "PR206", type: "837P", cpt: "20610", dx: "M54.5", fwa: "Routine — no anomaly", risk: 19, conf: 95, rec: "pay", note: "Major-joint injection consistent with the referral and fee schedule. No anomaly — auto-pay candidate." },
+  { pid: "PR207", type: "837P", cpt: "99213", dx: "Z00.00", fwa: "Routine — no anomaly", risk: 14, conf: 96, rec: "pay", note: "Routine established-patient visit. Clean — clear to pay." }
+];
+const recLabel = { pay: "Pay", hold: "Hold for records", deny: "Deny" };
+let ppId = 20721;
+PREPAY.forEach((s) => {
+  const prov = provById(s.pid);
+  const vet = pick(veterans);
+  const lines = (s.cpts || [[s.cpt, { dx: s.dx }]]).map(([cpt, o]) => {
+    o = o || {}; const units = o.units || s.units || 1; const base = CPT[cpt].allowed;
+    return cptLine(cpt, Object.assign({ units, billed: base * units, allowed: base * units }, o));
+  });
+  if (s.rec !== "pay") lines.forEach((l) => { l.violatesRuleIds = (s.rules && s.rules.length ? s.rules : (s.model ? [s.model] : [])); });
+  const claim = addClaim({ provider: prov, veteran: vet, type: s.type, dos: "2025-07-0" + (1 + (ppId % 9)), lines, pending: true });
+  const src = (s.rules && s.rules.length && s.model) ? "Both" : s.model ? "Pattern Recognition" : "Rules Engine";
+  addAllegation({
+    id: String(ppId++), providerId: s.pid, claimId: claim.id, fwaType: s.fwa, riskScore: s.risk, confidence: s.conf,
+    source: src, status: "Pending", claimType: s.type, exposurePre: claim.allowedAmount, exposurePost: 0,
+    mode: "prepay", recommendedAction: s.rec, model: s.model || null, rules: s.rules || [],
+    xai: { summary: s.note, factors: [{ label: "Amount at risk", value: "$" + claim.allowedAmount.toLocaleString() }, { label: "Recommended", value: recLabel[s.rec] }] }
+  });
+});
+
+// ========== provider historical-claim volumes (12 months) — retro aggregate + sparklines ==========
+const HIST_MONTHS = ["2024-04", "2024-05", "2024-06", "2024-07", "2024-08", "2024-09", "2024-10", "2024-11", "2024-12", "2025-01", "2025-02", "2025-03"];
+providers.forEach((p) => {
+  const perMonth = Math.max(1, Math.round((p.claimCount || 6) / 12));
+  const avgPaid = (p.totalPaid || 0) / Math.max(1, p.claimCount || 1);
+  p.history = HIST_MONTHS.map((m) => {
+    const claims = Math.max(0, perMonth + int(-2, 3));
+    const flagged = (p.flagged || p.role === "chain" || p.role === "hero") && chance(0.45) ? int(1, 3) : 0;
+    return { month: m, claims, paid: round2(claims * avgPaid), flagged };
+  });
+});
 
 // ========== assemble + write ==========
 const dataset = {

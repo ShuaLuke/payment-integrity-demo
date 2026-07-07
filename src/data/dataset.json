@@ -8,9 +8,9 @@
     "counts": {
       "providers": 22,
       "veterans": 45,
-      "claims": 584,
-      "allegations": 28,
-      "edges": 104,
+      "claims": 593,
+      "allegations": 37,
+      "edges": 122,
       "graphNodes": 65
     }
   },
@@ -140,7 +140,81 @@
             "outlier": true
           }
         ]
-      }
+      },
+      "history": [
+        {
+          "month": "2024-04",
+          "claims": 28,
+          "paid": 4952.52,
+          "flagged": 0
+        },
+        {
+          "month": "2024-05",
+          "claims": 30,
+          "paid": 5306.27,
+          "flagged": 0
+        },
+        {
+          "month": "2024-06",
+          "claims": 28,
+          "paid": 4952.52,
+          "flagged": 0
+        },
+        {
+          "month": "2024-07",
+          "claims": 29,
+          "paid": 5129.4,
+          "flagged": 0
+        },
+        {
+          "month": "2024-08",
+          "claims": 30,
+          "paid": 5306.27,
+          "flagged": 1
+        },
+        {
+          "month": "2024-09",
+          "claims": 31,
+          "paid": 5483.15,
+          "flagged": 0
+        },
+        {
+          "month": "2024-10",
+          "claims": 27,
+          "paid": 4775.64,
+          "flagged": 0
+        },
+        {
+          "month": "2024-11",
+          "claims": 27,
+          "paid": 4775.64,
+          "flagged": 1
+        },
+        {
+          "month": "2024-12",
+          "claims": 31,
+          "paid": 5483.15,
+          "flagged": 3
+        },
+        {
+          "month": "2025-01",
+          "claims": 27,
+          "paid": 4775.64,
+          "flagged": 1
+        },
+        {
+          "month": "2025-02",
+          "claims": 32,
+          "paid": 5660.02,
+          "flagged": 0
+        },
+        {
+          "month": "2025-03",
+          "claims": 31,
+          "paid": 5483.15,
+          "flagged": 0
+        }
+      ]
     },
     {
       "id": "PR002",
@@ -260,7 +334,81 @@
             "outlier": true
           }
         ]
-      }
+      },
+      "history": [
+        {
+          "month": "2024-04",
+          "claims": 3,
+          "paid": 3030,
+          "flagged": 0
+        },
+        {
+          "month": "2024-05",
+          "claims": 2,
+          "paid": 2020,
+          "flagged": 0
+        },
+        {
+          "month": "2024-06",
+          "claims": 5,
+          "paid": 5050,
+          "flagged": 2
+        },
+        {
+          "month": "2024-07",
+          "claims": 1,
+          "paid": 1010,
+          "flagged": 3
+        },
+        {
+          "month": "2024-08",
+          "claims": 1,
+          "paid": 1010,
+          "flagged": 0
+        },
+        {
+          "month": "2024-09",
+          "claims": 6,
+          "paid": 6060,
+          "flagged": 0
+        },
+        {
+          "month": "2024-10",
+          "claims": 2,
+          "paid": 2020,
+          "flagged": 0
+        },
+        {
+          "month": "2024-11",
+          "claims": 5,
+          "paid": 5050,
+          "flagged": 0
+        },
+        {
+          "month": "2024-12",
+          "claims": 3,
+          "paid": 3030,
+          "flagged": 0
+        },
+        {
+          "month": "2025-01",
+          "claims": 6,
+          "paid": 6060,
+          "flagged": 3
+        },
+        {
+          "month": "2025-02",
+          "claims": 2,
+          "paid": 2020,
+          "flagged": 2
+        },
+        {
+          "month": "2025-03",
+          "claims": 3,
+          "paid": 3030,
+          "flagged": 0
+        }
+      ]
     },
     {
       "id": "PR003",
@@ -386,7 +534,81 @@
             "outlier": false
           }
         ]
-      }
+      },
+      "history": [
+        {
+          "month": "2024-04",
+          "claims": 5,
+          "paid": 440,
+          "flagged": 0
+        },
+        {
+          "month": "2024-05",
+          "claims": 4,
+          "paid": 352,
+          "flagged": 0
+        },
+        {
+          "month": "2024-06",
+          "claims": 2,
+          "paid": 176,
+          "flagged": 0
+        },
+        {
+          "month": "2024-07",
+          "claims": 4,
+          "paid": 352,
+          "flagged": 3
+        },
+        {
+          "month": "2024-08",
+          "claims": 2,
+          "paid": 176,
+          "flagged": 1
+        },
+        {
+          "month": "2024-09",
+          "claims": 6,
+          "paid": 528,
+          "flagged": 1
+        },
+        {
+          "month": "2024-10",
+          "claims": 5,
+          "paid": 440,
+          "flagged": 0
+        },
+        {
+          "month": "2024-11",
+          "claims": 6,
+          "paid": 528,
+          "flagged": 1
+        },
+        {
+          "month": "2024-12",
+          "claims": 3,
+          "paid": 264,
+          "flagged": 0
+        },
+        {
+          "month": "2025-01",
+          "claims": 4,
+          "paid": 352,
+          "flagged": 0
+        },
+        {
+          "month": "2025-02",
+          "claims": 2,
+          "paid": 176,
+          "flagged": 1
+        },
+        {
+          "month": "2025-03",
+          "claims": 5,
+          "paid": 440,
+          "flagged": 0
+        }
+      ]
     },
     {
       "id": "PR100",
@@ -508,7 +730,81 @@
             "outlier": false
           }
         ]
-      }
+      },
+      "history": [
+        {
+          "month": "2024-04",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-05",
+          "claims": 4,
+          "paid": 481.54,
+          "flagged": 0
+        },
+        {
+          "month": "2024-06",
+          "claims": 4,
+          "paid": 481.54,
+          "flagged": 0
+        },
+        {
+          "month": "2024-07",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-08",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-09",
+          "claims": 1,
+          "paid": 120.38,
+          "flagged": 0
+        },
+        {
+          "month": "2024-10",
+          "claims": 3,
+          "paid": 361.15,
+          "flagged": 0
+        },
+        {
+          "month": "2024-11",
+          "claims": 2,
+          "paid": 240.77,
+          "flagged": 0
+        },
+        {
+          "month": "2024-12",
+          "claims": 1,
+          "paid": 120.38,
+          "flagged": 0
+        },
+        {
+          "month": "2025-01",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2025-02",
+          "claims": 4,
+          "paid": 481.54,
+          "flagged": 0
+        },
+        {
+          "month": "2025-03",
+          "claims": 3,
+          "paid": 361.15,
+          "flagged": 0
+        }
+      ]
     },
     {
       "id": "PR101",
@@ -630,7 +926,81 @@
             "outlier": false
           }
         ]
-      }
+      },
+      "history": [
+        {
+          "month": "2024-04",
+          "claims": 3,
+          "paid": 350.73,
+          "flagged": 0
+        },
+        {
+          "month": "2024-05",
+          "claims": 3,
+          "paid": 350.73,
+          "flagged": 0
+        },
+        {
+          "month": "2024-06",
+          "claims": 4,
+          "paid": 467.64,
+          "flagged": 0
+        },
+        {
+          "month": "2024-07",
+          "claims": 3,
+          "paid": 350.73,
+          "flagged": 0
+        },
+        {
+          "month": "2024-08",
+          "claims": 1,
+          "paid": 116.91,
+          "flagged": 0
+        },
+        {
+          "month": "2024-09",
+          "claims": 3,
+          "paid": 350.73,
+          "flagged": 0
+        },
+        {
+          "month": "2024-10",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-11",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-12",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2025-01",
+          "claims": 1,
+          "paid": 116.91,
+          "flagged": 0
+        },
+        {
+          "month": "2025-02",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2025-03",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        }
+      ]
     },
     {
       "id": "PR102",
@@ -752,7 +1122,81 @@
             "outlier": false
           }
         ]
-      }
+      },
+      "history": [
+        {
+          "month": "2024-04",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-05",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-06",
+          "claims": 2,
+          "paid": 178.6,
+          "flagged": 0
+        },
+        {
+          "month": "2024-07",
+          "claims": 3,
+          "paid": 267.9,
+          "flagged": 0
+        },
+        {
+          "month": "2024-08",
+          "claims": 4,
+          "paid": 357.2,
+          "flagged": 0
+        },
+        {
+          "month": "2024-09",
+          "claims": 4,
+          "paid": 357.2,
+          "flagged": 0
+        },
+        {
+          "month": "2024-10",
+          "claims": 4,
+          "paid": 357.2,
+          "flagged": 0
+        },
+        {
+          "month": "2024-11",
+          "claims": 4,
+          "paid": 357.2,
+          "flagged": 0
+        },
+        {
+          "month": "2024-12",
+          "claims": 1,
+          "paid": 89.3,
+          "flagged": 0
+        },
+        {
+          "month": "2025-01",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2025-02",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2025-03",
+          "claims": 1,
+          "paid": 89.3,
+          "flagged": 0
+        }
+      ]
     },
     {
       "id": "PR103",
@@ -874,7 +1318,81 @@
             "outlier": false
           }
         ]
-      }
+      },
+      "history": [
+        {
+          "month": "2024-04",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-05",
+          "claims": 1,
+          "paid": 111.9,
+          "flagged": 0
+        },
+        {
+          "month": "2024-06",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-07",
+          "claims": 4,
+          "paid": 447.6,
+          "flagged": 0
+        },
+        {
+          "month": "2024-08",
+          "claims": 4,
+          "paid": 447.6,
+          "flagged": 0
+        },
+        {
+          "month": "2024-09",
+          "claims": 1,
+          "paid": 111.9,
+          "flagged": 0
+        },
+        {
+          "month": "2024-10",
+          "claims": 2,
+          "paid": 223.8,
+          "flagged": 0
+        },
+        {
+          "month": "2024-11",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-12",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2025-01",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2025-02",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2025-03",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        }
+      ]
     },
     {
       "id": "PR104",
@@ -996,7 +1514,81 @@
             "outlier": false
           }
         ]
-      }
+      },
+      "history": [
+        {
+          "month": "2024-04",
+          "claims": 4,
+          "paid": 409.67,
+          "flagged": 0
+        },
+        {
+          "month": "2024-05",
+          "claims": 2,
+          "paid": 204.83,
+          "flagged": 0
+        },
+        {
+          "month": "2024-06",
+          "claims": 4,
+          "paid": 409.67,
+          "flagged": 0
+        },
+        {
+          "month": "2024-07",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-08",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-09",
+          "claims": 2,
+          "paid": 204.83,
+          "flagged": 0
+        },
+        {
+          "month": "2024-10",
+          "claims": 4,
+          "paid": 409.67,
+          "flagged": 0
+        },
+        {
+          "month": "2024-11",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-12",
+          "claims": 3,
+          "paid": 307.25,
+          "flagged": 0
+        },
+        {
+          "month": "2025-01",
+          "claims": 4,
+          "paid": 409.67,
+          "flagged": 0
+        },
+        {
+          "month": "2025-02",
+          "claims": 4,
+          "paid": 409.67,
+          "flagged": 0
+        },
+        {
+          "month": "2025-03",
+          "claims": 3,
+          "paid": 307.25,
+          "flagged": 0
+        }
+      ]
     },
     {
       "id": "PR105",
@@ -1118,7 +1710,81 @@
             "outlier": false
           }
         ]
-      }
+      },
+      "history": [
+        {
+          "month": "2024-04",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-05",
+          "claims": 2,
+          "paid": 213.83,
+          "flagged": 0
+        },
+        {
+          "month": "2024-06",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-07",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-08",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-09",
+          "claims": 4,
+          "paid": 427.67,
+          "flagged": 0
+        },
+        {
+          "month": "2024-10",
+          "claims": 2,
+          "paid": 213.83,
+          "flagged": 0
+        },
+        {
+          "month": "2024-11",
+          "claims": 3,
+          "paid": 320.75,
+          "flagged": 0
+        },
+        {
+          "month": "2024-12",
+          "claims": 1,
+          "paid": 106.92,
+          "flagged": 0
+        },
+        {
+          "month": "2025-01",
+          "claims": 2,
+          "paid": 213.83,
+          "flagged": 0
+        },
+        {
+          "month": "2025-02",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2025-03",
+          "claims": 1,
+          "paid": 106.92,
+          "flagged": 0
+        }
+      ]
     },
     {
       "id": "PR200",
@@ -1239,7 +1905,81 @@
             "outlier": true
           }
         ]
-      }
+      },
+      "history": [
+        {
+          "month": "2024-04",
+          "claims": 4,
+          "paid": 208,
+          "flagged": 3
+        },
+        {
+          "month": "2024-05",
+          "claims": 1,
+          "paid": 52,
+          "flagged": 3
+        },
+        {
+          "month": "2024-06",
+          "claims": 4,
+          "paid": 208,
+          "flagged": 2
+        },
+        {
+          "month": "2024-07",
+          "claims": 3,
+          "paid": 156,
+          "flagged": 0
+        },
+        {
+          "month": "2024-08",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 1
+        },
+        {
+          "month": "2024-09",
+          "claims": 3,
+          "paid": 156,
+          "flagged": 3
+        },
+        {
+          "month": "2024-10",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 1
+        },
+        {
+          "month": "2024-11",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 2
+        },
+        {
+          "month": "2024-12",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2025-01",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 3
+        },
+        {
+          "month": "2025-02",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 1
+        },
+        {
+          "month": "2025-03",
+          "claims": 1,
+          "paid": 52,
+          "flagged": 0
+        }
+      ]
     },
     {
       "id": "PR201",
@@ -1360,7 +2100,81 @@
             "outlier": false
           }
         ]
-      }
+      },
+      "history": [
+        {
+          "month": "2024-04",
+          "claims": 2,
+          "paid": 420,
+          "flagged": 0
+        },
+        {
+          "month": "2024-05",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-06",
+          "claims": 1,
+          "paid": 210,
+          "flagged": 0
+        },
+        {
+          "month": "2024-07",
+          "claims": 2,
+          "paid": 420,
+          "flagged": 1
+        },
+        {
+          "month": "2024-08",
+          "claims": 1,
+          "paid": 210,
+          "flagged": 1
+        },
+        {
+          "month": "2024-09",
+          "claims": 4,
+          "paid": 840,
+          "flagged": 0
+        },
+        {
+          "month": "2024-10",
+          "claims": 3,
+          "paid": 630,
+          "flagged": 1
+        },
+        {
+          "month": "2024-11",
+          "claims": 1,
+          "paid": 210,
+          "flagged": 0
+        },
+        {
+          "month": "2024-12",
+          "claims": 2,
+          "paid": 420,
+          "flagged": 0
+        },
+        {
+          "month": "2025-01",
+          "claims": 3,
+          "paid": 630,
+          "flagged": 2
+        },
+        {
+          "month": "2025-02",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2025-03",
+          "claims": 4,
+          "paid": 840,
+          "flagged": 0
+        }
+      ]
     },
     {
       "id": "PR202",
@@ -1481,7 +2295,81 @@
             "outlier": true
           }
         ]
-      }
+      },
+      "history": [
+        {
+          "month": "2024-04",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 1
+        },
+        {
+          "month": "2024-05",
+          "claims": 4,
+          "paid": 480,
+          "flagged": 3
+        },
+        {
+          "month": "2024-06",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-07",
+          "claims": 1,
+          "paid": 120,
+          "flagged": 0
+        },
+        {
+          "month": "2024-08",
+          "claims": 2,
+          "paid": 240,
+          "flagged": 0
+        },
+        {
+          "month": "2024-09",
+          "claims": 2,
+          "paid": 240,
+          "flagged": 2
+        },
+        {
+          "month": "2024-10",
+          "claims": 2,
+          "paid": 240,
+          "flagged": 0
+        },
+        {
+          "month": "2024-11",
+          "claims": 4,
+          "paid": 480,
+          "flagged": 0
+        },
+        {
+          "month": "2024-12",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 2
+        },
+        {
+          "month": "2025-01",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 3
+        },
+        {
+          "month": "2025-02",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2025-03",
+          "claims": 2,
+          "paid": 240,
+          "flagged": 2
+        }
+      ]
     },
     {
       "id": "PR203",
@@ -1602,7 +2490,81 @@
             "outlier": true
           }
         ]
-      }
+      },
+      "history": [
+        {
+          "month": "2024-04",
+          "claims": 1,
+          "paid": 67.5,
+          "flagged": 0
+        },
+        {
+          "month": "2024-05",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-06",
+          "claims": 3,
+          "paid": 202.5,
+          "flagged": 0
+        },
+        {
+          "month": "2024-07",
+          "claims": 3,
+          "paid": 202.5,
+          "flagged": 0
+        },
+        {
+          "month": "2024-08",
+          "claims": 4,
+          "paid": 270,
+          "flagged": 1
+        },
+        {
+          "month": "2024-09",
+          "claims": 4,
+          "paid": 270,
+          "flagged": 2
+        },
+        {
+          "month": "2024-10",
+          "claims": 1,
+          "paid": 67.5,
+          "flagged": 1
+        },
+        {
+          "month": "2024-11",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-12",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 2
+        },
+        {
+          "month": "2025-01",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 3
+        },
+        {
+          "month": "2025-02",
+          "claims": 1,
+          "paid": 67.5,
+          "flagged": 0
+        },
+        {
+          "month": "2025-03",
+          "claims": 3,
+          "paid": 202.5,
+          "flagged": 1
+        }
+      ]
     },
     {
       "id": "PR204",
@@ -1724,7 +2686,81 @@
             "outlier": true
           }
         ]
-      }
+      },
+      "history": [
+        {
+          "month": "2024-04",
+          "claims": 4,
+          "paid": 323.11,
+          "flagged": 0
+        },
+        {
+          "month": "2024-05",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-06",
+          "claims": 4,
+          "paid": 323.11,
+          "flagged": 0
+        },
+        {
+          "month": "2024-07",
+          "claims": 3,
+          "paid": 242.33,
+          "flagged": 1
+        },
+        {
+          "month": "2024-08",
+          "claims": 3,
+          "paid": 242.33,
+          "flagged": 3
+        },
+        {
+          "month": "2024-09",
+          "claims": 2,
+          "paid": 161.56,
+          "flagged": 0
+        },
+        {
+          "month": "2024-10",
+          "claims": 2,
+          "paid": 161.56,
+          "flagged": 2
+        },
+        {
+          "month": "2024-11",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-12",
+          "claims": 2,
+          "paid": 161.56,
+          "flagged": 0
+        },
+        {
+          "month": "2025-01",
+          "claims": 3,
+          "paid": 242.33,
+          "flagged": 0
+        },
+        {
+          "month": "2025-02",
+          "claims": 3,
+          "paid": 242.33,
+          "flagged": 1
+        },
+        {
+          "month": "2025-03",
+          "claims": 1,
+          "paid": 80.78,
+          "flagged": 3
+        }
+      ]
     },
     {
       "id": "PR205",
@@ -1845,7 +2881,81 @@
             "outlier": false
           }
         ]
-      }
+      },
+      "history": [
+        {
+          "month": "2024-04",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 3
+        },
+        {
+          "month": "2024-05",
+          "claims": 4,
+          "paid": 128,
+          "flagged": 0
+        },
+        {
+          "month": "2024-06",
+          "claims": 2,
+          "paid": 64,
+          "flagged": 2
+        },
+        {
+          "month": "2024-07",
+          "claims": 3,
+          "paid": 96,
+          "flagged": 0
+        },
+        {
+          "month": "2024-08",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-09",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 2
+        },
+        {
+          "month": "2024-10",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 2
+        },
+        {
+          "month": "2024-11",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-12",
+          "claims": 2,
+          "paid": 64,
+          "flagged": 0
+        },
+        {
+          "month": "2025-01",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2025-02",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 3
+        },
+        {
+          "month": "2025-03",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        }
+      ]
     },
     {
       "id": "PR206",
@@ -1967,7 +3077,81 @@
             "outlier": false
           }
         ]
-      }
+      },
+      "history": [
+        {
+          "month": "2024-04",
+          "claims": 2,
+          "paid": 218,
+          "flagged": 0
+        },
+        {
+          "month": "2024-05",
+          "claims": 4,
+          "paid": 436,
+          "flagged": 0
+        },
+        {
+          "month": "2024-06",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-07",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-08",
+          "claims": 1,
+          "paid": 109,
+          "flagged": 0
+        },
+        {
+          "month": "2024-09",
+          "claims": 2,
+          "paid": 218,
+          "flagged": 0
+        },
+        {
+          "month": "2024-10",
+          "claims": 1,
+          "paid": 109,
+          "flagged": 0
+        },
+        {
+          "month": "2024-11",
+          "claims": 2,
+          "paid": 218,
+          "flagged": 0
+        },
+        {
+          "month": "2024-12",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2025-01",
+          "claims": 1,
+          "paid": 109,
+          "flagged": 0
+        },
+        {
+          "month": "2025-02",
+          "claims": 2,
+          "paid": 218,
+          "flagged": 0
+        },
+        {
+          "month": "2025-03",
+          "claims": 2,
+          "paid": 218,
+          "flagged": 0
+        }
+      ]
     },
     {
       "id": "PR207",
@@ -2089,7 +3273,81 @@
             "outlier": false
           }
         ]
-      }
+      },
+      "history": [
+        {
+          "month": "2024-04",
+          "claims": 1,
+          "paid": 122.33,
+          "flagged": 0
+        },
+        {
+          "month": "2024-05",
+          "claims": 1,
+          "paid": 122.33,
+          "flagged": 0
+        },
+        {
+          "month": "2024-06",
+          "claims": 3,
+          "paid": 367,
+          "flagged": 0
+        },
+        {
+          "month": "2024-07",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-08",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-09",
+          "claims": 4,
+          "paid": 489.33,
+          "flagged": 0
+        },
+        {
+          "month": "2024-10",
+          "claims": 2,
+          "paid": 244.67,
+          "flagged": 0
+        },
+        {
+          "month": "2024-11",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-12",
+          "claims": 2,
+          "paid": 244.67,
+          "flagged": 0
+        },
+        {
+          "month": "2025-01",
+          "claims": 3,
+          "paid": 367,
+          "flagged": 0
+        },
+        {
+          "month": "2025-02",
+          "claims": 3,
+          "paid": 367,
+          "flagged": 0
+        },
+        {
+          "month": "2025-03",
+          "claims": 4,
+          "paid": 489.33,
+          "flagged": 0
+        }
+      ]
     },
     {
       "id": "PR208",
@@ -2211,7 +3469,81 @@
             "outlier": false
           }
         ]
-      }
+      },
+      "history": [
+        {
+          "month": "2024-04",
+          "claims": 3,
+          "paid": 710.33,
+          "flagged": 0
+        },
+        {
+          "month": "2024-05",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-06",
+          "claims": 4,
+          "paid": 947.11,
+          "flagged": 0
+        },
+        {
+          "month": "2024-07",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-08",
+          "claims": 4,
+          "paid": 947.11,
+          "flagged": 0
+        },
+        {
+          "month": "2024-09",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-10",
+          "claims": 4,
+          "paid": 947.11,
+          "flagged": 0
+        },
+        {
+          "month": "2024-11",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-12",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2025-01",
+          "claims": 4,
+          "paid": 947.11,
+          "flagged": 0
+        },
+        {
+          "month": "2025-02",
+          "claims": 2,
+          "paid": 473.56,
+          "flagged": 0
+        },
+        {
+          "month": "2025-03",
+          "claims": 4,
+          "paid": 947.11,
+          "flagged": 0
+        }
+      ]
     },
     {
       "id": "PR300",
@@ -2347,7 +3679,81 @@
             "outlier": false
           }
         ]
-      }
+      },
+      "history": [
+        {
+          "month": "2024-04",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-05",
+          "claims": 1,
+          "paid": 15146.67,
+          "flagged": 1
+        },
+        {
+          "month": "2024-06",
+          "claims": 2,
+          "paid": 30293.33,
+          "flagged": 0
+        },
+        {
+          "month": "2024-07",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-08",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-09",
+          "claims": 3,
+          "paid": 45440,
+          "flagged": 1
+        },
+        {
+          "month": "2024-10",
+          "claims": 2,
+          "paid": 30293.33,
+          "flagged": 0
+        },
+        {
+          "month": "2024-11",
+          "claims": 3,
+          "paid": 45440,
+          "flagged": 0
+        },
+        {
+          "month": "2024-12",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2025-01",
+          "claims": 2,
+          "paid": 30293.33,
+          "flagged": 0
+        },
+        {
+          "month": "2025-02",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 2
+        },
+        {
+          "month": "2025-03",
+          "claims": 1,
+          "paid": 15146.67,
+          "flagged": 2
+        }
+      ]
     },
     {
       "id": "PR301",
@@ -2483,7 +3889,81 @@
             "outlier": false
           }
         ]
-      }
+      },
+      "history": [
+        {
+          "month": "2024-04",
+          "claims": 2,
+          "paid": 31232,
+          "flagged": 0
+        },
+        {
+          "month": "2024-05",
+          "claims": 2,
+          "paid": 31232,
+          "flagged": 1
+        },
+        {
+          "month": "2024-06",
+          "claims": 4,
+          "paid": 62464,
+          "flagged": 0
+        },
+        {
+          "month": "2024-07",
+          "claims": 4,
+          "paid": 62464,
+          "flagged": 1
+        },
+        {
+          "month": "2024-08",
+          "claims": 1,
+          "paid": 15616,
+          "flagged": 0
+        },
+        {
+          "month": "2024-09",
+          "claims": 2,
+          "paid": 31232,
+          "flagged": 0
+        },
+        {
+          "month": "2024-10",
+          "claims": 3,
+          "paid": 46848,
+          "flagged": 0
+        },
+        {
+          "month": "2024-11",
+          "claims": 2,
+          "paid": 31232,
+          "flagged": 0
+        },
+        {
+          "month": "2024-12",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2025-01",
+          "claims": 4,
+          "paid": 62464,
+          "flagged": 2
+        },
+        {
+          "month": "2025-02",
+          "claims": 2,
+          "paid": 31232,
+          "flagged": 0
+        },
+        {
+          "month": "2025-03",
+          "claims": 4,
+          "paid": 62464,
+          "flagged": 0
+        }
+      ]
     },
     {
       "id": "PR302",
@@ -2619,7 +4099,81 @@
             "outlier": false
           }
         ]
-      }
+      },
+      "history": [
+        {
+          "month": "2024-04",
+          "claims": 4,
+          "paid": 67200,
+          "flagged": 0
+        },
+        {
+          "month": "2024-05",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2024-06",
+          "claims": 4,
+          "paid": 67200,
+          "flagged": 0
+        },
+        {
+          "month": "2024-07",
+          "claims": 4,
+          "paid": 67200,
+          "flagged": 0
+        },
+        {
+          "month": "2024-08",
+          "claims": 3,
+          "paid": 50400,
+          "flagged": 3
+        },
+        {
+          "month": "2024-09",
+          "claims": 2,
+          "paid": 33600,
+          "flagged": 2
+        },
+        {
+          "month": "2024-10",
+          "claims": 2,
+          "paid": 33600,
+          "flagged": 2
+        },
+        {
+          "month": "2024-11",
+          "claims": 3,
+          "paid": 50400,
+          "flagged": 3
+        },
+        {
+          "month": "2024-12",
+          "claims": 1,
+          "paid": 16800,
+          "flagged": 0
+        },
+        {
+          "month": "2025-01",
+          "claims": 2,
+          "paid": 33600,
+          "flagged": 0
+        },
+        {
+          "month": "2025-02",
+          "claims": 3,
+          "paid": 50400,
+          "flagged": 0
+        },
+        {
+          "month": "2025-03",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        }
+      ]
     },
     {
       "id": "PR303",
@@ -2755,7 +4309,81 @@
             "outlier": false
           }
         ]
-      }
+      },
+      "history": [
+        {
+          "month": "2024-04",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 3
+        },
+        {
+          "month": "2024-05",
+          "claims": 2,
+          "paid": 33024,
+          "flagged": 3
+        },
+        {
+          "month": "2024-06",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 2
+        },
+        {
+          "month": "2024-07",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 2
+        },
+        {
+          "month": "2024-08",
+          "claims": 1,
+          "paid": 16512,
+          "flagged": 0
+        },
+        {
+          "month": "2024-09",
+          "claims": 2,
+          "paid": 33024,
+          "flagged": 0
+        },
+        {
+          "month": "2024-10",
+          "claims": 2,
+          "paid": 33024,
+          "flagged": 0
+        },
+        {
+          "month": "2024-11",
+          "claims": 4,
+          "paid": 66048,
+          "flagged": 1
+        },
+        {
+          "month": "2024-12",
+          "claims": 4,
+          "paid": 66048,
+          "flagged": 1
+        },
+        {
+          "month": "2025-01",
+          "claims": 0,
+          "paid": 0,
+          "flagged": 0
+        },
+        {
+          "month": "2025-02",
+          "claims": 2,
+          "paid": 33024,
+          "flagged": 0
+        },
+        {
+          "month": "2025-03",
+          "claims": 3,
+          "paid": 49536,
+          "flagged": 1
+        }
+      ]
     }
   ],
   "veterans": [
@@ -22525,6 +24153,315 @@
           ]
         }
       ]
+    },
+    {
+      "id": "C00585",
+      "claimNumber": "L580X67K1-02-36",
+      "type": "837I",
+      "providerId": "PR300",
+      "veteranId": "V0010",
+      "dateOfService": "2025-07-04",
+      "billedAmount": 17280,
+      "allowedAmount": 17280,
+      "paidAmount": 0,
+      "claimStatus": "Pending",
+      "paymentType": "PRE",
+      "authorizationId": "A00585",
+      "paymentId": null,
+      "diagnosisCodes": [],
+      "lines": [
+        {
+          "lineId": "C00585-L1",
+          "cpt": "H0018",
+          "modifiers": [],
+          "units": 27,
+          "billed": 17280,
+          "allowed": 17280,
+          "paid": 0,
+          "description": "Behavioral health, short-term residential, per diem",
+          "violatesRuleIds": [
+            "rule_fee"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C00586",
+      "claimNumber": "G935X99K9-00-38",
+      "type": "837P",
+      "providerId": "PR002",
+      "veteranId": "V0016",
+      "dateOfService": "2025-07-05",
+      "billedAmount": 1010,
+      "allowedAmount": 1010,
+      "paidAmount": 0,
+      "claimStatus": "Pending",
+      "paymentType": "PRE",
+      "authorizationId": "A00586",
+      "paymentId": null,
+      "diagnosisCodes": [
+        "K21.9"
+      ],
+      "lines": [
+        {
+          "lineId": "C00586-L1",
+          "cpt": "43239",
+          "modifiers": [],
+          "units": 1,
+          "billed": 600,
+          "allowed": 600,
+          "paid": 0,
+          "description": "Upper GI endoscopy with biopsy",
+          "violatesRuleIds": [
+            "rule_ncci_43235_43239",
+            "rule_mod59"
+          ]
+        },
+        {
+          "lineId": "C00586-L2",
+          "cpt": "43235",
+          "modifiers": [
+            "59"
+          ],
+          "units": 1,
+          "billed": 410,
+          "allowed": 410,
+          "paid": 0,
+          "description": "Upper GI endoscopy, diagnostic",
+          "violatesRuleIds": [
+            "rule_ncci_43235_43239",
+            "rule_mod59"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C00587",
+      "claimNumber": "Y500X39K7-09-40",
+      "type": "837P",
+      "providerId": "PR001",
+      "veteranId": "V0033",
+      "dateOfService": "2025-07-06",
+      "billedAmount": 184,
+      "allowedAmount": 184,
+      "paidAmount": 0,
+      "claimStatus": "Pending",
+      "paymentType": "PRE",
+      "authorizationId": "A00587",
+      "paymentId": null,
+      "diagnosisCodes": [
+        "I10"
+      ],
+      "lines": [
+        {
+          "lineId": "C00587-L1",
+          "cpt": "99215",
+          "modifiers": [],
+          "units": 1,
+          "billed": 184,
+          "allowed": 184,
+          "paid": 0,
+          "description": "Office visit, established, level 5",
+          "violatesRuleIds": [
+            "model_em_peer"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C00588",
+      "claimNumber": "G194X96K9-01-01",
+      "type": "837P",
+      "providerId": "PR201",
+      "veteranId": "V0021",
+      "dateOfService": "2025-07-07",
+      "billedAmount": 210,
+      "allowedAmount": 210,
+      "paidAmount": 0,
+      "claimStatus": "Pending",
+      "paymentType": "PRE",
+      "authorizationId": "A00588",
+      "paymentId": null,
+      "diagnosisCodes": [],
+      "lines": [
+        {
+          "lineId": "C00588-L1",
+          "cpt": "E1390",
+          "modifiers": [],
+          "units": 1,
+          "billed": 210,
+          "allowed": 210,
+          "paid": 0,
+          "description": "Oxygen concentrator (DME)",
+          "violatesRuleIds": [
+            "rule_dup"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C00589",
+      "claimNumber": "K172X86K6-08-08",
+      "type": "837I",
+      "providerId": "PR205",
+      "veteranId": "V0023",
+      "dateOfService": "2025-07-08",
+      "billedAmount": 256,
+      "allowedAmount": 256,
+      "paidAmount": 0,
+      "claimStatus": "Pending",
+      "paymentType": "PRE",
+      "authorizationId": "A00589",
+      "paymentId": null,
+      "diagnosisCodes": [],
+      "lines": [
+        {
+          "lineId": "C00589-L1",
+          "cpt": "97110",
+          "modifiers": [],
+          "units": 8,
+          "billed": 256,
+          "allowed": 256,
+          "paid": 0,
+          "description": "Therapeutic exercise, 15 min",
+          "violatesRuleIds": [
+            "model_freq"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C00590",
+      "claimNumber": "A448X55K9-06-26",
+      "type": "837P",
+      "providerId": "PR200",
+      "veteranId": "V0020",
+      "dateOfService": "2025-07-09",
+      "billedAmount": 250,
+      "allowedAmount": 250,
+      "paidAmount": 0,
+      "claimStatus": "Pending",
+      "paymentType": "PRE",
+      "authorizationId": "A00590",
+      "paymentId": null,
+      "diagnosisCodes": [],
+      "lines": [
+        {
+          "lineId": "C00590-L1",
+          "cpt": "70551",
+          "modifiers": [],
+          "units": 1,
+          "billed": 250,
+          "allowed": 250,
+          "paid": 0,
+          "description": "MRI brain without contrast",
+          "violatesRuleIds": [
+            "model_freq"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C00591",
+      "claimNumber": "G502X46K7-05-34",
+      "type": "837P",
+      "providerId": "PR204",
+      "veteranId": "V0001",
+      "dateOfService": "2025-07-01",
+      "billedAmount": 149,
+      "allowedAmount": 149,
+      "paidAmount": 0,
+      "claimStatus": "Pending",
+      "paymentType": "PRE",
+      "authorizationId": "A00591",
+      "paymentId": null,
+      "diagnosisCodes": [],
+      "lines": [
+        {
+          "lineId": "C00591-L1",
+          "cpt": "93000",
+          "modifiers": [],
+          "units": 1,
+          "billed": 18,
+          "allowed": 18,
+          "paid": 0,
+          "description": "Electrocardiogram, complete",
+          "violatesRuleIds": []
+        },
+        {
+          "lineId": "C00591-L2",
+          "cpt": "99214",
+          "modifiers": [],
+          "units": 1,
+          "billed": 131,
+          "allowed": 131,
+          "paid": 0,
+          "description": "Office visit, established, level 4",
+          "violatesRuleIds": []
+        }
+      ]
+    },
+    {
+      "id": "C00592",
+      "claimNumber": "I230X89K6-04-06",
+      "type": "837P",
+      "providerId": "PR206",
+      "veteranId": "V0020",
+      "dateOfService": "2025-07-02",
+      "billedAmount": 65,
+      "allowedAmount": 65,
+      "paidAmount": 0,
+      "claimStatus": "Pending",
+      "paymentType": "PRE",
+      "authorizationId": "A00592",
+      "paymentId": null,
+      "diagnosisCodes": [
+        "M54.5"
+      ],
+      "lines": [
+        {
+          "lineId": "C00592-L1",
+          "cpt": "20610",
+          "modifiers": [],
+          "units": 1,
+          "billed": 65,
+          "allowed": 65,
+          "paid": 0,
+          "description": "Arthrocentesis, major joint",
+          "violatesRuleIds": []
+        }
+      ]
+    },
+    {
+      "id": "C00593",
+      "claimNumber": "Y587X12K8-07-06",
+      "type": "837P",
+      "providerId": "PR207",
+      "veteranId": "V0024",
+      "dateOfService": "2025-07-03",
+      "billedAmount": 92,
+      "allowedAmount": 92,
+      "paidAmount": 0,
+      "claimStatus": "Pending",
+      "paymentType": "PRE",
+      "authorizationId": "A00593",
+      "paymentId": null,
+      "diagnosisCodes": [
+        "Z00.00"
+      ],
+      "lines": [
+        {
+          "lineId": "C00593-L1",
+          "cpt": "99213",
+          "modifiers": [],
+          "units": 1,
+          "billed": 92,
+          "allowed": 92,
+          "paid": 0,
+          "description": "Office visit, established, level 3",
+          "violatesRuleIds": []
+        }
+      ]
     }
   ],
   "authorizations": [
@@ -28367,6 +30304,96 @@
       "validFrom": "2025-01-01",
       "validTo": "2025-12-31",
       "status": "Active"
+    },
+    {
+      "id": "A00585",
+      "authId": "AUTH-390326",
+      "veteranId": "V0010",
+      "providerId": "PR300",
+      "service": "Behavioral health, short-term residential, per diem",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00586",
+      "authId": "AUTH-119178",
+      "veteranId": "V0016",
+      "providerId": "PR002",
+      "service": "Upper GI endoscopy with biopsy",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00587",
+      "authId": "AUTH-858992",
+      "veteranId": "V0033",
+      "providerId": "PR001",
+      "service": "Office visit, established, level 5",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00588",
+      "authId": "AUTH-357057",
+      "veteranId": "V0021",
+      "providerId": "PR201",
+      "service": "Oxygen concentrator (DME)",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00589",
+      "authId": "AUTH-470529",
+      "veteranId": "V0023",
+      "providerId": "PR205",
+      "service": "Therapeutic exercise, 15 min",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00590",
+      "authId": "AUTH-662880",
+      "veteranId": "V0020",
+      "providerId": "PR200",
+      "service": "MRI brain without contrast",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00591",
+      "authId": "AUTH-283974",
+      "veteranId": "V0001",
+      "providerId": "PR204",
+      "service": "Electrocardiogram, complete",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00592",
+      "authId": "AUTH-703142",
+      "veteranId": "V0020",
+      "providerId": "PR206",
+      "service": "Arthrocentesis, major joint",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00593",
+      "authId": "AUTH-109718",
+      "veteranId": "V0024",
+      "providerId": "PR207",
+      "service": "Office visit, established, level 3",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
     }
   ],
   "payments": [
@@ -33201,6 +35228,8 @@
       "decision": null,
       "modelId": "model_em_peer",
       "ruleIds": [],
+      "mode": "retrospective",
+      "recommendedAction": null,
       "createdDate": "2025-10-02"
     },
     {
@@ -33247,6 +35276,8 @@
         "rule_ncci_43235_43239",
         "rule_mod59"
       ],
+      "mode": "retrospective",
+      "recommendedAction": null,
       "createdDate": "2025-06-19"
     },
     {
@@ -33289,6 +35320,8 @@
       "decision": null,
       "modelId": "model_freq",
       "ruleIds": [],
+      "mode": "retrospective",
+      "recommendedAction": null,
       "createdDate": "2025-08-06"
     },
     {
@@ -33314,6 +35347,8 @@
       "decision": null,
       "modelId": null,
       "ruleIds": [],
+      "mode": "retrospective",
+      "recommendedAction": null,
       "createdDate": "2025-09-02"
     },
     {
@@ -33341,6 +35376,8 @@
       "ruleIds": [
         "rule_dup"
       ],
+      "mode": "retrospective",
+      "recommendedAction": null,
       "createdDate": "2025-10-11"
     },
     {
@@ -33366,6 +35403,8 @@
       "decision": null,
       "modelId": null,
       "ruleIds": [],
+      "mode": "retrospective",
+      "recommendedAction": null,
       "createdDate": "2025-09-15"
     },
     {
@@ -33391,6 +35430,8 @@
       "decision": null,
       "modelId": null,
       "ruleIds": [],
+      "mode": "retrospective",
+      "recommendedAction": null,
       "createdDate": "2025-06-10"
     },
     {
@@ -33418,6 +35459,8 @@
       "ruleIds": [
         "rule_ncci_43235_43239"
       ],
+      "mode": "retrospective",
+      "recommendedAction": null,
       "createdDate": "2025-08-01"
     },
     {
@@ -33443,6 +35486,8 @@
       "decision": null,
       "modelId": null,
       "ruleIds": [],
+      "mode": "retrospective",
+      "recommendedAction": null,
       "createdDate": "2025-10-18"
     },
     {
@@ -33468,6 +35513,8 @@
       "decision": null,
       "modelId": null,
       "ruleIds": [],
+      "mode": "retrospective",
+      "recommendedAction": null,
       "createdDate": "2025-08-04"
     },
     {
@@ -33495,6 +35542,8 @@
       "ruleIds": [
         "rule_auth"
       ],
+      "mode": "retrospective",
+      "recommendedAction": null,
       "createdDate": "2025-06-06"
     },
     {
@@ -33520,6 +35569,8 @@
       "decision": null,
       "modelId": null,
       "ruleIds": [],
+      "mode": "retrospective",
+      "recommendedAction": null,
       "createdDate": "2025-10-16"
     },
     {
@@ -33566,6 +35617,8 @@
       "ruleIds": [
         "rule_fee"
       ],
+      "mode": "retrospective",
+      "recommendedAction": null,
       "createdDate": "2025-07-25"
     },
     {
@@ -33612,6 +35665,8 @@
       "ruleIds": [
         "rule_fee"
       ],
+      "mode": "retrospective",
+      "recommendedAction": null,
       "createdDate": "2025-08-09"
     },
     {
@@ -33658,6 +35713,8 @@
       "ruleIds": [
         "rule_fee"
       ],
+      "mode": "retrospective",
+      "recommendedAction": null,
       "createdDate": "2025-09-22"
     },
     {
@@ -33704,6 +35761,8 @@
       "ruleIds": [
         "rule_fee"
       ],
+      "mode": "retrospective",
+      "recommendedAction": null,
       "createdDate": "2025-09-08"
     },
     {
@@ -33729,6 +35788,8 @@
       "decision": null,
       "modelId": null,
       "ruleIds": [],
+      "mode": "retrospective",
+      "recommendedAction": null,
       "createdDate": "2025-10-05"
     },
     {
@@ -33754,6 +35815,8 @@
       "decision": null,
       "modelId": null,
       "ruleIds": [],
+      "mode": "retrospective",
+      "recommendedAction": null,
       "createdDate": "2025-07-27"
     },
     {
@@ -33779,6 +35842,8 @@
       "decision": null,
       "modelId": null,
       "ruleIds": [],
+      "mode": "retrospective",
+      "recommendedAction": null,
       "createdDate": "2025-08-21"
     },
     {
@@ -33804,6 +35869,8 @@
       "decision": null,
       "modelId": null,
       "ruleIds": [],
+      "mode": "retrospective",
+      "recommendedAction": null,
       "createdDate": "2025-08-02"
     },
     {
@@ -33829,6 +35896,8 @@
       "decision": null,
       "modelId": null,
       "ruleIds": [],
+      "mode": "retrospective",
+      "recommendedAction": null,
       "createdDate": "2025-06-02"
     },
     {
@@ -33854,6 +35923,8 @@
       "decision": null,
       "modelId": null,
       "ruleIds": [],
+      "mode": "retrospective",
+      "recommendedAction": null,
       "createdDate": "2025-06-14"
     },
     {
@@ -33879,6 +35950,8 @@
       "decision": null,
       "modelId": null,
       "ruleIds": [],
+      "mode": "retrospective",
+      "recommendedAction": null,
       "createdDate": "2025-08-25"
     },
     {
@@ -33904,6 +35977,8 @@
       "decision": null,
       "modelId": null,
       "ruleIds": [],
+      "mode": "retrospective",
+      "recommendedAction": null,
       "createdDate": "2025-07-01"
     },
     {
@@ -33929,6 +36004,8 @@
       "decision": null,
       "modelId": null,
       "ruleIds": [],
+      "mode": "retrospective",
+      "recommendedAction": null,
       "createdDate": "2025-07-19"
     },
     {
@@ -33954,6 +36031,8 @@
       "decision": null,
       "modelId": null,
       "ruleIds": [],
+      "mode": "retrospective",
+      "recommendedAction": null,
       "createdDate": "2025-10-03"
     },
     {
@@ -33979,6 +36058,8 @@
       "decision": null,
       "modelId": null,
       "ruleIds": [],
+      "mode": "retrospective",
+      "recommendedAction": null,
       "createdDate": "2025-09-07"
     },
     {
@@ -34004,7 +36085,340 @@
       "decision": null,
       "modelId": null,
       "ruleIds": [],
+      "mode": "retrospective",
+      "recommendedAction": null,
       "createdDate": "2025-09-17"
+    },
+    {
+      "id": "20721",
+      "providerId": "PR300",
+      "claimId": "C00585",
+      "fwaType": "Residential length-of-stay abuse",
+      "riskScore": 93,
+      "confidence": 88,
+      "source": "Both",
+      "status": "Pending",
+      "assignee": null,
+      "claimType": "837I",
+      "exposurePre": 17280,
+      "exposurePost": 0,
+      "submittedForRecovery": 0,
+      "verifiedRecoupment": 0,
+      "narrative": "",
+      "xai": {
+        "summary": "New 27-day residential stay from a facility in the flagged Meridian Behavioral chain — the same veteran was discharged from the AZ facility 26 days ago. Deny before the per-diem is paid.",
+        "factors": [
+          {
+            "label": "Amount at risk",
+            "value": "$17,280"
+          },
+          {
+            "label": "Recommended",
+            "value": "Deny"
+          }
+        ]
+      },
+      "decision": null,
+      "modelId": "model_los",
+      "ruleIds": [
+        "rule_fee"
+      ],
+      "mode": "prepay",
+      "recommendedAction": "deny",
+      "createdDate": "2025-09-13"
+    },
+    {
+      "id": "20722",
+      "providerId": "PR002",
+      "claimId": "C00586",
+      "fwaType": "Unbundling",
+      "riskScore": 88,
+      "confidence": 90,
+      "source": "Rules Engine",
+      "status": "Pending",
+      "assignee": null,
+      "claimType": "837P",
+      "exposurePre": 1010,
+      "exposurePost": 0,
+      "submittedForRecovery": 0,
+      "verifiedRecoupment": 0,
+      "narrative": "",
+      "xai": {
+        "summary": "43235 unbundled from 43239 with modifier 59 — the same NCCI-PTP pattern this TIN was flagged for post-pay. Deny the component line.",
+        "factors": [
+          {
+            "label": "Amount at risk",
+            "value": "$1,010"
+          },
+          {
+            "label": "Recommended",
+            "value": "Deny"
+          }
+        ]
+      },
+      "decision": null,
+      "modelId": null,
+      "ruleIds": [
+        "rule_ncci_43235_43239",
+        "rule_mod59"
+      ],
+      "mode": "prepay",
+      "recommendedAction": "deny",
+      "createdDate": "2025-06-28"
+    },
+    {
+      "id": "20723",
+      "providerId": "PR001",
+      "claimId": "C00587",
+      "fwaType": "Upcoding",
+      "riskScore": 82,
+      "confidence": 74,
+      "source": "Pattern Recognition",
+      "status": "Pending",
+      "assignee": null,
+      "claimType": "837P",
+      "exposurePre": 184,
+      "exposurePost": 0,
+      "submittedForRecovery": 0,
+      "verifiedRecoupment": 0,
+      "narrative": "",
+      "xai": {
+        "summary": "Level-5 E/M on an established hypertension visit from a provider billing 99215 on ~90% of visits. Hold for records before paying.",
+        "factors": [
+          {
+            "label": "Amount at risk",
+            "value": "$184"
+          },
+          {
+            "label": "Recommended",
+            "value": "Hold for records"
+          }
+        ]
+      },
+      "decision": null,
+      "modelId": "model_em_peer",
+      "ruleIds": [],
+      "mode": "prepay",
+      "recommendedAction": "hold",
+      "createdDate": "2025-08-10"
+    },
+    {
+      "id": "20724",
+      "providerId": "PR201",
+      "claimId": "C00588",
+      "fwaType": "Duplicate claim",
+      "riskScore": 77,
+      "confidence": 85,
+      "source": "Rules Engine",
+      "status": "Pending",
+      "assignee": null,
+      "claimType": "837P",
+      "exposurePre": 210,
+      "exposurePost": 0,
+      "submittedForRecovery": 0,
+      "verifiedRecoupment": 0,
+      "narrative": "",
+      "xai": {
+        "summary": "Oxygen concentrator billed twice within 30 days for the same veteran. Duplicate — deny the second.",
+        "factors": [
+          {
+            "label": "Amount at risk",
+            "value": "$210"
+          },
+          {
+            "label": "Recommended",
+            "value": "Deny"
+          }
+        ]
+      },
+      "decision": null,
+      "modelId": null,
+      "ruleIds": [
+        "rule_dup"
+      ],
+      "mode": "prepay",
+      "recommendedAction": "deny",
+      "createdDate": "2025-09-04"
+    },
+    {
+      "id": "20725",
+      "providerId": "PR205",
+      "claimId": "C00589",
+      "fwaType": "Phantom billing",
+      "riskScore": 84,
+      "confidence": 66,
+      "source": "Pattern Recognition",
+      "status": "Pending",
+      "assignee": null,
+      "claimType": "837I",
+      "exposurePre": 256,
+      "exposurePost": 0,
+      "submittedForRecovery": 0,
+      "verifiedRecoupment": 0,
+      "narrative": "",
+      "xai": {
+        "summary": "8 therapeutic-exercise units billed for a home-health visit with no matching visit note on file. Hold pending documentation.",
+        "factors": [
+          {
+            "label": "Amount at risk",
+            "value": "$256"
+          },
+          {
+            "label": "Recommended",
+            "value": "Hold for records"
+          }
+        ]
+      },
+      "decision": null,
+      "modelId": "model_freq",
+      "ruleIds": [],
+      "mode": "prepay",
+      "recommendedAction": "hold",
+      "createdDate": "2025-09-28"
+    },
+    {
+      "id": "20726",
+      "providerId": "PR200",
+      "claimId": "C00590",
+      "fwaType": "Frequency / over-utilization",
+      "riskScore": 70,
+      "confidence": 72,
+      "source": "Pattern Recognition",
+      "status": "Pending",
+      "assignee": null,
+      "claimType": "837P",
+      "exposurePre": 250,
+      "exposurePost": 0,
+      "submittedForRecovery": 0,
+      "verifiedRecoupment": 0,
+      "narrative": "",
+      "xai": {
+        "summary": "Third brain MRI for this veteran in 60 days. Hold for prior-imaging review.",
+        "factors": [
+          {
+            "label": "Amount at risk",
+            "value": "$250"
+          },
+          {
+            "label": "Recommended",
+            "value": "Hold for records"
+          }
+        ]
+      },
+      "decision": null,
+      "modelId": "model_freq",
+      "ruleIds": [],
+      "mode": "prepay",
+      "recommendedAction": "hold",
+      "createdDate": "2025-08-21"
+    },
+    {
+      "id": "20727",
+      "providerId": "PR204",
+      "claimId": "C00591",
+      "fwaType": "Modifier misuse",
+      "riskScore": 44,
+      "confidence": 61,
+      "source": "Rules Engine",
+      "status": "Pending",
+      "assignee": null,
+      "claimType": "837P",
+      "exposurePre": 149,
+      "exposurePost": 0,
+      "submittedForRecovery": 0,
+      "verifiedRecoupment": 0,
+      "narrative": "",
+      "xai": {
+        "summary": "EKG + E/M billed same day; modifier logic checks out and the amount matches the fee schedule. Low risk — clear to pay.",
+        "factors": [
+          {
+            "label": "Amount at risk",
+            "value": "$149"
+          },
+          {
+            "label": "Recommended",
+            "value": "Pay"
+          }
+        ]
+      },
+      "decision": null,
+      "modelId": null,
+      "ruleIds": [],
+      "mode": "prepay",
+      "recommendedAction": "pay",
+      "createdDate": "2025-06-12"
+    },
+    {
+      "id": "20728",
+      "providerId": "PR206",
+      "claimId": "C00592",
+      "fwaType": "Routine — no anomaly",
+      "riskScore": 19,
+      "confidence": 95,
+      "source": "Rules Engine",
+      "status": "Pending",
+      "assignee": null,
+      "claimType": "837P",
+      "exposurePre": 65,
+      "exposurePost": 0,
+      "submittedForRecovery": 0,
+      "verifiedRecoupment": 0,
+      "narrative": "",
+      "xai": {
+        "summary": "Major-joint injection consistent with the referral and fee schedule. No anomaly — auto-pay candidate.",
+        "factors": [
+          {
+            "label": "Amount at risk",
+            "value": "$65"
+          },
+          {
+            "label": "Recommended",
+            "value": "Pay"
+          }
+        ]
+      },
+      "decision": null,
+      "modelId": null,
+      "ruleIds": [],
+      "mode": "prepay",
+      "recommendedAction": "pay",
+      "createdDate": "2025-08-11"
+    },
+    {
+      "id": "20729",
+      "providerId": "PR207",
+      "claimId": "C00593",
+      "fwaType": "Routine — no anomaly",
+      "riskScore": 14,
+      "confidence": 96,
+      "source": "Rules Engine",
+      "status": "Pending",
+      "assignee": null,
+      "claimType": "837P",
+      "exposurePre": 92,
+      "exposurePost": 0,
+      "submittedForRecovery": 0,
+      "verifiedRecoupment": 0,
+      "narrative": "",
+      "xai": {
+        "summary": "Routine established-patient visit. Clean — clear to pay.",
+        "factors": [
+          {
+            "label": "Amount at risk",
+            "value": "$92"
+          },
+          {
+            "label": "Recommended",
+            "value": "Pay"
+          }
+        ]
+      },
+      "decision": null,
+      "modelId": null,
+      "ruleIds": [],
+      "mode": "prepay",
+      "recommendedAction": "pay",
+      "createdDate": "2025-07-18"
     }
   ],
   "precedents": [
@@ -35683,6 +38097,132 @@
         "target": "PR003",
         "props": {
           "claims": 36
+        }
+      },
+      {
+        "type": "FLAGS",
+        "source": "ALLG-20721",
+        "target": "C00585",
+        "props": {}
+      },
+      {
+        "type": "HAS_ALLEGATION",
+        "source": "PR300",
+        "target": "ALLG-20721",
+        "props": {
+          "fwaType": "Residential length-of-stay abuse"
+        }
+      },
+      {
+        "type": "FLAGS",
+        "source": "ALLG-20722",
+        "target": "C00586",
+        "props": {}
+      },
+      {
+        "type": "HAS_ALLEGATION",
+        "source": "PR002",
+        "target": "ALLG-20722",
+        "props": {
+          "fwaType": "Unbundling"
+        }
+      },
+      {
+        "type": "FLAGS",
+        "source": "ALLG-20723",
+        "target": "C00587",
+        "props": {}
+      },
+      {
+        "type": "HAS_ALLEGATION",
+        "source": "PR001",
+        "target": "ALLG-20723",
+        "props": {
+          "fwaType": "Upcoding"
+        }
+      },
+      {
+        "type": "FLAGS",
+        "source": "ALLG-20724",
+        "target": "C00588",
+        "props": {}
+      },
+      {
+        "type": "HAS_ALLEGATION",
+        "source": "PR201",
+        "target": "ALLG-20724",
+        "props": {
+          "fwaType": "Duplicate claim"
+        }
+      },
+      {
+        "type": "FLAGS",
+        "source": "ALLG-20725",
+        "target": "C00589",
+        "props": {}
+      },
+      {
+        "type": "HAS_ALLEGATION",
+        "source": "PR205",
+        "target": "ALLG-20725",
+        "props": {
+          "fwaType": "Phantom billing"
+        }
+      },
+      {
+        "type": "FLAGS",
+        "source": "ALLG-20726",
+        "target": "C00590",
+        "props": {}
+      },
+      {
+        "type": "HAS_ALLEGATION",
+        "source": "PR200",
+        "target": "ALLG-20726",
+        "props": {
+          "fwaType": "Frequency / over-utilization"
+        }
+      },
+      {
+        "type": "FLAGS",
+        "source": "ALLG-20727",
+        "target": "C00591",
+        "props": {}
+      },
+      {
+        "type": "HAS_ALLEGATION",
+        "source": "PR204",
+        "target": "ALLG-20727",
+        "props": {
+          "fwaType": "Modifier misuse"
+        }
+      },
+      {
+        "type": "FLAGS",
+        "source": "ALLG-20728",
+        "target": "C00592",
+        "props": {}
+      },
+      {
+        "type": "HAS_ALLEGATION",
+        "source": "PR206",
+        "target": "ALLG-20728",
+        "props": {
+          "fwaType": "Routine — no anomaly"
+        }
+      },
+      {
+        "type": "FLAGS",
+        "source": "ALLG-20729",
+        "target": "C00593",
+        "props": {}
+      },
+      {
+        "type": "HAS_ALLEGATION",
+        "source": "PR207",
+        "target": "ALLG-20729",
+        "props": {
+          "fwaType": "Routine — no anomaly"
         }
       }
     ]

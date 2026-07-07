@@ -56,11 +56,15 @@
         return {
           id: a.id, fwaType: a.fwaType, riskScore: a.riskScore, confidence: a.confidence,
           source: a.source, status: a.status, assignee: a.assignee, claimType: a.claimType,
-          exposurePost: a.exposurePost, createdDate: a.createdDate, providerId: a.providerId,
+          exposurePost: a.exposurePost, exposurePre: a.exposurePre, createdDate: a.createdDate, providerId: a.providerId,
+          mode: a.mode || "retrospective", recommendedAction: a.recommendedAction,
           providerName: p ? p.name : "—", providerNpi: p ? p.npi : "", providerState: p ? p.state : "",
           hero: ["20481", "20517", "20463"].indexOf(a.id) >= 0 ? 1 : 0
         };
       });
+      // default to the retrospective (post-payment) population; "prepay" or "all" opt in.
+      var mode = f.mode || "retrospective";
+      if (mode !== "all") rows = rows.filter(function (r) { return r.mode === mode; });
       if (f.fwaType) rows = rows.filter(function (r) { return r.fwaType === f.fwaType; });
       if (f.status) rows = rows.filter(function (r) { return r.status === f.status; });
       if (f.source) rows = rows.filter(function (r) { return r.source === f.source; });
@@ -78,7 +82,7 @@
     getModels: function () { return D.models; },
     getPrecedent: function (pid) { return (D.precedents || []).find(function (p) { return p.id === pid; }) || null; },
     listClaimsByProvider: function (providerId) { return D.claims.filter(function (c) { return c.providerId === providerId; }); },
-    listAllegationsByProvider: function (providerId) { return D.allegations.filter(function (a) { return a.providerId === providerId; }); },
+    listAllegationsByProvider: function (providerId, mode) { return D.allegations.filter(function (a) { return a.providerId === providerId && (mode === "all" || (a.mode || "retrospective") === (mode || "retrospective")); }); },
     listInvestigations: function () { return D.allegations.filter(function (a) { return a.status === "Escalated"; }); },
 
     // ---- provider report card (radar spokes + drill-down) ----
