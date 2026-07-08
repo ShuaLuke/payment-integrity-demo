@@ -239,7 +239,7 @@
     if (full) full.addEventListener("click", function () { window.APP.auditLog("NETWORK_VIEWED", "Claim #" + id + " · " + p.name); window.APP.nav("network"); });
   }
   function collusionLegend(s) {
-    var out = [lgDot("#0f6e56", "Provider in this case"), lgDot(s.kind === "chain" ? "#c6362f" : "#c77d11", "Linked provider"), lgDot("#378add", "Cross-billed veteran")];
+    var out = [lgDot("#10243b", "Business entity"), lgDot("#0f6e56", "Provider in this case"), lgDot(s.kind === "chain" ? "#c6362f" : "#c77d11", "Linked provider"), lgDot("#378add", "Cross-billed veteran")];
     if (s.sharedTin) out.push(lgLine("#c6362f", 3, "Shared TIN"));
     if (s.sharedRegistration) out.push(lgLine("#b5730e", 2, "Same registration"));
     if (s.sharedOfficer) out.push(lgLine("#7a3aa0", 2, "Same officer"));

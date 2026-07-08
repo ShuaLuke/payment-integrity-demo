@@ -2,7 +2,7 @@
 (function () {
   var mount;
   var APP = {
-    state: { view: "queue", allegationId: null, filters: {}, decisions: {}, audit: [], investigations: [], role: "analyst", watchlist: {}, mode: "retrospective", prepayDecisions: {} },
+    state: { view: "queue", allegationId: null, filters: {}, decisions: {}, audit: [], investigations: [], role: "analyst", watchlist: {}, businessWatchlist: {}, mode: "retrospective", prepayDecisions: {} },
 
     ROLES: { analyst: { name: "Dana Whitmore", title: "Analyst", initials: "DW" }, supervisor: { name: "Karen Boyd", title: "Supervisor", initials: "KB" } },
     isSupervisor: function () { return APP.state.role === "supervisor"; },
@@ -109,6 +109,17 @@
       APP.auditLog("CASE_ASSIGNED", "Flagged claim #" + id + " · " + (name ? "→ " + name : "unassigned"));
     },
     openTeam: function (sel) { APP.state.teamSel = sel; APP.nav("team"); },
+    openBusiness: function (id) { (APP.state.hist = APP.state.hist || []).push(APP.snapshot()); APP.state.businessId = id; APP.nav("business", { id: id }); },
+
+    // Flag/unflag a business entity (holding company / billing entity) for oversight.
+    isBusinessWatched: function (id) { return !!APP.state.businessWatchlist[id]; },
+    toggleBusinessWatch: function (id) {
+      var b = window.DP.getBusiness(id); if (!b) return false;
+      var on = !APP.state.businessWatchlist[id];
+      if (on) APP.state.businessWatchlist[id] = true; else delete APP.state.businessWatchlist[id];
+      APP.auditLog(on ? "BUSINESS_FLAGGED" : "BUSINESS_UNFLAGGED", b.name + " (" + b.providerCount + " providers)" + (on ? " added to the business watchlist" : " removed from the business watchlist"));
+      return on;
+    },
 
     // Flag/unflag a provider for future reference (repeat-offender watchlist).
     isProviderWatched: function (id) { return !!APP.state.watchlist[id]; },
@@ -169,10 +180,10 @@
     SUBS: {
       home: [],
       casework: [{ v: "queue", l: "Work queue", role: "analyst" }, { v: "approvals", l: "Approvals", role: "supervisor" }, { v: "team", l: "Team", role: "supervisor" }, { v: "investigations", l: "Investigations" }],
-      insights: [{ v: "analytics", l: "Overview" }, { v: "network", l: "Network" }, { v: "heatmap", l: "Heatmap" }],
+      insights: [{ v: "analytics", l: "Overview" }, { v: "network", l: "Network" }, { v: "businesses", l: "Businesses" }, { v: "heatmap", l: "Heatmap" }],
       library: [{ v: "rules", l: "Rules" }, { v: "audit", l: "Audit" }]
     },
-    VIEW_AREA: { home: "home", queue: "casework", claim: "casework", investigations: "casework", approvals: "casework", team: "casework", provider: "insights", analytics: "insights", network: "insights", heatmap: "insights", rules: "library", audit: "library" },
+    VIEW_AREA: { home: "home", queue: "casework", claim: "casework", investigations: "casework", approvals: "casework", team: "casework", provider: "insights", analytics: "insights", network: "insights", businesses: "insights", business: "insights", heatmap: "insights", rules: "library", audit: "library" },
     subsFor: function (area) { return (APP.SUBS[area] || []).filter(function (s) { return !s.role || s.role === APP.state.role; }); },
     areaOf: function (view) { return APP.VIEW_AREA[view] || "casework"; },
     openArea: function (area) {
@@ -183,20 +194,21 @@
       APP.nav(subs.length ? subs[0].v : area);
     },
     // ---- drill-down history for smart back / breadcrumb ----
-    snapshot: function () { return { view: APP.state.view, allegationId: APP.state.allegationId, providerId: APP.state.providerId }; },
+    snapshot: function () { return { view: APP.state.view, allegationId: APP.state.allegationId, providerId: APP.state.providerId, businessId: APP.state.businessId }; },
     labelForSnap: function (s) {
       if (!s) return "Work queue";
       if (s.view === "claim") return "Flagged claim #" + s.allegationId;
       if (s.view === "provider") { var p = window.DP.getProvider(s.providerId); return p ? p.name : "Provider"; }
-      var map = { queue: "Work queue", home: "Home", investigations: "Investigations", approvals: "Approvals", analytics: "Analytics", network: "Network", heatmap: "Heatmap", rules: "Rules", audit: "Audit" };
+      if (s.view === "business") { var b = window.DP.getBusiness(s.businessId); return b ? b.name : "Business"; }
+      var map = { queue: "Work queue", home: "Home", investigations: "Investigations", approvals: "Approvals", analytics: "Analytics", network: "Network", businesses: "Businesses", heatmap: "Heatmap", rules: "Rules", audit: "Audit" };
       return map[s.view] || "Back";
     },
     backLabel: function () { return APP.state.hist && APP.state.hist.length ? APP.labelForSnap(APP.state.hist[APP.state.hist.length - 1]) : "Work queue"; },
     goBack: function () {
       var t = (APP.state.hist || []).pop();
       if (!t) return APP.nav(APP.isSupervisor() ? "approvals" : "queue");
-      APP.state.allegationId = t.allegationId; APP.state.providerId = t.providerId;
-      APP.nav(t.view, { id: t.allegationId });
+      APP.state.allegationId = t.allegationId; APP.state.providerId = t.providerId; APP.state.businessId = t.businessId;
+      APP.nav(t.view, { id: t.allegationId || t.businessId });
     },
 
     nav: function (view, params) {
@@ -218,7 +230,7 @@
       el.style.display = "block";
       el.innerHTML = '<div style="max-width:1180px;margin:0 auto;padding:0 20px;display:flex;align-items:center;gap:2px">' + wsLabel +
         subs.map(function (s) {
-          var active = s.v === view || (view === "claim" && s.v === "queue") || (view === "provider" && s.v === "analytics");
+          var active = s.v === view || (view === "claim" && s.v === "queue") || (view === "provider" && s.v === "analytics") || (view === "business" && s.v === "businesses");
           return '<button class="subtab' + (active ? " active" : "") + '" data-view="' + s.v + '">' + s.l + (s.v === "approvals" ? ' <span id="sub-appr-badge"></span>' : "") + '</button>';
         }).join("") + '</div>';
       el.querySelectorAll(".subtab").forEach(function (b) { b.addEventListener("click", function () { APP.nav(b.getAttribute("data-view")); }); });

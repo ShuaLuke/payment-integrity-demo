@@ -58,8 +58,16 @@
     var distinctTins = {}; provs.forEach(function (p) { if (p.tin) distinctTins[p.tin] = 1; });
     var kind = "isolated";
     if (provs.length > 1) kind = (types.SHARES_REGISTRATION || types.SHARES_OFFICER) ? "chain" : "ring";
+    // the business entity behind the providers (holding company or shared-TIN entity)
+    var business = null;
+    if (provs.length > 1) {
+      business = (focus && focus.registration)
+        ? { id: focus.registrationId || focus.registration, name: focus.registration, kind: "Holding company", sub: focus.officer ? "officer " + focus.officer : "" }
+        : { id: focus ? focus.tin : "tin", name: "TIN " + (focus ? focus.tin : ""), kind: "Billing entity", sub: "one billing entity" };
+    }
 
     return {
+      business: business,
       net: net, focus: focus, kind: kind, isRing: net.isRing && provs.length > 1,
       providers: provs, providerCount: provs.length,
       states: provs.map(function (p) { return p.state; }).filter(function (s, i, a) { return s && a.indexOf(s) === i; }),
@@ -129,31 +137,36 @@
     el.style.position = "relative";
     d3.select(el).selectAll("svg,div.cn-tip").remove();
 
-    // nodes: providers + shared veterans
+    // nodes: business entity (center) + providers + shared veterans
     var nodes = [], byId = {};
+    if (s.business) { var bn = { id: "__biz__", type: "Business", name: s.business.name, kind: s.business.kind, sub: s.business.sub }; nodes.push(bn); byId["__biz__"] = bn; }
     s.providers.forEach(function (p) { var n = { id: p.id, type: "Provider", name: shortName(p.name), full: p.name, risk: p.riskScore, npi: p.npi, tin: p.tin, state: p.state, spec: p.taxonomyLabel, focus: p.id === providerId }; nodes.push(n); byId[p.id] = n; });
     net.veterans.filter(Boolean).forEach(function (v) { var n = { id: v.id, type: "Veteran", name: v.name, city: v.city, state: v.state }; nodes.push(n); byId[v.id] = n; });
 
-    // aggregated provider↔provider links + veteran treatment links
+    // business→provider links + aggregated provider↔provider links + veteran treatment links
+    var links = [];
+    if (s.business) s.providers.forEach(function (p) { links.push({ source: "__biz__", target: p.id, kind: "biz" }); });
     var pairs = aggregate(net);
-    var links = pairs.map(function (p) { return { source: p.a, target: p.b, kind: "prov", topType: p.topType, label: pairLabel(p) }; });
+    pairs.forEach(function (p) { links.push({ source: p.a, target: p.b, kind: "prov", topType: p.topType, label: pairLabel(p) }); });
     (net.vetLinks || []).forEach(function (e) { if (byId[e.source] && byId[e.target]) links.push({ source: e.source, target: e.target, kind: "treated" }); });
 
-    var svg = d3.select(el).append("svg").attr("width", W).attr("height", H).style("display", "block");
+    // width:100% + viewBox → scales to the container at any width (no clipping under overflow:hidden)
+    var svg = d3.select(el).append("svg").attr("width", "100%").attr("height", H).attr("viewBox", "0 0 " + W + " " + H).attr("preserveAspectRatio", "xMidYMid meet").style("display", "block");
     var g = svg.append("g");
     svg.call(d3.zoom().scaleExtent([0.5, 2.5]).on("zoom", function (e) { g.attr("transform", e.transform); }));
     svg.append("defs").append("marker").attr("id", "cn-ar").attr("viewBox", "0 -4 8 8").attr("refX", 22).attr("refY", 0).attr("markerWidth", 5).attr("markerHeight", 5).attr("orient", "auto").append("path").attr("d", "M0,-4L8,0L0,4").attr("fill", "#0f6e56");
 
     var sim = d3.forceSimulation(nodes)
-      .force("link", d3.forceLink(links).id(function (d) { return d.id; }).distance(function (l) { return l.kind === "treated" ? 46 : 128; }).strength(function (l) { return l.kind === "treated" ? 0.35 : 0.5; }))
-      .force("charge", d3.forceManyBody().strength(function (d) { return d.type === "Provider" ? -560 : -120; }))
+      .force("link", d3.forceLink(links).id(function (d) { return d.id; }).distance(function (l) { return l.kind === "treated" ? 46 : l.kind === "biz" ? 96 : 128; }).strength(function (l) { return l.kind === "treated" ? 0.35 : l.kind === "biz" ? 0.55 : 0.5; }))
+      .force("charge", d3.forceManyBody().strength(function (d) { return d.type === "Business" ? -820 : d.type === "Provider" ? -560 : -120; }))
       .force("center", d3.forceCenter(W / 2, H / 2))
       .force("collide", d3.forceCollide().radius(function (d) { return rad(d) + 8; }));
 
     var lk = g.append("g").selectAll("line").data(links).join("line")
-      .attr("stroke", function (d) { return d.kind === "treated" ? "#cbd2da" : LINK_COLOR[d.topType] || "#8a95a3"; })
-      .attr("stroke-width", function (d) { return d.kind === "treated" ? 1 : d.topType === "SHARES_TIN" ? 3 : 2; })
-      .attr("stroke-dasharray", function (d) { return d.kind === "treated" ? null : d.topType === "REFERRED_TO" ? "5,4" : null; })
+      .attr("stroke", function (d) { return d.kind === "treated" ? "#cbd2da" : d.kind === "biz" ? "#10243b" : LINK_COLOR[d.topType] || "#8a95a3"; })
+      .attr("stroke-width", function (d) { return d.kind === "treated" ? 1 : d.kind === "biz" ? 1.5 : d.topType === "SHARES_TIN" ? 3 : 2; })
+      .attr("stroke-opacity", function (d) { return d.kind === "biz" ? 0.5 : 1; })
+      .attr("stroke-dasharray", function (d) { return d.kind === "biz" ? "3,3" : d.kind === "treated" ? null : d.topType === "REFERRED_TO" ? "5,4" : null; })
       .attr("marker-end", function (d) { return d.topType === "REFERRED_TO" ? "url(#cn-ar)" : null; });
     var lt = g.append("g").selectAll("text").data(links.filter(function (d) { return d.kind === "prov"; })).join("text")
       .text(function (d) { return d.label; }).attr("font-size", 8.5).attr("font-family", "IBM Plex Mono,monospace")
@@ -162,22 +175,26 @@
     var nodeG = g.append("g").selectAll("g").data(nodes).join("g").attr("cursor", "pointer")
       .call(d3.drag().on("start", function (e, d) { if (!e.active) sim.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; }).on("drag", function (e, d) { d.fx = e.x; d.fy = e.y; }).on("end", function (e, d) { if (!e.active) sim.alphaTarget(0); d.fx = null; d.fy = null; }));
     nodeG.append("circle").attr("r", function (d) { return rad(d); })
-      .attr("fill", function (d) { return col(d) + "26"; })
-      .attr("stroke", function (d) { return d.focus ? "#0f6e56" : col(d); })
-      .attr("stroke-width", function (d) { return d.focus ? 3.5 : d.type === "Provider" ? 2 : 1.3; });
+      .attr("fill", function (d) { return d.type === "Business" ? "#10243b" : col(d) + "26"; })
+      .attr("stroke", function (d) { return d.type === "Business" ? "#10243b" : d.focus ? "#0f6e56" : col(d); })
+      .attr("stroke-width", function (d) { return d.focus ? 3.5 : d.type === "Provider" ? 2 : d.type === "Business" ? 2 : 1.3; });
     nodeG.filter(function (d) { return d.focus; }).append("circle").attr("r", function (d) { return rad(d) + 4; }).attr("fill", "none").attr("stroke", "#17b3a6").attr("stroke-width", 1).attr("stroke-dasharray", "2,2");
-    nodeG.append("text").text(function (d) { return d.type === "Provider" ? d.name : ""; })
-      .attr("text-anchor", "middle").attr("dy", function (d) { return rad(d) + 11; }).attr("font-size", 9.5)
-      .attr("font-family", "IBM Plex Sans,sans-serif").attr("font-weight", "500").attr("fill", function (d) { return col(d); });
+    // building glyph inside the business node
+    nodeG.filter(function (d) { return d.type === "Business"; }).append("text").text("⌂").attr("text-anchor", "middle").attr("dy", 5).attr("font-size", 16).attr("fill", "#7fe0d6");
+    nodeG.append("text").text(function (d) { return d.type === "Provider" ? d.name : d.type === "Business" ? bizLabel(d.name) : ""; })
+      .attr("text-anchor", "middle").attr("dy", function (d) { return rad(d) + 11; }).attr("font-size", function (d) { return d.type === "Business" ? 10 : 9.5; })
+      .attr("font-family", "IBM Plex Sans,sans-serif").attr("font-weight", function (d) { return d.type === "Business" ? "600" : "500"; }).attr("fill", function (d) { return d.type === "Business" ? "#10243b" : col(d); });
+    nodeG.filter(function (d) { return d.type === "Business"; }).append("text").text("BUSINESS ENTITY").attr("text-anchor", "middle").attr("dy", function (d) { return rad(d) + 22; }).attr("font-size", 7.5).attr("letter-spacing", "0.06em").attr("font-family", "IBM Plex Mono,monospace").attr("fill", "#8a95a3");
     nodeG.filter(function (d) { return d.type === "Provider"; }).append("text").text(function (d) { return d.state || ""; })
       .attr("text-anchor", "middle").attr("dy", 3.5).attr("font-size", 8.5).attr("font-family", "IBM Plex Mono,monospace").attr("font-weight", "600").attr("fill", function (d) { return col(d); });
-    nodeG.on("click", function (e, d) { if (d.type === "Provider" && window.APP) window.APP.openProvider(d.id); });
+    nodeG.on("click", function (e, d) { if (d.type === "Provider" && window.APP) window.APP.openProvider(d.id); if (d.type === "Business" && window.APP && s.business) window.APP.openBusiness(s.business.id); });
 
     var tip = d3.select(el).append("div").attr("class", "cn-tip").style("position", "absolute").style("background", "#10243b").style("border-radius", "6px").style("padding", "7px 10px").style("font-size", "10.5px").style("font-family", "IBM Plex Mono,monospace").style("color", "#e6eef7").style("pointer-events", "none").style("opacity", 0).style("z-index", 10).style("max-width", "210px");
     nodeG.on("mouseover", function (e, d) {
-      var h = "<div style='color:" + col(d) + ";font-family:IBM Plex Sans;margin-bottom:3px'>" + d.type + (d.focus ? " · this case" : "") + "</div><div>" + (d.full || d.name) + "</div>";
+      var h = "<div style='color:" + (d.type === "Business" ? "#7fe0d6" : col(d)) + ";font-family:IBM Plex Sans;margin-bottom:3px'>" + (d.type === "Business" ? d.kind : d.type) + (d.focus ? " · this case" : "") + "</div><div>" + (d.full || d.name) + "</div>";
       if (d.type === "Provider") h += "<div style='color:#93a7bf'>" + d.state + " · NPI " + d.npi + "<br>TIN " + d.tin + " · risk " + d.risk + "<br>click to open profile</div>";
       if (d.type === "Veteran") h += "<div style='color:#93a7bf'>" + (d.city || "") + ", " + (d.state || "") + " · cross-billed</div>";
+      if (d.type === "Business") h += "<div style='color:#93a7bf'>" + (d.sub || "") + "<br>click to open the business profile</div>";
       tip.html(h).style("opacity", 1).style("left", Math.min(e.offsetX + 12, W - 150) + "px").style("top", (e.offsetY - 6) + "px");
     }).on("mouseout", function () { tip.style("opacity", 0); });
 
@@ -191,11 +208,13 @@
   }
 
   function col(d) {
+    if (d.type === "Business") return "#10243b";
     if (d.type === "Provider") return d.risk >= 80 ? "#c6362f" : d.risk >= 50 ? "#c77d11" : "#10243b";
     return "#378add";
   }
-  function rad(d) { return d.type === "Provider" ? (d.focus ? 22 : 19) : 7; }
+  function rad(d) { return d.type === "Business" ? 26 : d.type === "Provider" ? (d.focus ? 22 : 19) : 7; }
   function shortName(n) { return n.replace(" Center", "").replace(" Treatment", "").replace(" Associates", "").replace(" Partners", ""); }
+  function bizLabel(n) { n = n.replace(" LLC", "").replace(" Holdings", "").replace(" Behavioral", ""); return n.length > 20 ? n.slice(0, 19) + "…" : n; }
 
   window.Collusion = { analyze: analyze, narrativeHtml: narrativeHtml, render: render, aggregate: aggregate };
 })();

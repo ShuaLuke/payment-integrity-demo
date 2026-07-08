@@ -96,7 +96,7 @@
       lgLine("#c6362f", 3, null, "Shared TIN") + lgLine("#0f6e56", 1.6, "5,4", "Referral") + lgLine("#c2cad4", 1, null, "Shared patient");
   }
   function legendChain() {
-    return lg("#0f6e56", "#e6f7f4", "Facility in this case") + lg("#c6362f", "#fbe3e3", "Chain facility · high risk") +
+    return lg("#10243b", "#dfe4ea", "Business entity") + lg("#0f6e56", "#e6f7f4", "Facility in this case") + lg("#c6362f", "#fbe3e3", "Chain facility · high risk") +
       lg("#378add", "#e6f1fb", "Cross-billed veteran") +
       lgLine("#b5730e", 2, null, "Same registration") + lgLine("#7a3aa0", 2, null, "Same officer") + lgLine("#8a95a3", 1, null, "Shared patients");
   }

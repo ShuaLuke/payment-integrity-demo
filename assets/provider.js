@@ -81,6 +81,36 @@
     getRules: function () { return D.rules; },
     getModels: function () { return D.models; },
     getPrecedent: function (pid) { return (D.precedents || []).find(function (p) { return p.id === pid; }) || null; },
+    // ---- business entities (TrackLight-style): providers grouped by a shared
+    // business registration (holding company) or a shared TIN (one billing entity). ----
+    listBusinesses: function (opts) {
+      opts = opts || {};
+      var groups = {};
+      D.providers.forEach(function (p) {
+        var key = p.registrationId || p.tin;
+        var g = groups[key] || (groups[key] = { id: key, providers: [], regName: p.registration || null, officer: p.officer || null, tin: p.tin });
+        g.providers.push(p);
+      });
+      return Object.keys(groups).map(function (k) { return groups[k]; })
+        .filter(function (g) { return opts.all ? true : g.providers.length >= 2; })
+        .map(function (g) {
+          var provs = g.providers;
+          var allegs = []; provs.forEach(function (p) { D.allegations.forEach(function (a) { if (a.providerId === p.id && (a.mode || "retrospective") === "retrospective") allegs.push(a); }); });
+          return {
+            id: g.id, name: g.regName || ("Billing entity · TIN " + g.tin),
+            kind: g.regName ? "Holding company" : "Shared-TIN billing entity",
+            officer: g.officer, registrationId: g.regName ? g.id : null, tin: g.regName ? provs[0].tin : g.tin,
+            sharedTin: !g.regName, providers: provs, providerCount: provs.length,
+            states: provs.map(function (p) { return p.state; }).filter(function (s, i, a) { return s && a.indexOf(s) === i; }),
+            totalPaid: provs.reduce(function (s, p) { return s + (p.totalPaid || 0); }, 0),
+            flaggedExposure: allegs.reduce(function (s, a) { return s + (a.exposurePost || 0); }, 0),
+            openAllegations: allegs.length,
+            riskScore: Math.max.apply(null, provs.map(function (p) { return p.riskScore || 0; }).concat([0]))
+          };
+        }).sort(function (a, b) { return b.flaggedExposure - a.flaggedExposure; });
+    },
+    getBusiness: function (id) { return this.listBusinesses({ all: true }).find(function (b) { return b.id === id; }) || null; },
+
     listClaimsByProvider: function (providerId) { return D.claims.filter(function (c) { return c.providerId === providerId; }); },
     listAllegationsByProvider: function (providerId, mode) { return D.allegations.filter(function (a) { return a.providerId === providerId && (mode === "all" || (a.mode || "retrospective") === (mode || "retrospective")); }); },
     listInvestigations: function () { return D.allegations.filter(function (a) { return a.status === "Escalated"; }); },

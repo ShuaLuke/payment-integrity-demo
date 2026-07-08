@@ -23,6 +23,8 @@
       var flaggedVisits = claims.filter(function (c) { return (c.lines || []).some(function (l) { return (l.violatesRuleIds || []).length; }); }).length;
       var ring = window.DP.listProviders().filter(function (x) { return x.tin === p.tin; }).length > 1;
       var chain = p.role === "chain";
+      var bizId = p.registrationId || (ring ? p.tin : null);
+      var hasBiz = bizId && window.DP.getBusiness(bizId);
       var repeatOffender = allegs.length >= 2 || chain;
       var watched = window.APP.isProviderWatched(id);
       var outlierCount = groups.filter(function (g) { return g.outlier; }).length;
@@ -45,6 +47,7 @@
         (ring ? '<div style="font-size:11px;color:var(--high);margin-top:5px"><i class="ti ti-affiliate"></i> Shared TIN — provider ring</div>' : '') +
         (chain ? '<div style="font-size:11px;color:var(--high);margin-top:5px;line-height:1.5"><i class="ti ti-building-community"></i> ' + window.APP.esc(p.registration) + '<br><span style="color:var(--text2)">Officer ' + window.APP.esc(p.officer) + ' · ' + window.APP.esc(p.registrationId) + '</span></div>' : '') +
         '<div style="font-size:11px;color:var(--text2);margin-top:6px">' + window.APP.esc(p.city || "") + ', ' + (p.state || "") + '</div>' +
+        (hasBiz ? '<div style="font-size:11.5px;color:var(--accent-d);margin-top:8px;cursor:pointer" id="pv-biz"><i class="ti ti-building-community"></i> View business entity</div>' : '') +
         '<div style="font-size:11.5px;color:var(--accent-d);margin-top:8px;cursor:pointer" id="pv-net"><i class="ti ti-share-3"></i> View in network</div></div>' +
         '</div>' +
 
@@ -87,6 +90,7 @@
       // ---- wiring ----
       document.getElementById("pv-back").addEventListener("click", function () { window.APP.goBack(); });
       document.getElementById("pv-net").addEventListener("click", function () { window.APP.nav("network"); });
+      var pvBiz = document.getElementById("pv-biz"); if (pvBiz) pvBiz.addEventListener("click", function () { window.APP.openBusiness(bizId); });
       document.getElementById("pv-flag").addEventListener("click", function () { window.APP.toggleProviderWatch(id); rerender(id); });
       mount.querySelectorAll("tr.row").forEach(function (tr) { tr.addEventListener("click", function () { window.APP.openAllegation(tr.getAttribute("data-id")); }); });
       wireRadar(mount, id);
