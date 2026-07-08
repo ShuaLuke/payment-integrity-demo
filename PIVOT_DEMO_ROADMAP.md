@@ -21,13 +21,17 @@ mostly shipped through Sprint 3 (HEAD `b13555b`), so several Round-2 asks are al
 called out per phase. Do the **Lead/Case rename (Phase A) first** so later network/AI/editing work isn't built on
 soon-to-change vocabulary.
 
+> **STATUS 2026-07-08 — all of Round 2 (Phases A–F) shipped & pushed, HEAD `53a75e1`.** Commits: roadmap `ad700b9`,
+> A `7c5db22`, D-comments `d64aa52`, E1/E2/E3 `8e9a8b2`/`c19b36c`/`6a75025`, F `53a75e1`. B & C were verified under
+> the new vocab. Each phase committed + pushed separately and verified in-browser.
+
 **Vocabulary shift (stakeholder's words):** Allegation → **"Lead"**, Investigation → **"Case"**. Change
 user-facing copy/labels/nav only; keep internal object ids / data keys / method names stable (`openAllegation`,
 `state.allegationId`, `D.allegations`, `listAllegations` all unchanged). **Case model:** a Case is **provider-level**
 (typically one open case per provider) and aggregates all that provider's Leads (flagged claims); new leads
 auto-attach to the provider's existing case.
 
-- **Phase A — Lead/Case model + IA + full-screen** · [now M] · **TODO (build first)**
+- **Phase A — Lead/Case model + IA + full-screen** · [now M] · **✅ DONE** (`7c5db22`)
   - Rename to Lead/Case across nav, titles, list headers, copilot/AI copy, audit strings.
   - Cases list (one row per provider with open leads: exposure, risk, lead count) + Case detail rolling up its
     leads. Repurpose `views/investigations.js` + the provider view; add `DP.listCases`/`DP.getCase`.
@@ -39,21 +43,21 @@ auto-attach to the provider's existing case.
   network embedded on the Network tab via `DP.getCollusionNetwork`, plain-language narrative + legend present.
   Remaining: confirm narrative covers both the shared-TIN ring (PR001/PR002) and the residential chain
   (PR300–PR303); tighten `views/network.js` legend/labels if thin.
-- **Phase D — AI "Summarize for adjudication" + comments** · **½ DONE** — summarize action exists (Sprint 1 §5,
-  `f27f066`, cites `DP.getSimilarAdjudicated`). **TODO:** audit-logged comment/annotation thread ("color
-  commentary") on a lead/case.
-- **Phase E — Investigator editing + uploads + analyst-created leads** · **TODO**
-  - Editable case working-record (TIN, exposure, payment amounts, provider/veteran/claim fields) visibly distinct
-    from the "claim of record"; log every edit to `APP.auditLog`.
-  - Document-upload affordance on Evidence (demo fake-attach + audit-log); make "request records" wording
-    configurable per case.
-  - Create-a-Lead (analyst-authored) + Lead **source taxonomy** (data-mining · rules · ML/AI · hotline/tip ·
-    referral · OIG) + source filter — answers "allegations are manual, not data-driven" (some legitimately are).
-- **Phase F — TrackLight secondary-scoring enrichment (on the Report Card)** · **½ DONE** — business-registration
-  facet exists (Sprint 3, `c39fb39`). **TODO:** synthetic external-profile panel — Business (state registry,
-  OpenCorporates, liens/judgments/bankruptcies, court dockets, OSINT) + Individual/officer (LexisNexis, Enformion,
-  public records, death OSINT). Lean on the chain's existing officer (Marcus D. Feld) + holding co (Meridian
-  Behavioral Holdings) to make it land.
+- **Phase D — AI "Summarize for adjudication" + comments** · **✅ DONE** — summarize action pre-existed (Sprint 1 §5,
+  `f27f066`); audit-logged comment/annotation thread ("color commentary") added on the lead (`d64aa52`,
+  `APP.addComment`/`getComments`, seeded prior notes).
+- **Phase E — Investigator editing + uploads + analyst-created leads** · **✅ DONE** (`8e9a8b2`, `c19b36c`, `6a75025`)
+  - E2 `c19b36c` — editable case working-record (TIN, exposure, billed/allowed/paid, claim/provider/veteran) shown
+    beside the immutable "claim of record"; every edit logs `RECORD_EDITED` (revert logs `RECORD_REVERTED`).
+  - E3 `6a75025` — document-upload affordance on Evidence (real file picker, fake-attach, `DOCUMENT_UPLOADED`);
+    "request records" wording is editable + persisted per case with FWA-specific defaults.
+  - E1 `8e9a8b2` — Create-a-Lead (analyst-authored, no claim-of-record) + Lead **source taxonomy** (`DP.SOURCES`:
+    data-mining · rules · ML/AI · hotline/tip · referral · OIG) + source filter; 3 manual leads seeded.
+- **Phase F — TrackLight secondary-scoring enrichment (on the Report Card)** · **✅ DONE** (`53a75e1`) — business-registration
+  facet pre-existed (Sprint 3, `c39fb39`); added `DP.getSecondaryProfile` + an "External profile & secondary scoring"
+  panel: Business (registry, OpenCorporates, liens/judgments/bankruptcies, court dockets, OSINT) + Individual/officer
+  (LexisNexis, Enformion, public records, death-index OSINT). Chain officer Marcus D. Feld / Meridian Behavioral lands
+  the narrative (3 registrations · 2 liens · 1 bankruptcy). Seam: `p.secondaryProfile` overrides with a real feed.
 
 **Deferred (note only, don't build):** beneficiary/veteran-side fraud; ingesting Jack's real millions-of-payloads
 report-card JSON — keep the `DP` seam shaped to accept it.
@@ -61,7 +65,11 @@ report-card JSON — keep the `DP` seam shaped to accept it.
 **Open item:** Patel to message a precise "lead → case" definition. Proceeding on the provider-level model above;
 flag any mismatch if his definition arrives.
 
-**Round-2 build order:** A (full) → D-comments → E → F-officer-half → verify B/C under new vocab.
+**Round-2 build order (done):** A → D-comments → E1/E2/E3 → F → B/C verified. ✅ Complete 2026-07-08.
+
+**Next candidates (not yet requested/built):** wire working-record edits into exposure/KPI rollups if desired;
+case-level (not just lead-level) notes rollup; regenerate `data.js` to bake the secondary-profile + manual leads in
+(currently synthesized in the `DP` layer); await Patel's precise "lead → case" definition.
 
 ---
 
