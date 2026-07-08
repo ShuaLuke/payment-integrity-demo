@@ -60,8 +60,8 @@
       var reviewState = final ? "final" : "pending";
       a.status = status; a.assignee = a.assignee || "Dana Whitmore";
       APP.state.decisions[id] = { outcome: outcome, rationale: rationale, ts: new Date(), status: status, reviewState: reviewState };
-      APP.auditLog("DECISION_" + outcome.toUpperCase(), "Flagged claim #" + id + " · " + (final ? "Dismissed (false positive)" : outcome) + (rationale ? " · rationale recorded" : ""));
-      if (!final) APP.auditLog("SUBMITTED_FOR_REVIEW", "Flagged claim #" + id + " · " + outcome + " → supervisor (Karen Boyd)");
+      APP.auditLog("DECISION_" + outcome.toUpperCase(), "Lead #" + id + " · " + (final ? "Dismissed (false positive)" : outcome) + (rationale ? " · rationale recorded" : ""));
+      if (!final) APP.auditLog("SUBMITTED_FOR_REVIEW", "Lead #" + id + " · " + outcome + " → supervisor (Karen Boyd)");
       APP.updateSupBadge();
     },
 
@@ -73,13 +73,13 @@
         dec.reviewState = "approved";
         a.status = dec.outcome === "confirm" ? "Confirmed" : "Escalated";
         dec.status = a.status;
-        APP.auditLog("SUPERVISOR_APPROVED", "Flagged claim #" + id + " · " + a.status + " · approver Karen Boyd");
-        if (dec.outcome === "confirm") APP.auditLog("RECOVERY_SUBMITTED", "Flagged claim #" + id + " · " + window.DP.usd(a.exposurePost || 0));
-        if (dec.outcome === "escalate") { APP.state.investigations.push(id); APP.auditLog("INVESTIGATION_OPENED", "Flagged claim #" + id + " · " + a.providerId); }
+        APP.auditLog("SUPERVISOR_APPROVED", "Lead #" + id + " · " + a.status + " · approver Karen Boyd");
+        if (dec.outcome === "confirm") APP.auditLog("RECOVERY_SUBMITTED", "Lead #" + id + " · " + window.DP.usd(a.exposurePost || 0));
+        if (dec.outcome === "escalate") { APP.state.investigations.push(id); APP.auditLog("CASE_OPENED", "Lead #" + id + " · " + a.providerId); }
       } else {
         dec.reviewState = "returned"; dec.returnNote = note || "";
         a.status = "Returned"; dec.status = "Returned";
-        APP.auditLog("SUPERVISOR_RETURNED", "Flagged claim #" + id + (note ? " · " + note : ""));
+        APP.auditLog("SUPERVISOR_RETURNED", "Lead #" + id + (note ? " · " + note : ""));
       }
       APP.updateSupBadge();
     },
@@ -106,7 +106,7 @@
       if (!a) return;
       a.assignee = name || null;
       if (name && a.status === "New") a.status = "Assigned";
-      APP.auditLog("CASE_ASSIGNED", "Flagged claim #" + id + " · " + (name ? "→ " + name : "unassigned"));
+      APP.auditLog("CASE_ASSIGNED", "Lead #" + id + " · " + (name ? "→ " + name : "unassigned"));
     },
     openTeam: function (sel) { APP.state.teamSel = sel; APP.nav("team"); },
     openBusiness: function (id) { (APP.state.hist = APP.state.hist || []).push(APP.snapshot()); APP.state.businessId = id; APP.nav("business", { id: id }); },
@@ -179,7 +179,7 @@
     // ---- information architecture: 4 areas, each with sub-views ----
     SUBS: {
       home: [],
-      casework: [{ v: "queue", l: "Work queue", role: "analyst" }, { v: "approvals", l: "Approvals", role: "supervisor" }, { v: "team", l: "Team", role: "supervisor" }, { v: "investigations", l: "Investigations" }],
+      casework: [{ v: "queue", l: "Work queue", role: "analyst" }, { v: "approvals", l: "Approvals", role: "supervisor" }, { v: "team", l: "Team", role: "supervisor" }, { v: "investigations", l: "Cases" }],
       insights: [{ v: "analytics", l: "Overview" }, { v: "network", l: "Network" }, { v: "businesses", l: "Businesses" }, { v: "heatmap", l: "Heatmap" }],
       library: [{ v: "rules", l: "Rules" }, { v: "audit", l: "Audit" }]
     },
@@ -197,10 +197,10 @@
     snapshot: function () { return { view: APP.state.view, allegationId: APP.state.allegationId, providerId: APP.state.providerId, businessId: APP.state.businessId }; },
     labelForSnap: function (s) {
       if (!s) return "Work queue";
-      if (s.view === "claim") return "Flagged claim #" + s.allegationId;
+      if (s.view === "claim") return "Lead #" + s.allegationId;
       if (s.view === "provider") { var p = window.DP.getProvider(s.providerId); return p ? p.name : "Provider"; }
       if (s.view === "business") { var b = window.DP.getBusiness(s.businessId); return b ? b.name : "Business"; }
-      var map = { queue: "Work queue", home: "Home", investigations: "Investigations", approvals: "Approvals", analytics: "Analytics", network: "Network", businesses: "Businesses", heatmap: "Heatmap", rules: "Rules", audit: "Audit" };
+      var map = { queue: "Work queue", home: "Home", investigations: "Cases", approvals: "Approvals", analytics: "Analytics", network: "Network", businesses: "Businesses", heatmap: "Heatmap", rules: "Rules", audit: "Audit" };
       return map[s.view] || "Back";
     },
     backLabel: function () { return APP.state.hist && APP.state.hist.length ? APP.labelForSnap(APP.state.hist[APP.state.hist.length - 1]) : "Work queue"; },
@@ -228,7 +228,7 @@
       if (area === "home" || subs.length < 1) { el.style.display = "none"; return; }
       var wsLabel = APP.isSupervisor() && area === "casework" ? '<span style="font-size:11px;color:var(--accent-d);font-weight:500;margin-right:14px"><i class="ti ti-user-shield"></i> Supervisor workspace</span>' : "";
       el.style.display = "block";
-      el.innerHTML = '<div style="max-width:1180px;margin:0 auto;padding:0 20px;display:flex;align-items:center;gap:2px">' + wsLabel +
+      el.innerHTML = '<div style="max-width:var(--page-max);margin:0 auto;padding:0 24px;display:flex;align-items:center;gap:2px">' + wsLabel +
         subs.map(function (s) {
           var active = s.v === view || (view === "claim" && s.v === "queue") || (view === "provider" && s.v === "analytics") || (view === "business" && s.v === "businesses");
           return '<button class="subtab' + (active ? " active" : "") + '" data-view="' + s.v + '">' + s.l + (s.v === "approvals" ? ' <span id="sub-appr-badge"></span>' : "") + '</button>';

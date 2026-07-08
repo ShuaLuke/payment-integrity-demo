@@ -15,7 +15,7 @@
   var STEPS = [
     { t: "Start with what we measure", n: "Analytics is the oversight lens: exposure & recovery trends, exposure by anomaly type, detection source, and peer comparison. Here Alamo Internal Medicine already stands out — 90% of its E/M visits at level 5 vs a 14% peer norm. That gap is what an outlier looks like.", a: function () { retro(); closeCopilot(); window.APP.nav("analytics"); } },
     { t: "The provider report card", n: "Adjudication can start from the provider, not just a claim. The report card's radar (Wendy's “FBI spider”) scores each FAMS composite group vs the peer norm — Alamo's Coding and Charge spokes spike as outliers. Click a spoke to drill into the attributes; compare against peers below.", a: function () { retro(); window.APP.openProvider("PR001"); } },
-    { t: "Drill to the flagged claim", n: "Claim → provider → network, all reachable in one place. From the provider open its flagged claim #20481. The Overview tab carries the risk, confidence and an Explainable-AI “why this was flagged.”", a: function () { retro(); window.APP.openAllegation("20481"); tab("overview"); } },
+    { t: "Drill to the lead", n: "Claim → provider → network, all reachable in one place. From the provider open its lead #20481. The Overview tab carries the risk, confidence and an Explainable-AI “why this was flagged.”", a: function () { retro(); window.APP.openAllegation("20481"); tab("overview"); } },
     { t: "Decision-supporting graphs", n: "The Analysis tab gives the reviewer the picture: 99215 mix vs peers, an exposure breakdown, claim-volume over time and a report-card snippet — the evidence behind the score, not just a number.", a: function () { retro(); window.APP.openAllegation("20481"); tab("analysis"); } },
     { t: "The collusion network — on the case", n: "The network isn't hidden in Insights — it lives on the case. Alamo shares a TIN, 9 referrals and 6 patients with Rio Grande Surgical: one billing entity, coordinated anomalies. The narrative spells out why in plain language.", a: function () { retro(); window.APP.openAllegation("20481"); tab("network"); } },
     { t: "These are not one-offs", n: "Rings aren't isolated. Open #20544 — a residential-treatment chain: four facilities under one holding company (Meridian Behavioral, officer Marcus Feld) cycling the same veterans across AZ→CA→NV for back-to-back sub-30-day stays, under separate TINs to hide the ownership.", a: function () { retro(); window.APP.openAllegation("20544"); tab("network"); } },
@@ -45,7 +45,7 @@
       var s = STEPS[DEMO.i], n = DEMO.i + 1, N = STEPS.length;
       var dots = STEPS.map(function (_, k) { return '<span data-go="' + k + '" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:' + (k === DEMO.i ? "#17b3a6" : "rgba(255,255,255,0.25)") + '"></span>'; }).join("");
       q("#demo-ribbon").innerHTML =
-        '<div style="max-width:1180px;margin:0 auto;padding:7px 20px">' +
+        '<div style="max-width:var(--page-max);margin:0 auto;padding:7px 24px">' +
         '<div style="display:flex;align-items:center;gap:12px">' +
         '<div style="display:flex;align-items:center;gap:7px;white-space:nowrap"><i class="ti ti-player-play" style="color:#7fe0d6"></i><span style="font-size:12px;font-weight:500;color:#fff">Guided demo</span><span style="font-size:11px;color:#93a7bf">' + n + '/' + N + '</span></div>' +
         '<div style="flex:1;display:flex;justify-content:center;align-items:center;gap:5px">' + dots + '</div>' +

@@ -13,7 +13,7 @@
     render: function (mount, params) {
       var id = params.id || window.APP.state.allegationId;
       var a = window.DP.getAllegation(id);
-      if (!a) { mount.innerHTML = '<div class="page"><p>Flagged claim not found.</p></div>'; return; }
+      if (!a) { mount.innerHTML = '<div class="page"><p>Lead not found.</p></div>'; return; }
       var p = a.provider || {}, cl = a.claim, ve = a.veteran;
       var prepay = (a.mode === "prepay");
       var dec = prepay ? window.APP.prepayDecisionFor(id) : window.APP.decisionFor(id);
@@ -29,14 +29,16 @@
         return '<div class="doc-row" data-doc="' + d.key + '" style="display:flex;align-items:center;gap:7px;padding:6px 8px;border:0.5px solid var(--border);border-radius:6px;cursor:pointer;font-size:11.5px"><i class="ti ti-' + d.icon + '" style="color:var(--accent-d)"></i><span style="flex:1">' + d.label + '</span><span class="muted" style="font-size:10px">' + d.meta + '</span><i class="ti ti-chevron-right" style="color:var(--text3);font-size:14px"></i></div>';
       }).join("");
 
-      var kind = prepay ? "Pending claim" : "Flagged claim";
+      var kind = prepay ? "Pending claim" : "Lead";
       var undecided = !dec;
+      // Descriptive header: "Lead #20481 · Alamo Internal Medicine — Upcoding"
+      var headText = kind + " #" + id + (p.name ? " · " + p.name : "") + (a.fwaType ? " — " + a.fwaType : "");
 
       mount.innerHTML =
         '<div class="page">' +
         '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">' +
         '<span class="btn" id="c-back" style="padding:5px 9px"><i class="ti ti-arrow-left"></i> ' + window.APP.esc(window.APP.backLabel()) + '</span>' +
-        '<span class="page-title">' + kind + ' #' + id + '</span><span id="c-status">' + window.UI.statusPill(a.status) + '</span>' +
+        '<span class="page-title">' + window.APP.esc(headText) + '</span><span id="c-status">' + window.UI.statusPill(a.status) + '</span>' +
         '<span style="font-size:11px;color:var(--text2);display:inline-flex;align-items:center;gap:4px"><i class="ti ti-lock"></i> Locked to you</span>' +
         '<span style="flex:1"></span>' + window.EXPORT.group("c") + '<button class="btn primary" id="c-summarize" style="font-size:12px"><i class="ti ti-file-analytics"></i> Summarize for adjudication</button></div>' +
         '<div class="split" style="display:flex;gap:12px;align-items:flex-start">' +
@@ -320,7 +322,7 @@
       if (dec.reviewState === "pending") { icon = "clock-hour-4"; color = "#3a5578"; msg = label + " submitted — pending supervisor review (Karen Boyd)"; }
       else if (dec.reviewState === "approved") {
         if (dec.outcome === "confirm") { icon = "circle-check"; color = "var(--low)"; msg = "Confirmed · " + window.DP.usd(a.exposurePost) + " submitted for recovery · approved by Karen Boyd"; }
-        else { icon = "arrow-up-right"; color = "var(--med)"; msg = "Escalated · Investigation created · approved by Karen Boyd"; }
+        else { icon = "arrow-up-right"; color = "var(--med)"; msg = "Escalated · Case opened · approved by Karen Boyd"; }
       } else { icon = "circle-x"; color = "var(--text2)"; msg = "Dismissed · false positive logged for model retraining"; }
       var svPanel = "";
       if (dec.reviewState === "pending" && window.APP.isSupervisor()) {
@@ -348,14 +350,14 @@
       '<div style="display:flex;gap:8px;margin-bottom:10px">' +
       '<div class="seg" data-d="c"><i class="ti ti-check"></i> Confirm<div class="sub">recommend recovery</div></div>' +
       '<div class="seg" data-d="d"><i class="ti ti-x"></i> Dismiss<div class="sub">false positive</div></div>' +
-      '<div class="seg" data-d="e"><i class="ti ti-arrow-up-right"></i> Escalate<div class="sub">to investigation</div></div></div>' +
+      '<div class="seg" data-d="e"><i class="ti ti-arrow-up-right"></i> Escalate<div class="sub">to a case</div></div></div>' +
       '<div id="c-hint" style="font-size:11.5px;color:var(--text2);margin-bottom:8px;min-height:16px"></div>' +
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px"><span style="font-size:11px;color:var(--text2)">Rationale (logged for audit &amp; model retraining)</span><button id="c-draft" class="btn" style="padding:4px 9px;font-size:11px"><i class="ti ti-sparkles"></i>Draft with AI</button></div>' +
       '<textarea id="c-rat" class="input" placeholder="Document your rationale…"></textarea>' +
       '<button id="c-submit" class="btn primary" style="margin-top:9px" disabled><i class="ti ti-send"></i>Submit decision</button>';
     var choice = null;
     var outMap = { c: "confirm", d: "dismiss", e: "escalate" };
-    var hints = { c: "Confirms improper payment — " + window.DP.usd(a.exposurePost) + " moves to Submitted for recovery.", d: "Logged as a false positive — outcome feeds model retraining.", e: "Creates an Investigation for further review." };
+    var hints = { c: "Confirms improper payment — " + window.DP.usd(a.exposurePost) + " moves to Submitted for recovery.", d: "Logged as a false positive — outcome feeds model retraining.", e: "Opens a Case for further review." };
     box.querySelectorAll(".seg").forEach(function (s) {
       s.addEventListener("click", function () {
         choice = s.getAttribute("data-d");

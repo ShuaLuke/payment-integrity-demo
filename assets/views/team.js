@@ -31,7 +31,7 @@
 
       mount.innerHTML =
         '<div class="page">' +
-        '<div class="page-head"><div><div class="page-title">Team &amp; assignments</div><div class="page-sub">Balance workload and assign flagged claims to analysts</div></div>' +
+        '<div class="page-head"><div><div class="page-title">Team &amp; assignments</div><div class="page-sub">Balance workload and assign leads to analysts</div></div>' +
         '<span class="tag"><i class="ti ti-user-shield"></i> Supervisor · Karen Boyd</span></div>' +
         '<div style="display:flex;gap:12px;align-items:flex-start">' +
         '<div style="width:280px;flex:none;display:flex;flex-direction:column;gap:6px">' +
@@ -45,7 +45,7 @@
         '<div style="padding:11px 13px;display:flex;justify-content:space-between;align-items:center;border-bottom:0.5px solid var(--border2)"><div style="font-weight:500;font-size:13px">' + window.APP.esc(selName) + ' <span class="muted" style="font-weight:400;font-size:11px">· ' + selList.length + ' open</span></div>' +
         (isPool && selList.length ? '<button class="btn" id="tm-balance" style="font-size:11.5px"><i class="ti ti-scale"></i> Balance workload</button>' : '') + '</div>' +
         '<div id="tm-bulk" style="display:none;padding:8px 13px;background:var(--accent-l);border-bottom:0.5px solid #cdeee8;align-items:center;gap:10px"><span id="tm-bulk-n" style="font-weight:500;font-size:12.5px;color:var(--accent-d)"></span><span style="flex:1"></span><span style="font-size:12px;color:var(--text2)">Assign to</span><select id="tm-bulk-who" class="input" style="width:auto;font-size:12px">' + team.map(function (n) { return '<option value="' + n + '">' + n + '</option>'; }).join("") + '<option value="__unassigned__">Unassign</option></select><button class="btn primary" id="tm-bulk-apply" style="font-size:12px"><i class="ti ti-user-check"></i> Assign</button><button class="btn" id="tm-bulk-clear" style="font-size:12px">Clear</button></div>' +
-        '<table><thead><tr><th style="width:30px"><input type="checkbox" class="tm-all"></th><th>Risk</th><th>Flagged claim</th><th>Provider</th><th class="right">Exposure</th><th>Status</th><th>Assign to</th></tr></thead><tbody>' +
+        '<table><thead><tr><th style="width:30px"><input type="checkbox" class="tm-all"></th><th>Risk</th><th>Lead</th><th>Provider</th><th class="right">Exposure</th><th>Status</th><th>Assign to</th></tr></thead><tbody>' +
         (selList.length ? selList.map(function (a) {
           var p = window.DP.getProvider(a.providerId);
           return '<tr class="tm-case" data-id="' + a.id + '"><td><input type="checkbox" class="tm-check" data-id="' + a.id + '" onclick="event.stopPropagation()"></td><td>' + window.UI.riskChip(a.riskScore) + '</td>' +
@@ -98,7 +98,7 @@
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-weight:500;font-size:13px"><i class="ti ti-scale" style="color:var(--accent-d)"></i> Suggested balanced assignment</div>' +
       '<div><button class="btn" id="tm-plan-cancel" style="font-size:12px;margin-right:6px">Cancel</button><button class="btn primary" id="tm-plan-apply" style="font-size:12px"><i class="ti ti-check"></i> Apply all (' + plan.length + ')</button></div></div>' +
       '<div style="font-size:11.5px;color:var(--text2);margin-bottom:8px">Distributes ' + plan.length + ' unassigned claims to the least-loaded analysts, highest-risk first. Open cases after: ' + summary + '</div>' +
-      '<table><thead><tr><th>Risk</th><th>Flagged claim</th><th>Provider</th><th>Suggested analyst</th></tr></thead><tbody>' +
+      '<table><thead><tr><th>Risk</th><th>Lead</th><th>Provider</th><th>Suggested analyst</th></tr></thead><tbody>' +
       plan.map(function (r) { return '<tr><td>' + window.UI.riskChip(r.risk) + '</td><td><span class="mono" style="font-weight:500">#' + r.id + '</span> <span class="tag fwa">' + r.fwa + '</span></td><td>' + window.APP.esc(r.provider) + '</td><td><span class="avatar" style="width:22px;height:22px;font-size:9px;display:inline-flex;vertical-align:middle;margin-right:5px">' + initials(r.who) + '</span>' + window.APP.esc(r.who) + '</td></tr>'; }).join("") +
       '</tbody></table></div>';
     document.getElementById("tm-plan-cancel").addEventListener("click", function () { document.getElementById("tm-plan").innerHTML = ""; });

@@ -16,6 +16,7 @@
   --sans:'IBM Plex Sans',system-ui,sans-serif;
   --mono:'IBM Plex Mono',ui-monospace,monospace;
   --r:8px;
+  --page-max:1500px; /* reviewer runs a large monitor — use the width */
 }
 *{box-sizing:border-box}
 html,body{margin:0}
@@ -49,7 +50,7 @@ button{font-family:var(--sans)}
 .conn .d{width:6px;height:6px;border-radius:50%;background:#17b3a6}
 
 /* ---- layout ---- */
-.page{padding:16px 20px;max-width:1180px;margin:0 auto}
+.page{padding:16px 24px;max-width:var(--page-max);margin:0 auto}
 .page-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:14px;gap:12px}
 .page-title{font-size:19px;font-weight:600}
 .page-sub{font-size:12.5px;color:var(--text2)}

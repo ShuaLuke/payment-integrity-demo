@@ -115,6 +115,41 @@
     listAllegationsByProvider: function (providerId, mode) { return D.allegations.filter(function (a) { return a.providerId === providerId && (mode === "all" || (a.mode || "retrospective") === (mode || "retrospective")); }); },
     listInvestigations: function () { return D.allegations.filter(function (a) { return a.status === "Escalated"; }); },
 
+    // ---- Cases (provider-level) ----------------------------------------------
+    // A Case is provider-level: one open case per provider, aggregating ALL that
+    // provider's Leads (flagged claims). New leads auto-attach to the provider's
+    // case. `listCases` = one row per provider with leads; `getCase` = one provider.
+    // NOTE: internal keys stay "allegation"; "Lead" is the user-facing name only.
+    listCases: function (opts) {
+      opts = opts || {};
+      var mode = opts.mode || "retrospective";
+      var terminal = { "Dismissed": 1, "Confirmed": 1, "Cleared to pay": 1, "Denied": 1 };
+      var byProv = {};
+      D.allegations.forEach(function (a) {
+        if (mode !== "all" && (a.mode || "retrospective") !== mode) return;
+        (byProv[a.providerId] = byProv[a.providerId] || []).push(a);
+      });
+      var exposureKey = mode === "prepay" ? "exposurePre" : "exposurePost";
+      return Object.keys(byProv).map(function (pid) {
+        var leads = byProv[pid].slice().sort(function (a, b) { return b.riskScore - a.riskScore; });
+        var p = providers[pid] || {};
+        var open = leads.filter(function (a) { return !terminal[a.status]; });
+        var escalated = leads.some(function (a) { return a.status === "Escalated"; });
+        return {
+          providerId: pid, provider: p, name: p.name || "—", npi: p.npi || "", state: p.state || "",
+          leads: leads, leadCount: leads.length, openCount: open.length,
+          exposure: leads.reduce(function (s, a) { return s + (a[exposureKey] || 0); }, 0),
+          riskScore: Math.max.apply(null, leads.map(function (a) { return a.riskScore || 0; }).concat([p.riskScore || 0])),
+          fwaTypes: leads.map(function (a) { return a.fwaType; }).filter(function (t, i, arr) { return t && arr.indexOf(t) === i; }),
+          assignee: (leads.find(function (a) { return a.assignee; }) || {}).assignee || null,
+          escalated: escalated,
+          status: open.length ? (escalated ? "Under investigation" : "Open") : "Closed"
+        };
+      }).filter(function (c) { return opts.all ? true : c.leadCount > 0; })
+        .sort(function (a, b) { return b.exposure - a.exposure; });
+    },
+    getCase: function (providerId, mode) { return this.listCases({ all: true, mode: mode || "all" }).find(function (c) { return c.providerId === providerId; }) || null; },
+
     // ---- provider report card (radar spokes + drill-down) ----
     getGroups: function () { var p = D.providers.find(function (x) { return x.groupScores; }); return p ? p.groupScores.map(function (g) { return g.group; }) : []; },
     getReportCard: function (id) { var p = providers[id]; return p ? { groups: p.groupScores || [], attributes: p.groupAttributes || {} } : null; },

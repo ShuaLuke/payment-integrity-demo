@@ -92,9 +92,9 @@
         '<table><thead><tr><th>Provider</th><th>Specialty</th><th>State</th><th class="right">Claims</th><th class="right">Risk</th></tr></thead><tbody>' +
         b.providers.map(function (p) { return '<tr class="row pv-row" data-id="' + p.id + '"><td style="font-weight:500;font-size:12px">' + window.APP.esc(p.name) + '<div class="mono" style="font-size:10px;color:var(--text3)">NPI ' + p.npi + ' · TIN ' + p.tin + '</div></td><td style="font-size:11.5px;color:var(--text2)">' + window.APP.esc(p.taxonomyLabel || "") + '</td><td style="font-size:11.5px">' + p.state + '</td><td class="right">' + (p.claimCount || 0) + '</td><td class="right">' + window.UI.riskChip(p.riskScore || 0) + '</td></tr>'; }).join("") +
         '</tbody></table></div>' +
-        '<div class="card" style="padding:0;overflow:hidden"><div style="padding:11px 13px 6px;font-weight:500;font-size:13px">Flagged claims across the business (' + allegs.length + ')</div>' +
+        '<div class="card" style="padding:0;overflow:hidden"><div style="padding:11px 13px 6px;font-weight:500;font-size:13px">Leads across the business (' + allegs.length + ')</div>' +
         '<table><thead><tr><th>Risk</th><th>Provider</th><th>FWA type</th><th>Status</th><th class="right">Exposure</th></tr></thead><tbody>' +
-        (allegs.length ? allegs.map(function (r) { return '<tr class="row al-row" data-id="' + r.a.id + '"><td>' + window.UI.riskChip(r.a.riskScore) + '</td><td style="font-size:11.5px">' + window.APP.esc(r.p.name) + '</td><td><span class="tag fwa">' + r.a.fwaType + '</span> <span class="mono" style="font-size:10px;color:var(--text3)">#' + r.a.id + '</span></td><td>' + window.UI.statusPill(r.a.status) + '</td><td class="right" style="font-weight:500">' + window.DP.usd(r.a.exposurePost || 0) + '</td></tr>'; }).join("") : '<tr><td colspan="5" class="muted" style="padding:12px">No flagged claims.</td></tr>') +
+        (allegs.length ? allegs.map(function (r) { return '<tr class="row al-row" data-id="' + r.a.id + '"><td>' + window.UI.riskChip(r.a.riskScore) + '</td><td style="font-size:11.5px">' + window.APP.esc(r.p.name) + '</td><td><span class="tag fwa">' + r.a.fwaType + '</span> <span class="mono" style="font-size:10px;color:var(--text3)">#' + r.a.id + '</span></td><td>' + window.UI.statusPill(r.a.status) + '</td><td class="right" style="font-weight:500">' + window.DP.usd(r.a.exposurePost || 0) + '</td></tr>'; }).join("") : '<tr><td colspan="5" class="muted" style="padding:12px">No leads.</td></tr>') +
         '</tbody></table></div>' +
         '</div></div></div>';
 
@@ -118,7 +118,7 @@
         pdf: function () {
           var body = window.EXPORT.kvHtml([["Business", b.name], ["Kind", b.kind], ["Officer", b.officer || "—"], ["TIN", b.tin], ["Footprint", b.states.join(", ")], ["Providers", b.providerCount], ["Flagged exposure", window.DP.usd(b.flaggedExposure)], ["Risk", b.riskScore + "/100"]]) +
             "<h2>Providers under this business</h2>" + window.EXPORT.tableHtml(pHead, pRows) +
-            "<h2>Flagged claims</h2>" + window.EXPORT.tableHtml(["Risk", "Provider", "FWA type", "Status", "Exposure"], allegs.map(function (r) { return [r.a.riskScore, r.p.name, r.a.fwaType, r.a.status, window.DP.usd(r.a.exposurePost || 0)]; }));
+            "<h2>Leads</h2>" + window.EXPORT.tableHtml(["Risk", "Provider", "FWA type", "Status", "Exposure"], allegs.map(function (r) { return [r.a.riskScore, r.p.name, r.a.fwaType, r.a.status, window.DP.usd(r.a.exposurePost || 0)]; }));
           window.EXPORT.pdf("Business entity — " + b.name, body);
         }
       });

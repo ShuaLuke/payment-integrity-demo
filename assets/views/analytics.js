@@ -64,11 +64,11 @@
         '</tbody></table></div>' +
         '</div></div>';
 
-      var flHead = ["Flagged claim", "FWA Type", "Risk", "Confidence", "Source", "Status", "Assignee", "Provider", "NPI", "ClaimType", "Exposure"];
+      var flHead = ["Lead", "FWA Type", "Risk", "Confidence", "Source", "Status", "Assignee", "Provider", "NPI", "ClaimType", "Exposure"];
       var flRows = window.DP.listAllegations().map(function (r) { return ["#" + r.id, r.fwaType, r.riskScore, r.confidence + "%", r.source, r.status, r.assignee || "", r.providerName, r.providerNpi, r.claimType, r.exposurePost]; });
       window.EXPORT.wire("an", {
         csv: function () { window.EXPORT.csv("pivot-flagged-claims", flHead, flRows); },
-        xls: function () { window.EXPORT.xls("pivot-flagged-claims", "Flagged claims", flHead, flRows); },
+        xls: function () { window.EXPORT.xls("pivot-flagged-claims", "Leads", flHead, flRows); },
         pdf: function () {
           var body = window.EXPORT.kvHtml([
             ["Post-payment exposure", window.DP.usdShort(base.exposurePost)], ["Submitted for recovery", window.DP.usdShort(k.submittedForRecovery)],
@@ -76,7 +76,7 @@
           ]) +
             "<h2>Exposure by anomaly type</h2>" + window.EXPORT.tableHtml(["Anomaly type", "Count", "Exposure"], anoRows.map(function (r) { return [r.t, r.n, window.DP.usd(r.exp)]; })) +
             "<h2>Top providers by open exposure</h2>" + window.EXPORT.tableHtml(["Provider", "Specialty", "Risk", "Exposure"], top.map(function (t) { return [t.name, t.spec, t.risk, window.DP.usd(t.exp)]; })) +
-            "<h2>Flagged claims (" + flRows.length + ")</h2>" + window.EXPORT.tableHtml(flHead, flRows);
+            "<h2>Leads (" + flRows.length + ")</h2>" + window.EXPORT.tableHtml(flHead, flRows);
           window.EXPORT.pdf("Payment Integrity — Analytics", body);
         }
       });

@@ -10,12 +10,12 @@
         "Recommend recovery of " + exp + " in improper post-payment amounts and update of the provider risk profile.",
       dismiss: "Reviewed and dismissed. On examination of the record, the flagged pattern is clinically and contractually supported; no improper payment is identified. " +
         "Logging as a false positive so the outcome feeds model retraining and reduces similar low-confidence flags.",
-      escalate: "Escalating to Investigation. The pattern combined with network signals (shared identifiers / referrals) suggests coordinated behavior warranting a full investigation beyond single-claim recovery."
+      escalate: "Escalating to a Case. The pattern combined with network signals (shared identifiers / referrals) suggests coordinated behavior warranting a provider-level case beyond single-claim recovery."
     };
     // scenario-specific overrides
     if (a.id === "20517") {
       C.confirm = "Confirmed unbundling. Rio Grande Surgical Partners (NPI 1487653920) billed 43235 with modifier 59 alongside 43239 on 28 of 31 paired claims, bypassing the NCCI PTP edit with no documentation of a distinct procedural service. Component 43235 ($410/claim) is not separately payable in the same session. Recommend recovery of $11,480.";
-      C.escalate = "Escalating to Investigation. The 90% modifier-59 override rate combined with a shared billing TIN (00-6820473) with Alamo Internal Medicine (PR001) suggests coordinated behavior warranting a full investigation.";
+      C.escalate = "Escalating to a Case. The 90% modifier-59 override rate combined with a shared billing TIN (00-6820473) with Alamo Internal Medicine (PR001) suggests coordinated behavior warranting a provider-level case.";
     }
     if (a.id === "20463") {
       C.dismiss = "Reviewed and dismissed. The medical record confirms end-stage renal disease (N18.6) with a standing order for thrice-weekly in-center hemodialysis — 36 sessions/quarter is clinically appropriate. No improper payment. Logged as a false positive to condition-adjust the frequency model for ESRD.";
@@ -79,10 +79,10 @@
       rec = { action: pa, label: plabel, rationale: prat };
     }
     else if (a.id === "20463") rec = { action: "request-records", label: "Request records first", rationale: "Confidence is only " + a.confidence + "% and frequency alone drives the flag. If the medical record shows an ESRD dialysis regimen, dismiss as a false positive — recovering here would be an error." };
-    else if (a.id === "20517") rec = { action: "confirm-escalate", label: "Confirm & escalate", rationale: "Two rules fired and the shared-TIN link to a partner provider lifts this above single-claim recovery. Confirm the " + exp + " and escalate the ring to Investigation." };
-    else if (a.id === "20544") rec = { action: "confirm-escalate", label: "Confirm & escalate", rationale: "The length-of-stay abuse is corroborated by rule + model, and the 4-facility holding-company chain makes this coordinated. Confirm " + exp + " and escalate the chain to Investigation." };
+    else if (a.id === "20517") rec = { action: "confirm-escalate", label: "Confirm & escalate", rationale: "Two rules fired and the shared-TIN link to a partner provider lifts this above single-claim recovery. Confirm the " + exp + " and escalate the ring to a Case." };
+    else if (a.id === "20544") rec = { action: "confirm-escalate", label: "Confirm & escalate", rationale: "The length-of-stay abuse is corroborated by rule + model, and the 4-facility holding-company chain makes this coordinated. Confirm " + exp + " and escalate the chain to a Case." };
     else if (a.id === "20481") rec = { action: "confirm", label: "Confirm", rationale: "Upcoding is 5.8σ above the specialty-peer median with low documented complexity. Confirm and recover the overpayment differential." };
-    else if (isRing && a.riskScore >= 75) rec = { action: "confirm-escalate", label: "Confirm & escalate", rationale: "High risk plus a collusion network means this shouldn't be closed as one claim — confirm " + exp + " and escalate the network to Investigation." };
+    else if (isRing && a.riskScore >= 75) rec = { action: "confirm-escalate", label: "Confirm & escalate", rationale: "High risk plus a collusion network means this shouldn't be closed as one claim — confirm " + exp + " and escalate the network to a Case." };
     else if (a.confidence < 65) rec = { action: "request-records", label: "Request records first", rationale: "Confidence is " + a.confidence + "% — pull the supporting record before deciding; dismiss if the billing is clinically justified." };
     else if (a.riskScore >= 80) rec = { action: "confirm", label: "Confirm", rationale: "Risk " + a.riskScore + "/100 with " + a.confidence + "% confidence and corroborating rule/peer evidence. Confirm and recover " + exp + "." };
     else rec = { action: "confirm", label: "Confirm if evidence holds", rationale: "Moderate risk (" + a.riskScore + "/100). Confirm if the rule and peer evidence stand on record review; otherwise dismiss." };
@@ -102,7 +102,7 @@
     }
     if (q.indexOf("recommend") >= 0 || q.indexOf("action") >= 0 || q.indexOf("should") >= 0) {
       if (a.id === "20463") return "Recommendation: request the medical record first. The confidence is low (61%) and frequency alone drives the flag. If the record shows an ESRD dialysis regimen, dismiss as a false positive — recovering here would be an error.";
-      if (a.id === "20517") return "Recommendation: confirm and escalate. Two rules fired (NCCI PTP + modifier-59) and the shared-TIN link to PR001 raises this above a single-claim recovery — an Investigation is warranted.";
+      if (a.id === "20517") return "Recommendation: confirm and escalate. Two rules fired (NCCI PTP + modifier-59) and the shared-TIN link to PR001 raises this above a single-claim recovery — a provider-level Case is warranted.";
       return "Recommendation: given a " + lvl + " risk score of " + a.riskScore + " with " + a.confidence + "% confidence, confirm if the rule/peer evidence holds, and escalate if network signals suggest coordination.";
     }
     if (q.indexOf("why") >= 0 || q.indexOf("flag") >= 0 || q.indexOf("explain") >= 0) {
@@ -114,7 +114,7 @@
     if (q.indexOf("exposure") >= 0 || q.indexOf("recover") >= 0 || q.indexOf("amount") >= 0 || q.indexOf("dollar") >= 0) {
       return "Estimated post-payment exposure is " + window.DP.usd(a.exposurePost || 0) + ". If confirmed, that amount moves to Submitted for recovery.";
     }
-    return "This is a " + a.fwaType.toLowerCase() + " flagged claim on " + p.name + " with risk " + a.riskScore + "/100 and " + a.confidence + "% confidence. Ask me to summarize the risk, compare to peers, recommend an action, or draft a rationale.";
+    return "This is a " + a.fwaType.toLowerCase() + " lead on " + p.name + " with risk " + a.riskScore + "/100 and " + a.confidence + "% confidence. Ask me to summarize the risk, compare to peers, recommend an action, or draft a rationale.";
   }
 
   // Typewriter streamer for the "live" feel.

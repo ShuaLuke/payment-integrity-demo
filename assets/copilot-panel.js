@@ -54,8 +54,8 @@
     var chat = document.getElementById("cp-chat"); chat.innerHTML = "";
     var a = ctx();
     addAI(focused()
-      ? "I'm focused on flagged claim #" + a.id + " — " + a.fwaType.toLowerCase() + " at " + a.provider.name + ". Ask me to summarize the risk, compare to peers, recommend an action, or draft a rationale."
-      : "Ask me about any flagged case. Open a claim and I'll ground my answers in its evidence, rules and network context.", false);
+      ? "I'm focused on lead #" + a.id + " — " + a.fwaType.toLowerCase() + " at " + a.provider.name + ". Ask me to summarize the risk, compare to peers, recommend an action, or draft a rationale."
+      : "Ask me about any lead. Open a lead and I'll ground my answers in its evidence, rules and network context.", false);
   }
   function addUser(t) { var d = el("msg user", t); chat().appendChild(d); scroll(); }
   function addAI(t, stream) { var d = el("msg ai", ""); chat().appendChild(d); if (stream) window.AI.stream(d, t, scroll); else d.textContent = t; scroll(); }
@@ -66,7 +66,7 @@
     addUser(qy);
     var a = ctx();
     window.APP.auditLog("COPILOT_QUERY", "#" + a.id + " · " + qy);
-    if (isAdjIntent(qy)) { thinkThen(function () { addBrief(a); window.APP.auditLog("AI_CASE_SUMMARY", "Flagged claim #" + a.id); }); return; }
+    if (isAdjIntent(qy)) { thinkThen(function () { addBrief(a); window.APP.auditLog("AI_CASE_SUMMARY", "Lead #" + a.id); }); return; }
     setTimeout(function () { addAI(window.AI.copilot(a, qy), true); }, 200);
   }
   function isAdjIntent(q) { q = (q || "").toLowerCase(); return /summar/.test(q) && /(adjudicat|case|decision|brief)/.test(q); }
@@ -136,7 +136,7 @@
       setCtxLine();
       var a = id ? window.DP.getAllegation(id) : ctx();
       addUser("Summarize this case for adjudication");
-      thinkThen(function () { addBrief(a); window.APP.auditLog("AI_CASE_SUMMARY", "Flagged claim #" + a.id); });
+      thinkThen(function () { addBrief(a); window.APP.auditLog("AI_CASE_SUMMARY", "Lead #" + a.id); });
     }
   };
   function boot() { if (!window.APP || !window.DP || !window.APP.ready) return setTimeout(boot, 100); build(); }

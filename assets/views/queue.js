@@ -21,10 +21,10 @@
 
       mount.innerHTML =
         '<div class="page">' +
-        '<div class="page-head"><div><div class="page-title">Work queue</div><div class="page-sub">Flagged claims routed for post-payment review</div></div>' +
+        '<div class="page-head"><div><div class="page-title">Work queue</div><div class="page-sub">Leads (flagged claims) routed for post-payment review</div></div>' +
         '<div style="display:flex;gap:10px;align-items:center"><div style="display:flex;gap:2px;background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:2px">' + seg("all", "All open") + seg("my", "My cases") + seg("unassigned", "Unassigned") + '</div>' + window.EXPORT.group("q") + '</div></div>' +
         '<div class="kpis">' +
-        kpi("Open flagged claims", openCount) + kpi("Exposure (open queue)", window.DP.usd(openExp)) +
+        kpi("Open leads", openCount) + kpi("Exposure (open queue)", window.DP.usd(openExp)) +
         kpi("Submitted for recovery", window.DP.usdShort(k.submittedForRecovery)) + kpi("Verified recoupment", window.DP.usdShort(k.verifiedRecoupment)) +
         '</div>' +
         '<div class="filters">' +
@@ -36,7 +36,7 @@
         '<div style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;color:var(--text2)">Min risk</span><input id="q-thr" type="range" min="0" max="100" value="' + st.minRisk + '" step="1" style="width:100px"><span id="q-thrv" class="mono" style="font-size:12.5px;font-weight:500;min-width:22px">' + st.minRisk + '</span></div>' +
         '<button class="btn" id="q-clear" style="font-size:11.5px"><i class="ti ti-x"></i> Clear</button>' +
         '</div>' +
-        '<div class="card" style="padding:0;overflow:hidden"><table><thead><tr><th>Risk</th><th>Flagged claim</th><th>Provider</th><th class="right">Exposure</th><th>Status</th><th>Assignee</th></tr></thead><tbody id="q-body"></tbody></table></div>' +
+        '<div class="card" style="padding:0;overflow:hidden"><table><thead><tr><th>Risk</th><th>Lead</th><th>Provider</th><th class="right">Exposure</th><th>Status</th><th>Assignee</th></tr></thead><tbody id="q-body"></tbody></table></div>' +
         '<div style="display:flex;justify-content:space-between;margin-top:10px;font-size:12px;color:var(--text2)"><span id="q-count"></span><span>Teal bar = one of the 3 demo scenarios</span></div>' +
         '</div>';
 
@@ -62,7 +62,7 @@
             '<td class="right" style="font-weight:500">' + window.DP.usd(r.exposurePost) + '</td>' +
             '<td>' + window.UI.statusPill(r.status) + '</td>' +
             '<td style="color:' + (r.assignee ? "var(--ink)" : "var(--text3)") + '">' + (r.assignee || "Unassigned") + '</td></tr>';
-        }).join("") || '<tr><td colspan="6" class="muted" style="padding:16px;text-align:center">No flagged claims match these filters.</td></tr>';
+        }).join("") || '<tr><td colspan="6" class="muted" style="padding:16px;text-align:center">No leads match these filters.</td></tr>';
         document.getElementById("q-count").textContent = "Showing " + rows.length + (st.status ? "" : " open") + " of " + all.length;
         document.getElementById("q-body").querySelectorAll("tr.row").forEach(function (tr) { tr.addEventListener("click", function () { window.APP.openAllegation(tr.getAttribute("data-id")); }); });
       }
@@ -75,12 +75,12 @@
       document.getElementById("q-assignee").addEventListener("change", function () { st.assignee = this.value; draw(); });
       document.getElementById("q-sort").addEventListener("change", function () { st.sort = this.value; draw(); });
       document.getElementById("q-clear").addEventListener("click", function () { window.APP.state.qfilters = { scope: "all", status: "", fwa: "", assignee: "", sort: "risk", minRisk: 0, query: "" }; window.APP.nav("queue"); });
-      var qHead = ["Flagged claim", "Risk", "FWA Type", "Source", "Provider", "NPI", "State", "Exposure", "Status", "Assignee"];
+      var qHead = ["Lead", "Risk", "FWA Type", "Source", "Provider", "NPI", "State", "Exposure", "Status", "Assignee"];
       var qRows = function () { return window.DP.listAllegations().filter(function (r) { return OPEN.indexOf(r.status) >= 0; }).sort(function (a, b) { return b.riskScore - a.riskScore; }).map(function (r) { return ["#" + r.id, r.riskScore, r.fwaType, r.source, r.providerName, r.providerNpi, r.providerState, r.exposurePost, r.status, r.assignee || "Unassigned"]; }); };
       window.EXPORT.wire("q", {
         csv: function () { window.EXPORT.csv("pivot-work-queue", qHead, qRows()); },
         xls: function () { window.EXPORT.xls("pivot-work-queue", "Work queue", qHead, qRows()); },
-        pdf: function () { var rows = qRows(); window.EXPORT.pdf("Work queue — open flagged claims", "<div class='sub'>" + rows.length + " open claims · total exposure " + window.DP.usd(rows.reduce(function (s, r) { return s + r[7]; }, 0)) + "</div>" + window.EXPORT.tableHtml(qHead, rows.map(function (r) { return r.slice(0, 7).concat([window.DP.usd(r[7]), r[8], r[9]]); }))); }
+        pdf: function () { var rows = qRows(); window.EXPORT.pdf("Work queue — open leads", "<div class='sub'>" + rows.length + " open leads · total exposure " + window.DP.usd(rows.reduce(function (s, r) { return s + r[7]; }, 0)) + "</div>" + window.EXPORT.tableHtml(qHead, rows.map(function (r) { return r.slice(0, 7).concat([window.DP.usd(r[7]), r[8], r[9]]); }))); }
       });
       draw();
     }
