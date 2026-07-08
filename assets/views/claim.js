@@ -155,7 +155,7 @@
     curTab = name;
     var panel = document.getElementById("c-tabpanel"); if (!panel || !ctx) return;
     document.querySelectorAll(".ctab").forEach(function (b) { b.classList.toggle("active", b.getAttribute("data-tab") === name); });
-    if (name === "overview") { panel.innerHTML = overviewHtml(ctx.a, ctx.prepay); var ovd = document.getElementById("c-ov-decide"); if (ovd) ovd.onclick = function () { showTab("decision"); }; }
+    if (name === "overview") { panel.innerHTML = overviewHtml(ctx.a, ctx.prepay); var ovd = document.getElementById("c-ov-decide"); if (ovd) ovd.onclick = function () { showTab("decision"); }; wireWorkingRecord(ctx.id); }
     else if (name === "evidence") panel.innerHTML = evidenceHtml(ctx.a, ctx.cl);
     else if (name === "analysis") { panel.innerHTML = analysisHtml(ctx.a); var rc = document.getElementById("c-openrc"); if (rc) rc.onclick = function () { window.APP.openProvider(ctx.p.id); }; }
     else if (name === "network") { panel.innerHTML = networkHtml(); renderCollusion(ctx.p, ctx.id); }
@@ -188,8 +188,67 @@
         '<div style="padding:11px 12px"><div style="font-size:12.5px;line-height:1.6;margin-bottom:' + (factors ? "9px" : "0") + '">' + window.APP.esc(a.xai.summary) + '</div>' +
         (factors ? '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:7px">' + factors + '</div>' : '') + '</div></div>' : '') +
       recBanner +
+      workingRecordCard(a, prepay) +
       '<div style="font-size:11.5px;color:var(--text2)"><i class="ti ti-info-circle"></i> Use the tabs above for the claim & rules (Evidence), decision-supporting graphs (Analysis), the collusion network (Network), and to record a decision.</div>' +
       '</div>';
+  }
+
+  // ---------- case working record (editable overlay, audit-logged) ----------
+  function workingRecordCard(a, prepay) {
+    var p = a.provider || {}, cl = a.claim, ve = a.veteran, id = a.id;
+    var fields = [
+      { f: "tin", label: "TIN", rec: p.tin || "", type: "text" },
+      { f: "exposure", label: prepay ? "At-risk amount" : "Exposure", rec: (prepay ? a.exposurePre : a.exposurePost) || 0, type: "money" }
+    ];
+    if (cl) {
+      fields.push({ f: "billed", label: "Billed", rec: cl.billedAmount || 0, type: "money" });
+      fields.push({ f: "allowed", label: "Allowed", rec: cl.allowedAmount || 0, type: "money" });
+      fields.push({ f: "paid", label: "Paid", rec: cl.paidAmount || 0, type: "money" });
+      fields.push({ f: "claimNumber", label: "Claim #", rec: cl.claimNumber || "", type: "text" });
+    }
+    fields.push({ f: "providerName", label: "Provider", rec: p.name || "", type: "text" });
+    if (ve) fields.push({ f: "veteranName", label: "Veteran", rec: ve.name || "", type: "text" });
+
+    var w = window.APP.getWorking(id);
+    var editCount = Object.keys(w).length;
+    var grid = "display:grid;grid-template-columns:130px 1fr 1fr;gap:10px;align-items:center";
+    var rows = fields.map(function (fl) {
+      var edited = fl.f in w;
+      var val = edited ? w[fl.f].value : fl.rec;
+      var recDisp = fl.rec === "" ? "—" : (fl.type === "money" ? window.DP.usd(fl.rec) : window.APP.esc(String(fl.rec)));
+      return '<div style="' + grid + ';padding:6px 0;border-top:0.5px solid var(--border2)">' +
+        '<div style="font-size:11.5px;color:var(--text2)">' + fl.label + (edited ? ' <span class="tag" style="background:var(--med-bg);color:var(--med-tx)">edited</span>' : '') + '</div>' +
+        '<div class="mono" style="font-size:11.5px;color:var(--text3)" title="claim of record — immutable">' + recDisp + '</div>' +
+        '<input class="input wr-input" data-f="' + fl.f + '" data-label="' + window.APP.esc(fl.label) + '" data-rec="' + window.APP.esc(String(fl.rec)) + '" data-type="' + fl.type + '" type="' + (fl.type === "money" ? "number" : "text") + '" value="' + window.APP.esc(String(val)) + '" style="font-size:12px' + (edited ? ";border-color:var(--med);background:var(--med-bg)" : "") + '">' +
+        '</div>';
+    }).join("");
+    return '<div class="card" id="c-working">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:10px;flex-wrap:wrap">' +
+      '<div style="font-weight:500;font-size:13px"><i class="ti ti-edit" style="color:var(--accent-d)"></i> Case working record <span class="muted" style="font-weight:400;font-size:11px">· investigator\'s editable copy — the claim of record is unchanged; every edit is logged</span></div>' +
+      '<span class="muted" style="font-size:11px" id="c-wr-count">' + (editCount ? editCount + " field" + (editCount === 1 ? "" : "s") + " edited" : "no edits") + '</span></div>' +
+      '<div style="' + grid + ';font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em"><div>Field</div><div>Claim of record</div><div>Working value</div></div>' +
+      rows +
+      (editCount ? '<div style="margin-top:9px"><button class="btn" id="c-wr-reset" style="font-size:11px"><i class="ti ti-arrow-back-up"></i> Revert to claim of record</button></div>' : '') +
+      '</div>';
+  }
+  function rerenderWorking(id) {
+    var host = document.getElementById("c-working"); if (!host || !ctx) return;
+    host.outerHTML = workingRecordCard(ctx.a, ctx.prepay);
+    wireWorkingRecord(id);
+  }
+  function wireWorkingRecord(id) {
+    document.querySelectorAll("#c-working .wr-input").forEach(function (inp) {
+      inp.addEventListener("change", function () {
+        var f = inp.getAttribute("data-f"), label = inp.getAttribute("data-label"), type = inp.getAttribute("data-type"), recRaw = inp.getAttribute("data-rec");
+        var val = type === "money" ? (+inp.value || 0) : inp.value;
+        var rec = type === "money" ? (+recRaw || 0) : recRaw;
+        if (String(val) === String(rec)) window.APP.clearWorking(id, f);
+        else window.APP.setWorking(id, f, label, val, rec);
+        rerenderWorking(id);
+      });
+    });
+    var rb = document.getElementById("c-wr-reset");
+    if (rb) rb.addEventListener("click", function () { window.APP.resetWorking(id); rerenderWorking(id); });
   }
 
   // ---------- Evidence ----------

@@ -2,7 +2,7 @@
 (function () {
   var mount;
   var APP = {
-    state: { view: "queue", allegationId: null, filters: {}, decisions: {}, audit: [], investigations: [], role: "analyst", watchlist: {}, businessWatchlist: {}, mode: "retrospective", prepayDecisions: {}, comments: {} },
+    state: { view: "queue", allegationId: null, filters: {}, decisions: {}, audit: [], investigations: [], role: "analyst", watchlist: {}, businessWatchlist: {}, mode: "retrospective", prepayDecisions: {}, comments: {}, workingRecord: {} },
 
     ROLES: { analyst: { name: "Dana Whitmore", title: "Analyst", initials: "DW" }, supervisor: { name: "Karen Boyd", title: "Supervisor", initials: "KB" } },
     isSupervisor: function () { return APP.state.role === "supervisor"; },
@@ -141,6 +141,17 @@
       APP.auditLog("NOTE_ADDED", "Lead #" + id + " · " + (APP.ROLES[APP.state.role] || {}).title + " note: " + (text.length > 60 ? text.slice(0, 57) + "…" : text));
       return c;
     },
+
+    // ---- case working record (investigator's editable overlay on the claim of record) ----
+    // Values live separately from the immutable claim of record; every edit is audit-logged.
+    getWorking: function (id) { return APP.state.workingRecord[id] || {}; },
+    setWorking: function (id, field, label, value, recordVal) {
+      (APP.state.workingRecord[id] = APP.state.workingRecord[id] || {})[field] = { value: value, recordVal: recordVal, ts: new Date() };
+      var r = (recordVal === "" || recordVal == null) ? "(blank)" : recordVal;
+      APP.auditLog("RECORD_EDITED", "Lead #" + id + " · " + label + ": " + r + " → " + (value === "" ? "(blank)" : value) + " (working record; claim of record unchanged)");
+    },
+    clearWorking: function (id, field) { var w = APP.state.workingRecord[id]; if (w && field in w) { delete w[field]; if (!Object.keys(w).length) delete APP.state.workingRecord[id]; } },
+    resetWorking: function (id) { if (APP.state.workingRecord[id]) { delete APP.state.workingRecord[id]; APP.auditLog("RECORD_REVERTED", "Lead #" + id + " · working record reverted to the claim of record"); } },
 
     // ---- analyst-created leads (some leads are manual, not data-driven) ----
     LEAD_SEQ: 0,
