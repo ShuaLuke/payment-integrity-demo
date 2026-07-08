@@ -25,13 +25,17 @@ assets/
   styles.css          design system (locked tokens, PIVOT_DEMO_DESIGN.md §7b)
   data.js             generated: window.PIVOT_DATA
   provider.js         DataProvider seam (window.DP) — swap for Neo4j later, same shapes
-  ai.js               deterministic "Gen AI" (window.AI) — swap for Gemini later
-  app.js              router, state, audit trail, decision/case-flow (window.APP)
-  views/              queue · claim · network · analytics · copilot · audit
+  collusion.js        shared collusion analysis + network graph + business-entity node (window.Collusion)
+  ai.js               deterministic "Gen AI" (window.AI) — adjudication brief, copilot, rationale
+  export.js           zero-dependency CSV / Excel / PDF exports (window.EXPORT)
+  app.js              router, state, prepay/retro mode, watchlists, audit, decisions (window.APP)
+  views/              home · queue (retro + prepay triage) · claim (tabbed) · provider report card ·
+                      businesses (registry + profile) · network · analytics · heatmap · rules · audit · …
 scripts/generate-data.mjs   synthetic-data generator (also a Neo4j loader later)
 src/data/dataset.json       canonical graph-shaped snapshot
 ```
 
 ## Swappable seams
-- `assets/provider.js` — today reads the JSON snapshot; later a Neo4j provider returns the same shapes.
-- `assets/ai.js` — today deterministic; later a live Gemini call via a serverless proxy. No UI change either way.
+- `assets/provider.js` — `window.DP`; today reads the JSON snapshot, later a Neo4j provider returns the same shapes.
+- `assets/ai.js` — `window.AI`; today deterministic, later a live Gemini/Claude call via a serverless proxy.
+- **See [`DATA_SPEC.md`](DATA_SPEC.md)** for the full `window.DP` contract, `window.PIVOT_DATA` shapes, three swap recipes, and where each of Wendy's real-data deliverables drops in. No UI change either way.
