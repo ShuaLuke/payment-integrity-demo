@@ -62,6 +62,7 @@
         '<div style="flex:1;min-width:0">' +
         tabBar(curTab, undecided) +
         '<div id="c-tabpanel"></div>' +
+        notesCardHtml(id) +
         '</div>' +
         '</div></div>';
 
@@ -87,6 +88,7 @@
       mount.querySelectorAll(".ctab").forEach(function (b) { b.addEventListener("click", function () { showTab(b.getAttribute("data-tab")); }); });
 
       showTab(curTab);
+      wireNotes(id);
       renderStickyBar(id, a, dec, prepay);
     },
 
@@ -110,6 +112,43 @@
     return '<div style="display:flex;gap:2px;border-bottom:0.5px solid var(--border);margin-bottom:10px">' +
       tabs.map(function (t) { return '<button class="ctab' + (t[0] === active ? " active" : "") + '" data-tab="' + t[0] + '">' + t[1] + (t[0] === "decision" && undecided ? ' <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);vertical-align:middle;margin-left:2px"></span>' : "") + '</button>'; }).join("") +
       '</div>';
+  }
+
+  // ---------- case notes / annotations (audit-logged "color commentary") ----------
+  function notesCardHtml(id) {
+    var notes = window.APP.getComments(id);
+    return '<div class="card" id="c-notes" style="margin-top:12px">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;gap:10px;flex-wrap:wrap">' +
+      '<div style="font-weight:500;font-size:13px"><i class="ti ti-messages" style="color:var(--accent-d)"></i> Case notes &amp; annotations <span class="muted" style="font-weight:400;font-size:11px">· running commentary on this lead — every note is logged to the audit trail</span></div>' +
+      '<span class="muted" style="font-size:11px" id="c-notes-count">' + notes.length + ' note' + (notes.length === 1 ? '' : 's') + '</span></div>' +
+      '<div id="c-notes-list">' + notesListHtml(notes) + '</div>' +
+      '<div style="display:flex;gap:8px;align-items:flex-start;margin-top:10px">' +
+      '<textarea id="c-note-input" class="input" placeholder="Add a note or annotation… (⌘/Ctrl+Enter)" style="flex:1;min-height:40px"></textarea>' +
+      '<button class="btn primary" id="c-note-add" style="white-space:nowrap"><i class="ti ti-send"></i> Add note</button></div>' +
+      '</div>';
+  }
+  function notesListHtml(notes) {
+    if (!notes.length) return '<div class="muted" style="font-size:12px;padding:6px 0">No notes yet — add the first annotation below.</div>';
+    return notes.map(function (c) {
+      var initials = String(c.user || "?").split(" ").map(function (w) { return w[0]; }).join("").slice(0, 2).toUpperCase();
+      return '<div style="display:flex;gap:9px;padding:8px 0;border-top:0.5px solid var(--border2)">' +
+        '<div class="avatar" style="width:26px;height:26px;flex:none;font-size:10px">' + initials + '</div>' +
+        '<div style="flex:1;min-width:0"><div style="font-size:12px"><span style="font-weight:600">' + window.APP.esc(c.user) + '</span> <span class="muted" style="font-size:10.5px">· ' + window.APP.esc(c.role || "") + ' · ' + window.APP.fmtTs(c.ts) + '</span></div>' +
+        '<div style="font-size:12.5px;color:var(--text);margin-top:2px;line-height:1.5">' + window.APP.esc(c.text) + '</div></div></div>';
+    }).join("");
+  }
+  function wireNotes(id) {
+    var add = document.getElementById("c-note-add"), input = document.getElementById("c-note-input");
+    if (!add || !input) return;
+    var submit = function () {
+      if (!input.value.trim()) return;
+      window.APP.addComment(id, input.value); input.value = "";
+      var notes = window.APP.getComments(id);
+      document.getElementById("c-notes-list").innerHTML = notesListHtml(notes);
+      var cnt = document.getElementById("c-notes-count"); if (cnt) cnt.textContent = notes.length + " note" + (notes.length === 1 ? "" : "s");
+    };
+    add.addEventListener("click", submit);
+    input.addEventListener("keydown", function (e) { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") submit(); });
   }
 
   function showTab(name) {

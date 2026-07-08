@@ -2,7 +2,7 @@
 (function () {
   var mount;
   var APP = {
-    state: { view: "queue", allegationId: null, filters: {}, decisions: {}, audit: [], investigations: [], role: "analyst", watchlist: {}, businessWatchlist: {}, mode: "retrospective", prepayDecisions: {} },
+    state: { view: "queue", allegationId: null, filters: {}, decisions: {}, audit: [], investigations: [], role: "analyst", watchlist: {}, businessWatchlist: {}, mode: "retrospective", prepayDecisions: {}, comments: {} },
 
     ROLES: { analyst: { name: "Dana Whitmore", title: "Analyst", initials: "DW" }, supervisor: { name: "Karen Boyd", title: "Supervisor", initials: "KB" } },
     isSupervisor: function () { return APP.state.role === "supervisor"; },
@@ -131,6 +131,17 @@
       return on;
     },
 
+    // ---- case notes / annotations (analyst "color commentary" on a lead/case) ----
+    // Keyed by lead id; every note is written to the audit trail.
+    getComments: function (id) { return APP.state.comments[id] || []; },
+    addComment: function (id, text) {
+      text = (text || "").trim(); if (!text) return null;
+      var c = { ts: new Date(), user: (APP.ROLES[APP.state.role] || {}).name || "Dana Whitmore", role: (APP.ROLES[APP.state.role] || {}).title || "Analyst", text: text };
+      (APP.state.comments[id] = APP.state.comments[id] || []).push(c);
+      APP.auditLog("NOTE_ADDED", "Lead #" + id + " · " + (APP.ROLES[APP.state.role] || {}).title + " note: " + (text.length > 60 ? text.slice(0, 57) + "…" : text));
+      return c;
+    },
+
     // ---- prepay vs retrospective (global mode / lens) ----
     // Retrospective = post-payment review & recoupment (the default "pay and report"
     // world). Prepay = pending claims scored BEFORE payment; analyst decides Pay/Hold/Deny.
@@ -252,8 +263,20 @@
       APP.setModeHeader();
       APP.setRoleHeader();
       APP.auditLog("SESSION_START", APP.ROLES[APP.state.role].name + " signed in · " + (window.SB && window.SB.enabled ? "authenticated" : "PIV authenticated"));
+      APP.seedComments();
       APP.nav("home");
       APP.ready = true;
+    },
+    // A little prior "color commentary" so the thread isn't empty in the demo.
+    seedComments: function () {
+      var mk = function (mins, name, role, text) { return { ts: new Date(Date.now() - mins * 60000), user: name, role: role, text: text }; };
+      APP.state.comments["20481"] = [
+        mk(1440, "Maria Delgado", "Analyst", "Pulled the 99215 trend — the 90% level-5 share holds across all 11 months, not a one-quarter blip. Looks systemic."),
+        mk(320, "Karen Boyd", "Supervisor", "Agree it's systemic. Before we recover, confirm the linked-diagnosis complexity is genuinely low — attach the med-record excerpt to the case.")
+      ];
+      APP.state.comments["20544"] = [
+        mk(210, "Devon Carter", "Analyst", "Same 7 veterans cycle AZ→CA→NV in <30-day stays. This is the holding-company chain, not a one-off — flag the business too.")
+      ];
     }
   };
   window.APP = APP;
