@@ -22,7 +22,7 @@
       mount.innerHTML =
         '<div class="page">' +
         '<div class="page-head"><div><div class="page-title">Work queue</div><div class="page-sub">Flagged claims routed for post-payment review</div></div>' +
-        '<div style="display:flex;gap:2px;background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:2px">' + seg("all", "All open") + seg("my", "My cases") + seg("unassigned", "Unassigned") + '</div></div>' +
+        '<div style="display:flex;gap:10px;align-items:center"><div style="display:flex;gap:2px;background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:2px">' + seg("all", "All open") + seg("my", "My cases") + seg("unassigned", "Unassigned") + '</div>' + window.EXPORT.group("q") + '</div></div>' +
         '<div class="kpis">' +
         kpi("Open flagged claims", openCount) + kpi("Exposure (open queue)", window.DP.usd(openExp)) +
         kpi("Submitted for recovery", window.DP.usdShort(k.submittedForRecovery)) + kpi("Verified recoupment", window.DP.usdShort(k.verifiedRecoupment)) +
@@ -75,6 +75,13 @@
       document.getElementById("q-assignee").addEventListener("change", function () { st.assignee = this.value; draw(); });
       document.getElementById("q-sort").addEventListener("change", function () { st.sort = this.value; draw(); });
       document.getElementById("q-clear").addEventListener("click", function () { window.APP.state.qfilters = { scope: "all", status: "", fwa: "", assignee: "", sort: "risk", minRisk: 0, query: "" }; window.APP.nav("queue"); });
+      var qHead = ["Flagged claim", "Risk", "FWA Type", "Source", "Provider", "NPI", "State", "Exposure", "Status", "Assignee"];
+      var qRows = function () { return window.DP.listAllegations().filter(function (r) { return OPEN.indexOf(r.status) >= 0; }).sort(function (a, b) { return b.riskScore - a.riskScore; }).map(function (r) { return ["#" + r.id, r.riskScore, r.fwaType, r.source, r.providerName, r.providerNpi, r.providerState, r.exposurePost, r.status, r.assignee || "Unassigned"]; }); };
+      window.EXPORT.wire("q", {
+        csv: function () { window.EXPORT.csv("pivot-work-queue", qHead, qRows()); },
+        xls: function () { window.EXPORT.xls("pivot-work-queue", "Work queue", qHead, qRows()); },
+        pdf: function () { var rows = qRows(); window.EXPORT.pdf("Work queue — open flagged claims", "<div class='sub'>" + rows.length + " open claims · total exposure " + window.DP.usd(rows.reduce(function (s, r) { return s + r[7]; }, 0)) + "</div>" + window.EXPORT.tableHtml(qHead, rows.map(function (r) { return r.slice(0, 7).concat([window.DP.usd(r[7]), r[8], r[9]]); }))); }
+      });
       draw();
     }
   };
@@ -88,7 +95,7 @@
     mount.innerHTML =
       '<div class="page">' +
       '<div class="page-head"><div><div class="page-title">Pre-payment triage</div><div class="page-sub">Claims scored <b>before</b> payment — decide Pay · Hold · Deny to stop improper payments before the money leaves</div></div>' +
-      '<div style="display:flex;gap:2px;background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:2px">' + ppSeg("", "All") + ppSeg("deny", "Deny") + ppSeg("hold", "Hold") + ppSeg("pay", "Pay") + '</div></div>' +
+      '<div style="display:flex;gap:10px;align-items:center"><div style="display:flex;gap:2px;background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:2px">' + ppSeg("", "All") + ppSeg("deny", "Deny") + ppSeg("hold", "Hold") + ppSeg("pay", "Pay") + '</div>' + window.EXPORT.group("pp") + '</div></div>' +
       '<div class="kpis">' +
       kpi("Pending to triage", stats.pending + " / " + stats.total) +
       kpi("Amount at risk", window.DP.usd(stats.atRisk)) +
@@ -100,6 +107,18 @@
       '</div>';
     drawPrepay();
     mount.querySelectorAll(".ppseg").forEach(function (b) { b.addEventListener("click", function () { st.rec = b.getAttribute("data-rec"); window.APP.nav("queue"); }); });
+    var ppHead = ["Pending claim", "Risk", "FWA Type", "Provider", "NPI", "Amount at risk", "Model recommends", "Decision"];
+    var ppRows = function () {
+      return window.DP.listAllegations({ mode: "prepay" }).sort(function (a, b) { return b.riskScore - a.riskScore; }).map(function (r) {
+        var d = window.APP.prepayDecisionFor(r.id);
+        return ["#" + r.id, r.riskScore, r.fwaType, r.providerName, r.providerNpi, r.exposurePre || 0, (r.recommendedAction || "").toUpperCase(), d ? { pay: "Cleared to pay", hold: "On hold", deny: "Denied" }[d.action] : "Pending"];
+      });
+    };
+    window.EXPORT.wire("pp", {
+      csv: function () { window.EXPORT.csv("pivot-prepay-triage", ppHead, ppRows()); },
+      xls: function () { window.EXPORT.xls("pivot-prepay-triage", "Prepay triage", ppHead, ppRows()); },
+      pdf: function () { var rows = ppRows(); window.EXPORT.pdf("Pre-payment triage queue", "<div class='sub'>" + rows.length + " pending claims · " + window.DP.usd(stats.atRisk) + " at risk · " + window.DP.usd(stats.prevented) + " payment prevented</div>" + window.EXPORT.tableHtml(ppHead, rows.map(function (r) { return r.slice(0, 5).concat([window.DP.usd(r[5]), r[6], r[7]]); }))); }
+    });
   }
 
   function drawPrepay() {

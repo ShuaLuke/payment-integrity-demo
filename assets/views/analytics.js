@@ -30,7 +30,7 @@
       mount.innerHTML =
         '<div class="page">' +
         '<div class="page-head"><div><div class="page-title">Analytics</div><div class="page-sub">Payment-integrity oversight — exposure, recovery and provider risk</div></div>' +
-        '<div style="display:flex;gap:7px"><button class="btn" id="a-csv"><i class="ti ti-file-spreadsheet"></i> Export CSV</button><button class="btn" id="a-xlsx"><i class="ti ti-file-download"></i> Excel</button><button class="btn" id="a-pdf"><i class="ti ti-file-text"></i> PDF</button></div></div>' +
+        window.EXPORT.group("an") + '</div>' +
         '<div class="kpis" style="grid-template-columns:repeat(5,1fr)">' +
         kpi("Post-payment exposure", window.DP.usdShort(base.exposurePost)) +
         kpi("Submitted for recovery", window.DP.usdShort(k.submittedForRecovery)) +
@@ -64,30 +64,24 @@
         '</tbody></table></div>' +
         '</div></div>';
 
-      document.getElementById("a-csv").addEventListener("click", exportCsv);
-      document.getElementById("a-xlsx").addEventListener("click", function () { window.APP.auditLog("EXPORT", "Excel export (demo)"); notify("Excel export prepared (demo)"); });
-      document.getElementById("a-pdf").addEventListener("click", function () { window.APP.auditLog("EXPORT", "PDF export (demo)"); notify("PDF export prepared (demo)"); });
+      var flHead = ["Flagged claim", "FWA Type", "Risk", "Confidence", "Source", "Status", "Assignee", "Provider", "NPI", "ClaimType", "Exposure"];
+      var flRows = window.DP.listAllegations().map(function (r) { return ["#" + r.id, r.fwaType, r.riskScore, r.confidence + "%", r.source, r.status, r.assignee || "", r.providerName, r.providerNpi, r.claimType, r.exposurePost]; });
+      window.EXPORT.wire("an", {
+        csv: function () { window.EXPORT.csv("pivot-flagged-claims", flHead, flRows); },
+        xls: function () { window.EXPORT.xls("pivot-flagged-claims", "Flagged claims", flHead, flRows); },
+        pdf: function () {
+          var body = window.EXPORT.kvHtml([
+            ["Post-payment exposure", window.DP.usdShort(base.exposurePost)], ["Submitted for recovery", window.DP.usdShort(k.submittedForRecovery)],
+            ["Verified recoupment", window.DP.usdShort(base.verifiedRecoupment)], ["Open / closed", base.openAllegations + " / " + base.closedAllegations.toLocaleString()], ["Avg days to close", base.avgTimeToCompletionDays]
+          ]) +
+            "<h2>Exposure by anomaly type</h2>" + window.EXPORT.tableHtml(["Anomaly type", "Count", "Exposure"], anoRows.map(function (r) { return [r.t, r.n, window.DP.usd(r.exp)]; })) +
+            "<h2>Top providers by open exposure</h2>" + window.EXPORT.tableHtml(["Provider", "Specialty", "Risk", "Exposure"], top.map(function (t) { return [t.name, t.spec, t.risk, window.DP.usd(t.exp)]; })) +
+            "<h2>Flagged claims (" + flRows.length + ")</h2>" + window.EXPORT.tableHtml(flHead, flRows);
+          window.EXPORT.pdf("Payment Integrity — Analytics", body);
+        }
+      });
     }
   };
-
-  function exportCsv() {
-    var rows = window.DP.listAllegations();
-    var head = ["Flagged claim", "FWA Type", "Risk", "Confidence", "Source", "Status", "Assignee", "Provider", "NPI", "ClaimType", "Exposure"];
-    var lines = [head.join(",")].concat(rows.map(function (r) {
-      return ["#" + r.id, q(r.fwaType), r.riskScore, r.confidence + "%", q(r.source), q(r.status), q(r.assignee || ""), q(r.providerName), r.providerNpi, r.claimType, r.exposurePost].join(",");
-    }));
-    var blob = new Blob([lines.join("\n")], { type: "text/csv" });
-    var url = URL.createObjectURL(blob), a = document.createElement("a");
-    a.href = url; a.download = "pivot-flagged-claims.csv"; a.click(); URL.revokeObjectURL(url);
-    window.APP.auditLog("EXPORT", "CSV export · " + rows.length + " flagged claims");
-  }
-  function q(s) { s = String(s); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
-  function notify(msg) {
-    var n = document.createElement("div");
-    n.textContent = msg;
-    n.style.cssText = "position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#10243b;color:#fff;padding:9px 16px;border-radius:8px;font-size:12.5px;z-index:200";
-    document.body.appendChild(n); setTimeout(function () { n.remove(); }, 2200);
-  }
   function trendChart(tr) {
     if (!tr.length) return "";
     var W = 900, H = 180, pl = 8, pr = 8, pt = 12, pb = 24, iw = W - pl - pr, ih = H - pt - pb, n = tr.length;

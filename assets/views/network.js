@@ -36,6 +36,7 @@
         '<div style="display:flex;gap:10px;align-items:center">' +
         '<div style="display:flex;background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:2px">' + scnBtn("ring", "Shared-TIN ring", "one billing entity") + scnBtn("chain", "Residential chain", "AZ → CA → NV") + '</div>' +
         '<span id="n-ring-tools" style="display:flex;gap:7px"><button class="btn" id="n-ring"><i class="ti ti-focus-2"></i> Highlight ring</button><button class="btn" id="n-reset">Reset</button></span>' +
+        window.EXPORT.group("nw") +
         '</div></div>' +
         '<div class="canvas" id="n-canvas"></div>' +
         '<div class="legend" id="n-legend"></div>' +
@@ -60,9 +61,34 @@
         }
       }
       mount.querySelectorAll(".nscn").forEach(function (b) { b.onclick = function () { paint(b.getAttribute("data-scn")); }; });
+      window.EXPORT.wire("nw", {
+        csv: function () { var d = netData(current); window.EXPORT.csv("collusion-network-" + current, d.eHead, d.eRows); },
+        xls: function () { var d = netData(current); window.EXPORT.xls("collusion-network-" + current, "Edges", d.eHead, d.eRows); },
+        pdf: function () {
+          var d = netData(current), s = window.Collusion.analyze(d.focus);
+          var summary = s.kind === "chain"
+            ? window.APP.esc(s.registration || "") + " — " + s.providerCount + " facilities across " + s.states.join("/") + ", shared officer " + window.APP.esc(s.officer || "") + ", " + s.sharedPct + "% shared veterans, separate TINs (hidden common ownership)."
+            : s.providerCount + " providers operating as one billing entity — shared TIN " + (s.tin || "") + ", " + s.referralCount + " referrals, " + s.sharedPct + "% shared veterans.";
+          window.EXPORT.pdf("Collusion network — " + (current === "chain" ? "residential chain" : "shared-TIN ring"),
+            "<div class='card'>" + window.EXPORT.htmlEsc(summary) + "</div><h2>Providers</h2>" + window.EXPORT.tableHtml(d.pHead, d.pRows) +
+            "<h2>Shared-identifier edges</h2>" + window.EXPORT.tableHtml(["Type", "Source", "Target", "Detail"], d.eRows.map(function (e) { return [e[0], e[2], e[4], e[5]]; })));
+        }
+      });
       paint("ring");
     }
   };
+
+  // export data for the current scenario's collusion subgraph
+  function netData(scn) {
+    var focus = scn === "chain" ? "PR300" : "PR001";
+    var net = window.DP.getCollusionNetwork(focus), provs = net.providers.filter(Boolean);
+    var nameOf = {}; provs.forEach(function (p) { nameOf[p.id] = p.name; });
+    var pHead = ["ID", "Name", "NPI", "TIN", "State", "Risk", "Role"];
+    var pRows = provs.map(function (p) { return [p.id, p.name, p.npi, p.tin, p.state, p.riskScore, p.role]; });
+    var eHead = ["Type", "Source", "Source name", "Target", "Target name", "Detail"];
+    var eRows = net.links.map(function (e) { var pr = e.props || {}; var det = pr.tin || pr.officer || pr.registration || (pr.sharedVeterans ? pr.sharedVeterans + " shared veterans" : "") || (pr.veteranId ? "veteran " + pr.veteranId : "") || ""; return [e.type, e.source, nameOf[e.source] || e.source, e.target, nameOf[e.target] || e.target, det]; });
+    return { focus: focus, pHead: pHead, pRows: pRows, eHead: eHead, eRows: eRows };
+  }
 
   function legendRing() {
     return lg("#c6362f", "#fbe3e3", "Provider · high risk") + lg("#c77d11", "#fbe6cf", "Provider · medium") +

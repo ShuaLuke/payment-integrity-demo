@@ -33,7 +33,7 @@
         '<span class="page-title">' + window.APP.esc(p.name) + '</span>' + window.UI.riskChip(p.riskScore || 0) +
         (repeatOffender ? '<span class="pill" style="background:var(--high-bg);color:var(--high-tx)"><i class="ti ti-alert-triangle"></i> Repeat offender</span>' : '') +
         (watched ? '<span class="pill" style="background:var(--med-bg);color:var(--med-tx)"><i class="ti ti-bookmark"></i> On watchlist</span>' : '') +
-        '<span style="flex:1"></span>' +
+        '<span style="flex:1"></span>' + window.EXPORT.group("pv") +
         '<button class="btn' + (watched ? ' on' : '') + '" id="pv-flag">' + (watched ? '<i class="ti ti-bookmark-off"></i> Remove from watchlist' : '<i class="ti ti-bookmark"></i> Flag for future reference') + '</button></div>' +
 
         '<div style="display:flex;gap:12px;align-items:flex-start">' +
@@ -90,6 +90,27 @@
       document.getElementById("pv-flag").addEventListener("click", function () { window.APP.toggleProviderWatch(id); rerender(id); });
       mount.querySelectorAll("tr.row").forEach(function (tr) { tr.addEventListener("click", function () { window.APP.openAllegation(tr.getAttribute("data-id")); }); });
       wireRadar(mount, id);
+
+      // ---- report-card export ----
+      var gHead = ["Group", "Score", "Peer norm", "Outlier"];
+      var gRows = groups.map(function (g) { return [g.group, g.score, g.peer, g.outlier ? "Yes" : "No"]; });
+      var aHead = ["Flagged claim", "FWA Type", "Risk", "Status", "Exposure"];
+      var aRows = allegs.slice().sort(function (a, b) { return b.riskScore - a.riskScore; }).map(function (a) { return ["#" + a.id, a.fwaType, a.riskScore, a.status, a.exposurePost || 0]; });
+      var slug = "report-card-" + (p.name || "provider").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+      window.EXPORT.wire("pv", {
+        csv: function () { window.EXPORT.csv(slug, gHead, gRows); },
+        xls: function () { window.EXPORT.xls(slug, "Report card", gHead, gRows); },
+        pdf: function () {
+          var body = window.EXPORT.kvHtml([
+            ["Provider", p.name], ["NPI", p.npi], ["TIN", p.tin], ["Specialty", p.taxonomyLabel || ""], ["Location", (p.city || "") + ", " + (p.state || "")],
+            ["Risk", (p.riskScore || 0) + "/100"], ["Claims", p.claimCount || 0], ["Open flagged", allegs.length]
+          ]) +
+            (chain ? "<div class='card'><b>Collusion chain:</b> " + window.EXPORT.htmlEsc(p.registration) + " · officer " + window.EXPORT.htmlEsc(p.officer) + " · " + window.EXPORT.htmlEsc(p.registrationId) + "</div>" : "") +
+            "<h2>Report card — composite group scores</h2>" + window.EXPORT.tableHtml(gHead, gRows) +
+            "<h2>Flagged claims (" + aRows.length + ")</h2>" + window.EXPORT.tableHtml(aHead, aRows.map(function (r) { return r.slice(0, 4).concat([window.DP.usd(r[4])]); }));
+          window.EXPORT.pdf("Provider report card — " + p.name, body);
+        }
+      });
     }
   };
 

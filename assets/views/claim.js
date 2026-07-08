@@ -38,7 +38,7 @@
         '<span class="btn" id="c-back" style="padding:5px 9px"><i class="ti ti-arrow-left"></i> ' + window.APP.esc(window.APP.backLabel()) + '</span>' +
         '<span class="page-title">' + kind + ' #' + id + '</span><span id="c-status">' + window.UI.statusPill(a.status) + '</span>' +
         '<span style="font-size:11px;color:var(--text2);display:inline-flex;align-items:center;gap:4px"><i class="ti ti-lock"></i> Locked to you</span>' +
-        '<span style="flex:1"></span><button class="btn primary" id="c-summarize" style="font-size:12px"><i class="ti ti-file-analytics"></i> Summarize for adjudication</button></div>' +
+        '<span style="flex:1"></span>' + window.EXPORT.group("c") + '<button class="btn primary" id="c-summarize" style="font-size:12px"><i class="ti ti-file-analytics"></i> Summarize for adjudication</button></div>' +
         '<div style="display:flex;gap:12px;align-items:flex-start">' +
         // ---- left rail (identity + evidence) ----
         '<div style="width:200px;flex:none;display:flex;flex-direction:column;gap:10px">' +
@@ -81,6 +81,7 @@
       });
       var sumBtn = document.getElementById("c-summarize");
       if (sumBtn) sumBtn.addEventListener("click", function () { if (window.COPILOT) window.COPILOT.summarize(id); });
+      wireExport(id, a, cl, p, prepay, kind);
       mount.querySelectorAll(".ctab").forEach(function (b) { b.addEventListener("click", function () { showTab(b.getAttribute("data-tab")); }); });
 
       showTab(curTab);
@@ -395,6 +396,29 @@
         : btn("c", "Confirm", "check", "#fff", "#8b1a13") + btn("d", "Dismiss", "x", "rgba(255,255,255,0.12)", "#fff") + btn("e", "Escalate", "arrow-up-right", "rgba(255,255,255,0.12)", "#fff"));
     document.getElementById("view").appendChild(bar);
     bar.querySelectorAll(".sbtn").forEach(function (b) { b.onclick = function () { window.Views.claim.gotoDecision(b.getAttribute("data-d")); }; });
+  }
+
+  // ---------- export (CSV / Excel / PDF of the case) ----------
+  function wireExport(id, a, cl, p, prepay, kind) {
+    var clHead = ["CPT", "Description", "Modifiers", "Units", "Billed", "Allowed", "Paid", "Flagged"];
+    var clRows = cl ? cl.lines.map(function (l) { return [l.cpt, l.description, (l.modifiers || []).join(" "), l.units, l.billed, l.allowed, l.paid, (l.violatesRuleIds || []).length ? "Yes" : "No"]; }) : [];
+    window.EXPORT.wire("c", {
+      csv: function () { window.EXPORT.csv("claim-" + id, clHead, clRows); },
+      xls: function () { window.EXPORT.xls("claim-" + id, "Claim " + id, clHead, clRows); },
+      pdf: function () {
+        var ve = a.veteran, s = window.Collusion ? window.Collusion.analyze(p.id) : null;
+        var body = window.EXPORT.kvHtml([
+          ["Claim", cl ? cl.claimNumber : "—"], ["Provider", p.name], ["NPI", p.npi], ["Veteran", ve ? ve.name : "—"],
+          ["Risk", a.riskScore + "/100"], ["Confidence", a.confidence + "%"], [prepay ? "At risk" : "Exposure", window.DP.usd((prepay ? a.exposurePre : a.exposurePost) || 0)],
+          ["FWA type", a.fwaType], ["Status", a.status], ["Source", a.source === "Pattern Recognition" ? "ML/AI" : a.source === "Both" ? "ML/AI + Rules" : "Rules"]
+        ]) +
+          (a.xai ? "<h2>Why flagged (Explainable AI)</h2><div class='card'>" + window.EXPORT.htmlEsc(a.xai.summary) + "</div>" : "") +
+          (cl ? "<h2>Claim line items</h2>" + window.EXPORT.tableHtml(clHead, clRows) : "") +
+          ((a.rules && a.rules.length) ? "<h2>Rules fired</h2>" + window.EXPORT.tableHtml(["Code", "Rule", "Source"], a.rules.map(function (r) { return [r.code, r.name, r.source]; })) : "") +
+          (s && s.isRing ? "<h2>Collusion network</h2><div class='card'>" + window.EXPORT.htmlEsc((s.kind === "chain" ? "Residential chain — " : "Provider ring — ") + s.providerCount + " providers, " + s.sharedPct + "% shared veterans" + (s.sharedTin ? ", shared TIN " + s.tin : s.sharedRegistration ? ", shared registration " + (s.registration || "") : "") + ".") + "</div>" : "");
+        window.EXPORT.pdf(kind + " #" + id + " — " + a.fwaType, body);
+      }
+    });
   }
 
   function rerender(id) { window.Views.claim.render(document.getElementById("view"), { id: id }); }
