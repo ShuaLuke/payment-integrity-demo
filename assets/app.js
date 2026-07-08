@@ -2,7 +2,7 @@
 (function () {
   var mount;
   var APP = {
-    state: { view: "queue", allegationId: null, filters: {}, decisions: {}, audit: [], investigations: [], role: "analyst", watchlist: {}, businessWatchlist: {}, mode: "retrospective", prepayDecisions: {}, comments: {}, workingRecord: {} },
+    state: { view: "queue", allegationId: null, filters: {}, decisions: {}, audit: [], investigations: [], role: "analyst", watchlist: {}, businessWatchlist: {}, mode: "retrospective", prepayDecisions: {}, comments: {}, workingRecord: {}, uploads: {}, recordsRequestText: {} },
 
     ROLES: { analyst: { name: "Dana Whitmore", title: "Analyst", initials: "DW" }, supervisor: { name: "Karen Boyd", title: "Supervisor", initials: "KB" } },
     isSupervisor: function () { return APP.state.role === "supervisor"; },
@@ -140,6 +140,15 @@
       (APP.state.comments[id] = APP.state.comments[id] || []).push(c);
       APP.auditLog("NOTE_ADDED", "Lead #" + id + " · " + (APP.ROLES[APP.state.role] || {}).title + " note: " + (text.length > 60 ? text.slice(0, 57) + "…" : text));
       return c;
+    },
+
+    // ---- document uploads (demo: fake-attach, files are not stored) ----
+    getUploads: function (id) { return APP.state.uploads[id] || []; },
+    addUpload: function (id, name, size) {
+      var u = { name: name || "document", size: size || 0, ts: new Date(), by: (APP.ROLES[APP.state.role] || {}).name || "Dana Whitmore" };
+      (APP.state.uploads[id] = APP.state.uploads[id] || []).push(u);
+      APP.auditLog("DOCUMENT_UPLOADED", "Lead #" + id + " · attached “" + u.name + "”" + (size ? " (" + Math.max(1, Math.round(size / 1024)) + " KB)" : ""));
+      return u;
     },
 
     // ---- case working record (investigator's editable overlay on the claim of record) ----

@@ -79,8 +79,19 @@
         });
       });
       document.getElementById("c-req").addEventListener("click", function () {
-        window.APP.auditLog("RECORDS_REQUESTED", kind + " #" + id + " · additional records");
-        document.getElementById("c-support").innerHTML = '<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:7px;padding:7px 9px;font-size:11px;color:var(--text2)"><i class="ti ti-clock"></i> Additional records requested from provider.</div>';
+        var saved = (window.APP.state.recordsRequestText || {})[id];
+        var def = saved || defaultRecordsRequest(a);
+        document.getElementById("c-support").innerHTML =
+          '<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:7px;padding:8px 9px">' +
+          '<div style="font-size:10.5px;color:var(--text2);margin-bottom:4px">Records to request <span style="color:var(--text3)">(editable per case)</span></div>' +
+          '<textarea id="c-req-text" class="input" style="min-height:54px;font-size:11.5px">' + window.APP.esc(def) + '</textarea>' +
+          '<button class="btn primary" id="c-req-send" style="margin-top:6px;width:100%;font-size:11px"><i class="ti ti-send"></i> Send request to provider</button></div>';
+        document.getElementById("c-req-send").addEventListener("click", function () {
+          var txt = document.getElementById("c-req-text").value.trim() || def;
+          (window.APP.state.recordsRequestText = window.APP.state.recordsRequestText || {})[id] = txt;
+          window.APP.auditLog("RECORDS_REQUESTED", kind + " #" + id + " · " + txt);
+          document.getElementById("c-support").innerHTML = '<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:7px;padding:7px 9px;font-size:11px;color:var(--text2)"><i class="ti ti-clock"></i> Requested from provider: <span style="color:var(--ink)">' + window.APP.esc(txt) + '</span></div>';
+        });
       });
       var sumBtn = document.getElementById("c-summarize");
       if (sumBtn) sumBtn.addEventListener("click", function () { if (window.COPILOT) window.COPILOT.summarize(id); });
@@ -156,7 +167,7 @@
     var panel = document.getElementById("c-tabpanel"); if (!panel || !ctx) return;
     document.querySelectorAll(".ctab").forEach(function (b) { b.classList.toggle("active", b.getAttribute("data-tab") === name); });
     if (name === "overview") { panel.innerHTML = overviewHtml(ctx.a, ctx.prepay); var ovd = document.getElementById("c-ov-decide"); if (ovd) ovd.onclick = function () { showTab("decision"); }; wireWorkingRecord(ctx.id); }
-    else if (name === "evidence") panel.innerHTML = evidenceHtml(ctx.a, ctx.cl);
+    else if (name === "evidence") { panel.innerHTML = evidenceHtml(ctx.a, ctx.cl); wireEvidenceUploads(ctx.id); }
     else if (name === "analysis") { panel.innerHTML = analysisHtml(ctx.a); var rc = document.getElementById("c-openrc"); if (rc) rc.onclick = function () { window.APP.openProvider(ctx.p.id); }; }
     else if (name === "network") { panel.innerHTML = networkHtml(); renderCollusion(ctx.p, ctx.id); }
     else if (name === "decision") {
@@ -272,7 +283,43 @@
       (cl ? '<div class="card" style="padding:0;overflow:hidden"><div style="padding:9px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:0.5px solid var(--border2)"><span style="font-weight:500;font-size:13px">Claim <span class="mono" style="font-weight:400;color:var(--text2)">' + cl.claimNumber + '</span></span><span style="font-size:11px;color:var(--text2)">' + cl.type + ' · DOS ' + cl.dateOfService + ' · Dx ' + (cl.diagnosisCodes.join(",") || "—") + ' · ' + cl.claimStatus + ' / ' + cl.paymentType + '</span></div>' +
         '<table><thead><tr><th>CPT</th><th>Description</th><th>Mod</th><th class="right">Units</th><th class="right">Billed</th><th class="right">Paid</th><th></th></tr></thead><tbody>' + lines + '</tbody></table></div>' : '') +
       '<div class="card"><div style="font-weight:500;font-size:13px;margin-bottom:8px">Rule engine outcomes</div><div style="display:flex;flex-direction:column;gap:7px">' + rulesHtml + '</div></div>' +
+      '<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:10px;flex-wrap:wrap">' +
+      '<div style="font-weight:500;font-size:13px"><i class="ti ti-paperclip" style="color:var(--accent-d)"></i> Attached documents <span class="muted" style="font-weight:400;font-size:11px">· upload supporting records to the case (demo — files are not stored)</span></div>' +
+      '<div><input type="file" id="c-upload-input" style="display:none"><button class="btn primary" id="c-upload-btn" style="font-size:12px"><i class="ti ti-upload"></i> Attach document</button></div></div>' +
+      '<div id="c-uploads-list">' + uploadsListHtml(a.id) + '</div></div>' +
       '</div>';
+  }
+  function fmtSize(b) { return b >= 1048576 ? (b / 1048576).toFixed(1) + " MB" : b >= 1024 ? Math.round(b / 1024) + " KB" : b + " B"; }
+  function uploadsListHtml(id) {
+    var ups = window.APP.getUploads(id);
+    if (!ups.length) return '<div class="muted" style="font-size:11.5px;padding:4px 0">No documents attached yet. Use “Attach document” to add supporting records — every upload is logged to the audit trail.</div>';
+    return ups.map(function (u) {
+      return '<div style="display:flex;align-items:center;gap:9px;padding:7px 0;border-top:0.5px solid var(--border2)"><i class="ti ti-file-description" style="color:var(--accent-d);font-size:17px"></i>' +
+        '<div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:500">' + window.APP.esc(u.name) + '</div>' +
+        '<div class="muted" style="font-size:10.5px">' + (u.size ? fmtSize(u.size) + " · " : "") + window.APP.esc(u.by || "") + " · " + window.APP.fmtTs(u.ts) + '</div></div>' +
+        '<span class="tag" style="background:var(--low-bg);color:var(--low-tx)">attached</span></div>';
+    }).join("");
+  }
+  function wireEvidenceUploads(id) {
+    var btn = document.getElementById("c-upload-btn"), input = document.getElementById("c-upload-input");
+    if (!btn || !input) return;
+    btn.addEventListener("click", function () { input.click(); });
+    input.addEventListener("change", function () {
+      var f = input.files && input.files[0]; if (!f) return;
+      window.APP.addUpload(id, f.name, f.size); input.value = "";
+      document.getElementById("c-uploads-list").innerHTML = uploadsListHtml(id);
+    });
+  }
+  function defaultRecordsRequest(a) {
+    var m = {
+      "Upcoding": "Itemized progress notes and E/M documentation supporting the level billed.",
+      "Unbundling": "Operative report and documentation of a distinct procedural service for the modifier-59 lines.",
+      "Phantom billing": "Attendance logs, appointment records and proof of service for the billed dates.",
+      "Residential length-of-stay abuse": "Admission/discharge records and medical-necessity documentation for the full length of stay.",
+      "Deceased patient": "Date-of-death verification and service records for the dates billed.",
+      "Kickback / self-referral": "Referral agreements, financial arrangements and ownership disclosures between the linked entities."
+    };
+    return m[a.fwaType] || "Itemized medical records and documentation supporting the billed services.";
   }
 
   // ---------- Analysis (decision-supporting graphs) ----------
