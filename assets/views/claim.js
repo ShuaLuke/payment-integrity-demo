@@ -632,8 +632,13 @@
   }
 
   function docBox(title, body, tone) {
-    var bg = tone === "good" ? "var(--low-bg)" : "var(--surface)", bd = tone === "good" ? "#bfe0c9" : "var(--border)", tx = tone === "good" ? "var(--low-tx)" : "var(--text2)";
-    return '<div style="background:' + bg + ';border:0.5px solid ' + bd + ';border-radius:7px;padding:9px 11px"><div style="font-weight:500;font-size:11.5px;color:' + tx + ';margin-bottom:4px"><i class="ti ti-file-description"></i> ' + title + '</div><div style="font-size:11px;color:var(--text2);line-height:1.55">' + body + '</div></div>';
+    var map = {
+      good: ["var(--low-bg)", "#bfe0c9", "var(--low-tx)", "circle-check"],
+      bad: ["var(--high-bg)", "#e3b4b0", "var(--high-tx)", "alert-triangle"],
+      warn: ["var(--med-bg)", "#e7c99a", "var(--med-tx)", "alert-circle"]
+    };
+    var c = map[tone] || ["var(--surface)", "var(--border)", "var(--text2)", "file-description"];
+    return '<div style="background:' + c[0] + ';border:0.5px solid ' + c[1] + ';border-radius:7px;padding:9px 11px"><div style="font-weight:500;font-size:11.5px;color:' + c[2] + ';margin-bottom:4px"><i class="ti ti-' + c[3] + '"></i> ' + title + '</div><div style="font-size:11px;color:var(--text2);line-height:1.55">' + body + '</div></div>';
   }
   // the evidence records on file for a lead (shared by the rail index + Evidence tab)
   function evidenceDocs(a, cl) {
@@ -652,12 +657,36 @@
   function docContent(key, id, a, cl) {
     if (key === "mr") {
       if (id === "20463") return docBox("Nephrology progress note", "Dx <span class='mono'>N18.6</span> end-stage renal disease. Standing order: in-center hemodialysis 3×/week (Mon/Wed/Fri). Vascular access: AV fistula, functioning. The billed <span class='mono'>90935</span> frequency is consistent with the documented dialysis regimen.", "good");
-      if (a.fwaType === "Upcoding") return docBox("Clinical note", "Established-patient visit for a stable chronic condition. History and exam are focused; medical decision-making is straightforward. Documentation does <b>not</b> support the high-complexity level (<span class='mono'>99215</span>) billed.");
+      var MR = {
+        "Upcoding": ["Clinical note", "Established-patient visit for a stable chronic condition. History and exam are focused; medical decision-making is straightforward. Documentation does <b>not</b> support the high-complexity level (<span class='mono'>99215</span>) billed — a mid-level code is the most it substantiates.", "bad"],
+        "Unbundling": ["Operative note", "A single diagnostic EGD is documented — one scope, one session, one anatomic site. Nothing in the note describes the separate, distinct procedural service that reporting the component code with <span class='mono'>modifier&nbsp;59</span> asserts. The two lines reflect one procedure.", "bad"],
+        "Modifier misuse": ["Clinical note", "The documentation does not establish the distinct service, laterality or circumstance the appended modifier claims. No separate note, time or site supports it — removing the modifier changes the line's payable status.", "bad"],
+        "Residential length-of-stay abuse": ["Admission H&P + discharge summary", "A 28-day residential stay is documented, then discharge and re-admission at an out-of-state affiliated facility days later — a chain of back-to-back sub-30-day stays. Continuous medical necessity across the transfers is <b>not</b> documented; the pattern reads as resetting the per-diem clock, not clinical need.", "bad"],
+        "Deceased patient": ["Enrollment / eligibility record", "The VA enrollment record and SSA Death Master File both list the beneficiary's date of death <b>before</b> the billed date(s) of service. No encounter could have occurred — services billed after death cannot be substantiated.", "bad"],
+        "Authorization mismatch": ["Referral / authorization review", "The encounter documents a service outside the scope of the Community Care referral on file. The authorized procedure and the rendered/billed procedure do not match, and no amended authorization is documented.", "bad"],
+        "Duplicate claim": ["Encounter note + remittance history", "The same service, same date of service, same veteran was already adjudicated and paid on a prior claim. Only one encounter is documented — this submission duplicates a paid claim.", "bad"],
+        "Frequency / over-utilization": ["Clinical note", "The service is billed at a frequency above the clinically expected range for the documented diagnosis, without notes justifying the added units or visits. Pull the full treatment plan before recovering — some regimens legitimately run high.", "warn"],
+        "Phantom billing": ["Records request — nothing on file", "No encounter note, appointment record or provider documentation exists for the billed date(s) of service, and the facility's attendance/visit logs do not corroborate that the service was rendered. The claim is unsupported.", "bad"],
+        "Billing outside specialty": ["Credentialing / scope review", "The rendering provider's taxonomy and credentialing do not include the specialty required for the billed procedure, and no supervision or appropriate-scope arrangement is documented.", "warn"],
+        "Routine — no anomaly": ["Clinical note", "Encounter documentation is complete and consistent with the codes billed — history, exam and medical decision-making support the service. No discrepancy identified on review.", "good"]
+      };
+      var e = MR[a.fwaType];
+      if (e) return docBox(e[0], e[1], e[2]);
       return docBox("Clinical note", "Encounter documentation on file for the billed date of service. Content is being reviewed against the billed codes.");
     }
     if (key === "claim" && cl) return docBox("Claim " + cl.claimNumber, cl.type + " · DOS " + cl.dateOfService + " · Dx " + (cl.diagnosisCodes.join(",") || "—") + ". Line items: " + cl.lines.map(function (l) { return l.cpt + (l.modifiers.length ? "-" + l.modifiers.join(",") : "") + " ($" + l.paid + ")"; }).join(", ") + ". Billed " + window.DP.usd(cl.billedAmount) + (a.mode === "prepay" ? " · pending payment." : " · paid " + window.DP.usd(cl.paidAmount) + "."));
     if (key === "ra" && cl) return docBox("Remittance advice (835)", "Payment of " + window.DP.usd(cl.paidAmount) + " on " + cl.dateOfService + ". Status: paid in full, no prior adjustments. This is a post-payment review — funds have already been disbursed.");
-    if (key === "auth") return docBox("Authorization / referral", "Community Care referral on file for the billed service, valid through 2025. Authorized scope is being validated against the billed procedure(s).");
+    if (key === "auth") {
+      var AU = {
+        "Authorization mismatch": ["Community Care referral on file authorizes a <b>different</b> procedure than the one billed — the rendered service falls outside the authorized scope, and no amended authorization is documented.", "bad"],
+        "Residential length-of-stay abuse": ["Referral authorized a single episode of residential treatment. The billing instead spans multiple affiliated facilities under separate authorizations — exceeding the approved scope for a continuous stay.", "warn"],
+        "Deceased patient": ["The referral on file predates the beneficiary's recorded date of death; no service could be authorized or rendered after that date.", "bad"],
+        "Billing outside specialty": ["No authorization on file establishes the rendering provider's scope for the billed specialty procedure.", "warn"]
+      };
+      var au = AU[a.fwaType];
+      if (au) return docBox("Authorization / referral", au[0], au[1]);
+      return docBox("Authorization / referral", "Community Care referral on file for the billed service, valid through 2025. Authorized scope is being validated against the billed procedure(s).");
+    }
     return docBox("Document", "No preview available.");
   }
 })();
