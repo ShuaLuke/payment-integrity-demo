@@ -39,9 +39,9 @@
         '<span class="page-title">' + kind + ' #' + id + '</span><span id="c-status">' + window.UI.statusPill(a.status) + '</span>' +
         '<span style="font-size:11px;color:var(--text2);display:inline-flex;align-items:center;gap:4px"><i class="ti ti-lock"></i> Locked to you</span>' +
         '<span style="flex:1"></span>' + window.EXPORT.group("c") + '<button class="btn primary" id="c-summarize" style="font-size:12px"><i class="ti ti-file-analytics"></i> Summarize for adjudication</button></div>' +
-        '<div style="display:flex;gap:12px;align-items:flex-start">' +
+        '<div class="split" style="display:flex;gap:12px;align-items:flex-start">' +
         // ---- left rail (identity + evidence) ----
-        '<div style="width:200px;flex:none;display:flex;flex-direction:column;gap:10px">' +
+        '<div class="rail" style="width:200px;flex:none;display:flex;flex-direction:column;gap:10px">' +
         '<div class="card"><div class="l" style="font-size:10.5px;color:var(--text2);margin-bottom:6px">Provider</div>' +
         '<div id="c-prov" style="font-weight:600;font-size:13px;color:var(--accent-d);cursor:pointer">' + window.APP.esc(p.name) + ' <i class="ti ti-external-link" style="font-size:11px"></i></div><div style="font-size:11px;color:var(--text2);margin-bottom:7px">' + window.APP.esc(p.taxonomyLabel || "") + ' · ' + (p.taxonomyCode || "") + '</div>' +
         '<div class="mono" style="font-size:11px;line-height:1.6">NPI ' + p.npi + '<br>TIN ' + (ring ? '<span style="background:var(--high-bg);color:var(--high-tx);padding:0 3px;border-radius:3px">' + p.tin + '</span>' : p.tin) + '</div>' +
@@ -384,8 +384,9 @@
   function renderStickyBar(id, a, dec, prepay) {
     document.querySelectorAll(".c-sticky").forEach(function (n) { n.remove() });
     if (window.APP.isSupervisor()) return;
-    if (dec) return; // already decided (retro shows a review-state bar only when returned)
-    if (!prepay && dec && dec.reviewState !== "returned") return;
+    // prepay: hide once triaged. retro: hide once decided, EXCEPT when a supervisor
+    // returned it (the analyst still needs to revise & resubmit).
+    if (prepay ? !!dec : (dec && dec.reviewState !== "returned")) return;
     var bar = document.createElement("div");
     bar.className = "c-sticky";
     bar.style.cssText = "position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:150;background:var(--ink);border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,0.22);display:flex;align-items:center;gap:7px;padding:7px 12px;font-family:var(--sans)";

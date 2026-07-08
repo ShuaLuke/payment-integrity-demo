@@ -115,7 +115,7 @@
     if (typeof d3 === "undefined") { setTimeout(function () { draw(G); }, 60); return; }
     var W = el.clientWidth || 900, H = 440;
     d3.select(el).selectAll("svg,div").remove();
-    var svg = d3.select(el).append("svg").attr("width", W).attr("height", H);
+    var svg = d3.select(el).append("svg").attr("width", "100%").attr("height", H).attr("viewBox", "0 0 " + W + " " + H).attr("preserveAspectRatio", "xMidYMid meet");
     var g = svg.append("g");
     svg.call(d3.zoom().scaleExtent([0.4, 3]).on("zoom", function (e) { g.attr("transform", e.transform); }));
     svg.append("defs").append("marker").attr("id", "n-ar").attr("viewBox", "0 -4 8 8").attr("refX", 20).attr("refY", 0).attr("markerWidth", 5).attr("markerHeight", 5).attr("orient", "auto").append("path").attr("d", "M0,-4L8,0L0,4").attr("fill", "#0f6e56");

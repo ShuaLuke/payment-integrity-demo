@@ -73,9 +73,9 @@
         '<span style="flex:1"></span>' + window.EXPORT.group("bd") +
         '<button class="btn' + (watched ? ' on' : '') + '" id="bz-flag">' + (watched ? '<i class="ti ti-bookmark-off"></i> Remove from watchlist' : '<i class="ti ti-bookmark"></i> Flag business') + '</button></div>' +
 
-        '<div style="display:flex;gap:12px;align-items:flex-start">' +
+        '<div class="split" style="display:flex;gap:12px;align-items:flex-start">' +
         // left rail
-        '<div style="width:220px;flex:none;display:flex;flex-direction:column;gap:10px">' +
+        '<div class="rail" style="width:220px;flex:none;display:flex;flex-direction:column;gap:10px">' +
         '<div class="card"><div class="l" style="font-size:10.5px;color:var(--text2);margin-bottom:6px">' + (b.sharedTin ? "Billing entity" : "Holding company") + '</div>' +
         '<div class="mono" style="font-size:11px;line-height:1.7">' + (b.registrationId ? "Reg " + b.registrationId + "<br>" : "") + "TIN " + b.tin + '</div>' +
         (b.officer ? '<div style="font-size:11.5px;color:var(--text2);margin-top:6px"><i class="ti ti-user-shield"></i> Officer <span style="color:var(--ink);font-weight:500">' + window.APP.esc(b.officer) + '</span></div>' : '') +

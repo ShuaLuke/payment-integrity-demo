@@ -152,8 +152,17 @@ tr.row:hover{background:var(--accent-l)}
   .navitems{gap:0}
   .navitem{padding:15px 9px;font-size:12px}
   #role-name,#role-title{display:none}
+  .modebtn{padding:4px 8px}
+}
+/* two-column detail screens (claim / provider / business) stack; KPI rows reflow */
+@media (max-width: 760px){
+  .split{flex-direction:column}
+  .rail{width:100%!important;flex:none}
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .page-head{flex-wrap:wrap;gap:8px}
 }
 @media (max-width: 560px){
   .filters{gap:8px}
   .navitem{padding:14px 7px;font-size:11.5px}
+  .modebtn i{display:none}
 }

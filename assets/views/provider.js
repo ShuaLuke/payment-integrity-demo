@@ -38,9 +38,9 @@
         '<span style="flex:1"></span>' + window.EXPORT.group("pv") +
         '<button class="btn' + (watched ? ' on' : '') + '" id="pv-flag">' + (watched ? '<i class="ti ti-bookmark-off"></i> Remove from watchlist' : '<i class="ti ti-bookmark"></i> Flag for future reference') + '</button></div>' +
 
-        '<div style="display:flex;gap:12px;align-items:flex-start">' +
+        '<div class="split" style="display:flex;gap:12px;align-items:flex-start">' +
         // ---- left rail: identity ----
-        '<div style="width:220px;flex:none;display:flex;flex-direction:column;gap:10px">' +
+        '<div class="rail" style="width:220px;flex:none;display:flex;flex-direction:column;gap:10px">' +
         '<div class="card"><div class="l" style="font-size:10.5px;color:var(--text2);margin-bottom:6px">Provider</div>' +
         '<div style="font-size:11px;color:var(--text2);margin-bottom:7px">' + window.APP.esc(p.taxonomyLabel || "") + ' · ' + (p.taxonomyCode || "") + '</div>' +
         '<div class="mono" style="font-size:11px;line-height:1.7">NPI ' + p.npi + '<br>TIN ' + (ring ? '<span style="background:var(--high-bg);color:var(--high-tx);padding:0 3px;border-radius:3px">' + p.tin + '</span>' : p.tin) + '</div>' +
