@@ -106,7 +106,7 @@
       '<div style="font-weight:600;font-size:14px"><i class="ti ti-plus" style="color:var(--accent-d)"></i> Create a lead</div>' +
       '<i class="ti ti-x" id="cl-x" style="cursor:pointer;color:var(--text2);font-size:18px"></i></div>' +
       '<div style="padding:14px 16px;display:flex;flex-direction:column;gap:11px">' +
-      '<div style="font-size:11.5px;color:var(--text2)">Analyst-authored lead. Not every lead is data-driven — capture hotline tips, referrals and OIG cases here. Logged to the audit trail.</div>' +
+      '<div style="font-size:11.5px;color:var(--text2)">Analyst-authored lead. Not every lead is data-driven — adjudicators often get them by <b>email or phone</b>, or as hotline tips, referrals and OIG cases, and enter them manually here. Logged to the audit trail.</div>' +
       clField("Provider", '<select id="cl-prov" class="input">' + provs.map(function (p) { return o(p.id, p.name + " · " + (p.state || "")); }).join("") + '</select>') +
       '<div style="display:flex;gap:10px"><div style="flex:1">' + clField("Source", '<select id="cl-src" class="input">' + window.DP.SOURCES.map(function (s) { return o(s, s); }).join("") + '</select>') + '</div>' +
       '<div style="flex:1">' + clField("FWA type", '<select id="cl-fwa" class="input"><option value="Other / manual">Other / manual</option>' + fwaTypes.map(function (f) { return o(f, f); }).join("") + '</select>') + '</div></div>' +

@@ -8,13 +8,25 @@
 
   function band(r) { return r >= 80 ? "high" : r >= 50 ? "med" : "low"; }
   // Lead source taxonomy — answers "leads aren't all data-driven; some are manual."
-  // data-mining · rules · ML/AI (automated) + hotline/tip · referral · OIG (manual).
-  var SOURCES = ["ML/AI", "Rules", "Data mining", "Hotline / tip", "Referral", "OIG"];
+  // data-mining · rules · ML/AI (automated) + hotline/tip · referral · OIG · email · phone (manual).
+  var SOURCES = ["ML/AI", "Rules", "Data mining", "Hotline / tip", "Referral", "OIG", "Email", "Phone / call"];
   function sourceOf(a) {
     if (!a) return "ML/AI";
     if (a.sourceType) return a.sourceType;              // explicit (manual / created leads)
     if (a.source === "Rules Engine") return "Rules";
     return "ML/AI";                                     // Pattern Recognition / Both → ML/AI-driven
+  }
+
+  // Lead → Case model (Patel's definition): a flagged item is a LEAD; once it is
+  // reviewed & CONFIRMED (or escalated) it turns into / joins the provider's CASE.
+  // Multiple confirmed leads on one provider roll into one case. Dismissed leads
+  // never open a case; still-open leads only "feed in" until they're confirmed.
+  var CASE_STATUS = { "Pending review": 1, "Confirmed": 1, "Escalated": 1 };
+  var CLOSED_STATUS = { "Dismissed": 1, "Cleared to pay": 1, "Denied": 1 };
+  function isCaseLead(a) {
+    if (CASE_STATUS[a.status]) return true;
+    var dec = window.APP && window.APP.state && window.APP.state.decisions && window.APP.state.decisions[a.id];
+    return !!(dec && (dec.outcome === "confirm" || dec.outcome === "escalate"));
   }
   function usd(n) { return "$" + Math.round(n).toLocaleString(); }
   function usdShort(n) {
@@ -124,16 +136,17 @@
     listClaimsByProvider: function (providerId) { return D.claims.filter(function (c) { return c.providerId === providerId; }); },
     listAllegationsByProvider: function (providerId, mode) { return D.allegations.filter(function (a) { return a.providerId === providerId && (mode === "all" || (a.mode || "retrospective") === (mode || "retrospective")); }); },
     listInvestigations: function () { return D.allegations.filter(function (a) { return a.status === "Escalated"; }); },
+    isCaseLead: isCaseLead,
 
     // ---- Cases (provider-level) ----------------------------------------------
-    // A Case is provider-level: one open case per provider, aggregating ALL that
-    // provider's Leads (flagged claims). New leads auto-attach to the provider's
-    // case. `listCases` = one row per provider with leads; `getCase` = one provider.
-    // NOTE: internal keys stay "allegation"; "Lead" is the user-facing name only.
+    // A Case exists for a provider ONLY once ≥1 of its leads is reviewed & confirmed
+    // (or escalated). It aggregates that provider's confirmed leads; the provider's
+    // still-open leads "feed in" (they join the case if/when confirmed). `listCases`
+    // = one row per provider that HAS a case; `getCase` = that provider (or a shell
+    // with leadCount 0 if no case yet). Internal keys stay "allegation".
     listCases: function (opts) {
       opts = opts || {};
       var mode = opts.mode || "retrospective";
-      var terminal = { "Dismissed": 1, "Confirmed": 1, "Cleared to pay": 1, "Denied": 1 };
       var byProv = {};
       D.allegations.forEach(function (a) {
         if (mode !== "all" && (a.mode || "retrospective") !== mode) return;
@@ -141,19 +154,21 @@
       });
       var exposureKey = mode === "prepay" ? "exposurePre" : "exposurePost";
       return Object.keys(byProv).map(function (pid) {
-        var leads = byProv[pid].slice().sort(function (a, b) { return b.riskScore - a.riskScore; });
+        var all = byProv[pid].slice().sort(function (a, b) { return b.riskScore - a.riskScore; });
         var p = providers[pid] || {};
-        var open = leads.filter(function (a) { return !terminal[a.status]; });
-        var escalated = leads.some(function (a) { return a.status === "Escalated"; });
+        var caseLeads = all.filter(isCaseLead);
+        var openLeads = all.filter(function (a) { return !isCaseLead(a) && !CLOSED_STATUS[a.status]; });
+        var escalated = caseLeads.some(function (a) { return a.status === "Escalated"; });
         return {
           providerId: pid, provider: p, name: p.name || "—", npi: p.npi || "", state: p.state || "",
-          leads: leads, leadCount: leads.length, openCount: open.length,
-          exposure: leads.reduce(function (s, a) { return s + (a[exposureKey] || 0); }, 0),
-          riskScore: Math.max.apply(null, leads.map(function (a) { return a.riskScore || 0; }).concat([p.riskScore || 0])),
-          fwaTypes: leads.map(function (a) { return a.fwaType; }).filter(function (t, i, arr) { return t && arr.indexOf(t) === i; }),
-          assignee: (leads.find(function (a) { return a.assignee; }) || {}).assignee || null,
+          leads: caseLeads, caseLeads: caseLeads, openLeads: openLeads,
+          leadCount: caseLeads.length, openCount: openLeads.length,
+          exposure: caseLeads.reduce(function (s, a) { return s + (a[exposureKey] || 0); }, 0),
+          riskScore: Math.max.apply(null, caseLeads.map(function (a) { return a.riskScore || 0; }).concat([0])),
+          fwaTypes: caseLeads.map(function (a) { return a.fwaType; }).filter(function (t, i, arr) { return t && arr.indexOf(t) === i; }),
+          assignee: (caseLeads.find(function (a) { return a.assignee; }) || {}).assignee || null,
           escalated: escalated,
-          status: open.length ? (escalated ? "Under investigation" : "Open") : "Closed"
+          status: escalated ? "Under investigation" : "Open case"
         };
       }).filter(function (c) { return opts.all ? true : c.leadCount > 0; })
         .sort(function (a, b) { return b.exposure - a.exposure; });

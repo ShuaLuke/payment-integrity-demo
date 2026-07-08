@@ -61,7 +61,14 @@
       a.status = status; a.assignee = a.assignee || "Dana Whitmore";
       APP.state.decisions[id] = { outcome: outcome, rationale: rationale, ts: new Date(), status: status, reviewState: reviewState };
       APP.auditLog("DECISION_" + outcome.toUpperCase(), "Lead #" + id + " · " + (final ? "Dismissed (false positive)" : outcome) + (rationale ? " · rationale recorded" : ""));
-      if (!final) APP.auditLog("SUBMITTED_FOR_REVIEW", "Lead #" + id + " · " + outcome + " → supervisor (Karen Boyd)");
+      if (!final) {
+        APP.auditLog("SUBMITTED_FOR_REVIEW", "Lead #" + id + " · " + outcome + " → supervisor (Karen Boyd)");
+        // confirming/escalating a lead opens (or joins) the provider's case
+        var pc = window.DP.getCase(a.providerId, "retrospective");
+        var joins = pc && pc.caseLeads && pc.caseLeads.length > 1;
+        var pv = window.DP.getProvider(a.providerId);
+        APP.auditLog(joins ? "CASE_UPDATED" : "CASE_OPENED", "Lead #" + id + " · " + (outcome === "escalate" ? "escalated" : "confirmed") + " → " + (joins ? "added to existing case" : "opened case") + " for " + a.providerId + (pv ? " (" + pv.name + ")" : ""));
+      }
       APP.updateSupBadge();
     },
 
@@ -184,12 +191,35 @@
       APP.auditLog("LEAD_CREATED", "Lead #" + id + " · " + p.name + " · source: " + src + (data.fwaType ? " · " + data.fwaType : ""));
       return lead;
     },
+    // Pre-adjudicated leads so some CASES exist at load (a case forms only once a
+    // lead is reviewed & confirmed/escalated). PR204 gets 2 confirmed + others open
+    // to show "multiple leads feeding one case". Idempotent across boots.
+    seedCases: function () {
+      [
+        { pid: "PR204", n: 2, outcome: "confirm" },   // Big Bend — 2 confirmed into one case; remaining leads feed in
+        { pid: "PR001", n: 1, outcome: "escalate" },  // Alamo — ring, escalated
+        { pid: "PR002", n: 1, outcome: "confirm" },   // Rio Grande — ring
+        { pid: "PR300", n: 1, outcome: "escalate" },  // Sonoran — chain
+        { pid: "PR200", n: 1, outcome: "confirm" }    // Gulf Coast
+      ].forEach(function (pl) {
+        var leads = window.DP.listAllegationsByProvider(pl.pid, "retrospective").slice().sort(function (a, b) { return b.riskScore - a.riskScore; });
+        var done = 0;
+        leads.forEach(function (a) {
+          if (done >= pl.n) return;
+          if (["Confirmed", "Escalated", "Dismissed", "Pending review"].indexOf(a.status) >= 0) return;
+          if (pl.outcome === "escalate") { a.status = "Escalated"; APP.state.decisions[a.id] = { outcome: "escalate", rationale: "Reviewed and escalated — coordinated behavior; opened a provider case.", ts: new Date(), status: "Escalated", reviewState: "approved" }; }
+          else { a.status = "Pending review"; APP.state.decisions[a.id] = { outcome: "confirm", rationale: "Reviewed and confirmed improper payment — added to the provider case; recovery pending supervisor approval.", ts: new Date(), status: "Pending review", reviewState: "pending" }; }
+          done++;
+        });
+      });
+    },
     // A few manual-origin leads so the "not everything is data-driven" story shows out of the box.
     seedManualLeads: function () {
       [
         { id: "M0007", providerId: "PR205", fwaType: "Phantom billing", src: "Hotline / tip", risk: 74, exp: 8400, by: "OIG Hotline intake", note: "Whistleblower tip: a home-health aide reports visits billed for a veteran who was hospitalized on the service dates. Manual lead — pending records pull." },
-        { id: "M0008", providerId: "PR003", fwaType: "Upcoding", src: "Referral", risk: 63, exp: 5200, by: "VISN clinical reviewer", note: "Referred by a VISN clinical reviewer who noticed consistent level-5 E/M on routine follow-ups. Not model-flagged — a human referral." },
-        { id: "M0009", providerId: "PR002", fwaType: "Kickback / self-referral", src: "OIG", risk: 81, exp: 12600, by: "VA-OIG", note: "OIG case referral tied to the shared-TIN ring; potential inducement arrangement. Data mining did not surface this — an investigative referral." }
+        { id: "M0008", providerId: "PR003", fwaType: "Upcoding", src: "Email", risk: 63, exp: 5200, by: "VISN clinical reviewer", note: "Emailed in by a VISN clinical reviewer who noticed consistent level-5 E/M on routine follow-ups. Adjudicator entered it manually — not model-flagged." },
+        { id: "M0009", providerId: "PR002", fwaType: "Kickback / self-referral", src: "OIG", risk: 81, exp: 12600, by: "VA-OIG", note: "OIG case referral tied to the shared-TIN ring; potential inducement arrangement. Data mining did not surface this — an investigative referral." },
+        { id: "M0010", providerId: "PR206", fwaType: "Duplicate billing", src: "Phone / call", risk: 58, exp: 3900, by: "Provider-relations call line", note: "Phoned in by a beneficiary who was balance-billed for a service the VA already paid. Adjudicator took the call and entered the lead manually." }
       ].forEach(function (s) {
         if (!window.DP.getProvider(s.providerId)) return;
         if (window.DP.raw.allegations.some(function (x) { return x.id === s.id; })) return;
@@ -319,6 +349,7 @@
       APP.setRoleHeader();
       APP.auditLog("SESSION_START", APP.ROLES[APP.state.role].name + " signed in · " + (window.SB && window.SB.enabled ? "authenticated" : "PIV authenticated"));
       APP.seedManualLeads();
+      APP.seedCases();
       APP.seedComments();
       APP.nav("home");
       APP.ready = true;

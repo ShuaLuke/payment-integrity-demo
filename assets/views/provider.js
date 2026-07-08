@@ -11,6 +11,8 @@
       var p = window.DP.getProvider(id);
       if (!p) { mount.innerHTML = '<div class="page"><p>Provider not found.</p></div>'; return; }
       var allegs = window.DP.listAllegationsByProvider(id);
+      var caseInfo = window.DP.getCase(id, "retrospective") || { caseLeads: [], openLeads: [], leadCount: 0, openCount: 0 };
+      var hasCase = caseInfo.leadCount > 0;
       var claims = window.DP.listClaimsByProvider(id);
       var card = window.DP.getReportCard(id) || { groups: [], attributes: {} };
       var groups = card.groups;
@@ -33,7 +35,8 @@
         '<div class="page">' +
         '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap"><span class="btn" id="pv-back" style="padding:5px 9px"><i class="ti ti-arrow-left"></i> ' + window.APP.esc(window.APP.backLabel()) + '</span>' +
         '<span class="page-title">' + window.APP.esc(p.name) + '</span>' + window.UI.riskChip(p.riskScore || 0) +
-        (allegs.length ? '<span class="pill p-new"><i class="ti ti-folder"></i> Case · ' + allegs.length + ' lead' + (allegs.length === 1 ? '' : 's') + '</span>' : '') +
+        (hasCase ? '<span class="pill ' + (caseInfo.status === "Under investigation" ? "p-esc" : "p-new") + '"><i class="ti ti-folder"></i> Case · ' + caseInfo.leadCount + ' confirmed' + (caseInfo.openCount ? ' · +' + caseInfo.openCount + ' open' : '') + '</span>'
+          : (allegs.length ? '<span class="pill p-asg"><i class="ti ti-flag"></i> ' + allegs.length + ' open lead' + (allegs.length === 1 ? '' : 's') + ' · no case yet</span>' : '')) +
         (repeatOffender ? '<span class="pill" style="background:var(--high-bg);color:var(--high-tx)"><i class="ti ti-alert-triangle"></i> Repeat offender</span>' : '') +
         (watched ? '<span class="pill" style="background:var(--med-bg);color:var(--med-tx)"><i class="ti ti-bookmark"></i> On watchlist</span>' : '') +
         '<span style="flex:1"></span>' + window.EXPORT.group("pv") +
@@ -56,7 +59,7 @@
         '<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:10px">' +
         '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">' +
         kpi("Claims", p.claimCount || claims.length) + kpi("Anomalous visits", flaggedVisits) +
-        kpi("Open leads", allegs.length) + kpi("Lead exposure", window.DP.usdShort(exposure)) +
+        kpi(hasCase ? "Confirmed · open" : "Open leads", hasCase ? (caseInfo.leadCount + " · " + caseInfo.openCount) : allegs.length) + kpi("Lead exposure", window.DP.usdShort(exposure)) +
         kpi("Total paid", window.DP.usdShort(p.totalPaid || 0)) + '</div>' +
 
         // report card: radar + drill-down
@@ -74,7 +77,7 @@
         secondaryPanel(id) +
 
         // flagged claims — adjudicate from provider
-        '<div class="card" style="padding:0;overflow:hidden"><div style="padding:11px 13px 6px;font-weight:500;font-size:13px">Leads on this case (' + allegs.length + ') <span class="muted" style="font-weight:400;font-size:11px">· start an adjudication from here</span></div>' +
+        '<div class="card" style="padding:0;overflow:hidden"><div style="padding:11px 13px 6px;font-weight:500;font-size:13px">' + (hasCase ? 'Leads — case (' + caseInfo.leadCount + ' confirmed · ' + caseInfo.openCount + ' open feeding in)' : 'Leads (' + allegs.length + ' open · no case yet)') + ' <span class="muted" style="font-weight:400;font-size:11px">· confirm a lead to add it to the case</span></div>' +
         '<table><thead><tr><th>Risk</th><th>FWA type</th><th>Status</th><th class="right">Exposure</th><th></th></tr></thead><tbody>' +
         (allegs.length ? allegs.slice().sort(function (a, b) { return b.riskScore - a.riskScore; }).map(function (a) {
           return '<tr class="row" data-id="' + a.id + '"><td>' + window.UI.riskChip(a.riskScore) + '</td><td><span class="tag fwa">' + a.fwaType + '</span> <span class="mono" style="font-size:10.5px;color:var(--text3)">#' + a.id + '</span></td><td>' + window.UI.statusPill(a.status) + '</td><td class="right" style="font-weight:500">' + window.DP.usd(a.exposurePost || 0) + '</td><td class="right"><span style="font-size:11px;color:var(--accent-d)">Review <i class="ti ti-chevron-right"></i></span></td></tr>';

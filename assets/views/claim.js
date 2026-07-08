@@ -504,7 +504,7 @@
       '<button id="c-submit" class="btn primary" style="margin-top:9px" disabled><i class="ti ti-send"></i>Submit decision</button>';
     var choice = null;
     var outMap = { c: "confirm", d: "dismiss", e: "escalate" };
-    var hints = { c: "Confirms improper payment — " + window.DP.usd(a.exposurePost) + " moves to Submitted for recovery.", d: "Logged as a false positive — outcome feeds model retraining.", e: "Opens a Case for further review." };
+    var hints = { c: "Confirms improper payment — " + window.DP.usd(a.exposurePost) + " moves to Submitted for recovery, and this lead opens (or joins) " + window.APP.esc(a.provider ? a.provider.name + "'s" : "the provider's") + " case.", d: "Logged as a false positive — outcome feeds model retraining. No case is opened.", e: "Escalates as coordinated behavior — opens (or joins) the provider's case for investigation." };
     box.querySelectorAll(".seg").forEach(function (s) {
       s.addEventListener("click", function () {
         choice = s.getAttribute("data-d");
