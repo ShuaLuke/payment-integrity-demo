@@ -21,13 +21,8 @@
       if (id !== lastId) { curTab = "overview"; lastId = id; }
       ctx = { id: id, a: a, cl: cl, p: p, prepay: prepay };
 
-      // evidence documents (left rail)
-      var docs = [{ key: "mr", label: "Medical record", icon: "file-text", meta: "on file" }];
-      if (cl) { docs.push({ key: "claim", label: "Claim (" + cl.type + ")", icon: "file-invoice", meta: cl.claimNumber }); if (!prepay) docs.push({ key: "ra", label: "Remittance (835)", icon: "receipt", meta: window.DP.usd(cl.paidAmount) }); }
-      docs.push({ key: "auth", label: "Authorization / referral", icon: "clipboard-check", meta: "on file" });
-      var docsHtml = docs.map(function (d) {
-        return '<div class="doc-row" data-doc="' + d.key + '" style="display:flex;align-items:center;gap:7px;padding:6px 8px;border:0.5px solid var(--border);border-radius:6px;cursor:pointer;font-size:11.5px"><i class="ti ti-' + d.icon + '" style="color:var(--accent-d)"></i><span style="flex:1">' + d.label + '</span><span class="muted" style="font-size:10px">' + d.meta + '</span><i class="ti ti-chevron-right" style="color:var(--text3);font-size:14px"></i></div>';
-      }).join("");
+      // evidence documents (shared by the left-rail index and the Evidence tab)
+      var docsHtml = evidenceDocs(a, cl).map(function (d) { return docRowHtml(d, "doc-row"); }).join("");
 
       var kind = prepay ? "Pending claim" : "Lead";
       var undecided = !dec;
@@ -167,7 +162,7 @@
     var panel = document.getElementById("c-tabpanel"); if (!panel || !ctx) return;
     document.querySelectorAll(".ctab").forEach(function (b) { b.classList.toggle("active", b.getAttribute("data-tab") === name); });
     if (name === "overview") { panel.innerHTML = overviewHtml(ctx.a, ctx.prepay); var ovd = document.getElementById("c-ov-decide"); if (ovd) ovd.onclick = function () { showTab("decision"); }; wireWorkingRecord(ctx.id); }
-    else if (name === "evidence") { panel.innerHTML = evidenceHtml(ctx.a, ctx.cl); wireEvidenceUploads(ctx.id); }
+    else if (name === "evidence") { panel.innerHTML = evidenceHtml(ctx.a, ctx.cl); wireEvidenceUploads(ctx.id); wireEvidenceDocs(ctx.id, ctx.a, ctx.cl); }
     else if (name === "analysis") { panel.innerHTML = analysisHtml(ctx.a); var rc = document.getElementById("c-openrc"); if (rc) rc.onclick = function () { window.APP.openProvider(ctx.p.id); }; }
     else if (name === "network") { panel.innerHTML = networkHtml(); renderCollusion(ctx.p, ctx.id); }
     else if (name === "decision") {
@@ -280,6 +275,9 @@
       ? '<div style="font-size:11.5px;color:var(--text2)"><i class="ti ti-user-edit" style="color:var(--med)"></i> Analyst-created lead from <b>' + window.APP.esc(window.DP.sourceOf(a)) + '</b>' + (a.createdBy ? ' (' + window.APP.esc(a.createdBy) + ')' : '') + ' — no automated rule or model fired. Attach records on this tab to build the evidence.</div>'
       : '<div style="font-size:11.5px;color:var(--text2)">No rules fired — behavioral anomaly flagged by ' + (a.model ? window.APP.esc(a.model.name) : "the ML/AI models") + '.</div>';
     return '<div style="display:flex;flex-direction:column;gap:10px">' +
+      '<div class="card"><div style="font-weight:500;font-size:13px;margin-bottom:8px"><i class="ti ti-folder-open" style="color:var(--accent-d)"></i> Evidence on file <span class="muted" style="font-weight:400;font-size:11px">· click a record to review it</span></div>' +
+      '<div style="display:flex;flex-direction:column;gap:6px">' + evidenceDocs(a, cl).map(function (d) { return docRowHtml(d, "ev-doc-row"); }).join("") + '</div>' +
+      '<div id="c-ev-doc" style="margin-top:9px"></div></div>' +
       (cl ? '<div class="card" style="padding:0;overflow:hidden"><div style="padding:9px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:0.5px solid var(--border2)"><span style="font-weight:500;font-size:13px">Claim <span class="mono" style="font-weight:400;color:var(--text2)">' + cl.claimNumber + '</span></span><span style="font-size:11px;color:var(--text2)">' + cl.type + ' · DOS ' + cl.dateOfService + ' · Dx ' + (cl.diagnosisCodes.join(",") || "—") + ' · ' + cl.claimStatus + ' / ' + cl.paymentType + '</span></div>' +
         '<table><thead><tr><th>CPT</th><th>Description</th><th>Mod</th><th class="right">Units</th><th class="right">Billed</th><th class="right">Paid</th><th></th></tr></thead><tbody>' + lines + '</tbody></table></div>' : '') +
       '<div class="card"><div style="font-weight:500;font-size:13px;margin-bottom:8px">Rule engine outcomes</div><div style="display:flex;flex-direction:column;gap:7px">' + rulesHtml + '</div></div>' +
@@ -299,6 +297,23 @@
         '<div class="muted" style="font-size:10.5px">' + (u.size ? fmtSize(u.size) + " · " : "") + window.APP.esc(u.by || "") + " · " + window.APP.fmtTs(u.ts) + '</div></div>' +
         '<span class="tag" style="background:var(--low-bg);color:var(--low-tx)">attached</span></div>';
     }).join("");
+  }
+  function wireEvidenceDocs(id, a, cl) {
+    var rows = document.querySelectorAll(".ev-doc-row");
+    if (!rows.length) return;
+    var kind = a.mode === "prepay" ? "Pending claim" : "Lead";
+    var render = function (key) {
+      var box = document.getElementById("c-ev-doc"); if (box) box.innerHTML = docContent(key, id, a, cl);
+      document.querySelectorAll(".ev-doc-row").forEach(function (r) { r.style.borderColor = r.getAttribute("data-doc") === key ? "var(--accent-d)" : "var(--border)"; });
+    };
+    rows.forEach(function (r) {
+      r.addEventListener("click", function () {
+        var key = r.getAttribute("data-doc");
+        render(key);
+        window.APP.auditLog(key === "mr" ? "MEDICAL_RECORD_VIEWED" : "EVIDENCE_VIEWED", kind + " #" + id + (key === "mr" ? "" : " · " + key));
+      });
+    });
+    render("mr"); // preview the medical record by default (no audit entry until the reviewer interacts)
   }
   function wireEvidenceUploads(id) {
     var btn = document.getElementById("c-upload-btn"), input = document.getElementById("c-upload-input");
@@ -619,6 +634,20 @@
   function docBox(title, body, tone) {
     var bg = tone === "good" ? "var(--low-bg)" : "var(--surface)", bd = tone === "good" ? "#bfe0c9" : "var(--border)", tx = tone === "good" ? "var(--low-tx)" : "var(--text2)";
     return '<div style="background:' + bg + ';border:0.5px solid ' + bd + ';border-radius:7px;padding:9px 11px"><div style="font-weight:500;font-size:11.5px;color:' + tx + ';margin-bottom:4px"><i class="ti ti-file-description"></i> ' + title + '</div><div style="font-size:11px;color:var(--text2);line-height:1.55">' + body + '</div></div>';
+  }
+  // the evidence records on file for a lead (shared by the rail index + Evidence tab)
+  function evidenceDocs(a, cl) {
+    var prepay = a.mode === "prepay";
+    var docs = [{ key: "mr", label: "Medical record", icon: "file-text", meta: "on file" }];
+    if (cl) {
+      docs.push({ key: "claim", label: "Claim (" + cl.type + ")", icon: "file-invoice", meta: cl.claimNumber });
+      if (!prepay) docs.push({ key: "ra", label: "Remittance (835)", icon: "receipt", meta: window.DP.usd(cl.paidAmount) });
+    }
+    docs.push({ key: "auth", label: "Authorization / referral", icon: "clipboard-check", meta: "on file" });
+    return docs;
+  }
+  function docRowHtml(d, cls) {
+    return '<div class="' + cls + '" data-doc="' + d.key + '" style="display:flex;align-items:center;gap:7px;padding:6px 8px;border:0.5px solid var(--border);border-radius:6px;cursor:pointer;font-size:11.5px"><i class="ti ti-' + d.icon + '" style="color:var(--accent-d)"></i><span style="flex:1">' + d.label + '</span><span class="muted" style="font-size:10px">' + window.APP.esc(d.meta) + '</span><i class="ti ti-chevron-right" style="color:var(--text3);font-size:14px"></i></div>';
   }
   function docContent(key, id, a, cl) {
     if (key === "mr") {
