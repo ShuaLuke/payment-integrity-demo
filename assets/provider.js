@@ -7,6 +7,15 @@
       rules = idx(D.rules), models = idx(D.models);
 
   function band(r) { return r >= 80 ? "high" : r >= 50 ? "med" : "low"; }
+  // Lead source taxonomy — answers "leads aren't all data-driven; some are manual."
+  // data-mining · rules · ML/AI (automated) + hotline/tip · referral · OIG (manual).
+  var SOURCES = ["ML/AI", "Rules", "Data mining", "Hotline / tip", "Referral", "OIG"];
+  function sourceOf(a) {
+    if (!a) return "ML/AI";
+    if (a.sourceType) return a.sourceType;              // explicit (manual / created leads)
+    if (a.source === "Rules Engine") return "Rules";
+    return "ML/AI";                                     // Pattern Recognition / Both → ML/AI-driven
+  }
   function usd(n) { return "$" + Math.round(n).toLocaleString(); }
   function usdShort(n) {
     if (n >= 1e6) return "$" + (n / 1e6).toFixed(2) + "M";
@@ -19,6 +28,7 @@
     meta: D.meta,
     disclaimer: D.meta.disclaimer,
     band: band, usd: usd, usdShort: usdShort,
+    SOURCES: SOURCES, sourceOf: sourceOf,
     getKpis: function () { return D.kpis; },
     getAnomalyBreakdown: function () { return D.anomalyBreakdown; },
     getGraph: function () { return D.graph; },
@@ -55,9 +65,9 @@
         var p = providers[a.providerId];
         return {
           id: a.id, fwaType: a.fwaType, riskScore: a.riskScore, confidence: a.confidence,
-          source: a.source, status: a.status, assignee: a.assignee, claimType: a.claimType,
+          source: a.source, sourceType: sourceOf(a), status: a.status, assignee: a.assignee, claimType: a.claimType,
           exposurePost: a.exposurePost, exposurePre: a.exposurePre, createdDate: a.createdDate, providerId: a.providerId,
-          mode: a.mode || "retrospective", recommendedAction: a.recommendedAction,
+          mode: a.mode || "retrospective", recommendedAction: a.recommendedAction, manual: !!a.manual,
           providerName: p ? p.name : "—", providerNpi: p ? p.npi : "", providerState: p ? p.state : "",
           hero: ["20481", "20517", "20463"].indexOf(a.id) >= 0 ? 1 : 0
         };
@@ -67,7 +77,7 @@
       if (mode !== "all") rows = rows.filter(function (r) { return r.mode === mode; });
       if (f.fwaType) rows = rows.filter(function (r) { return r.fwaType === f.fwaType; });
       if (f.status) rows = rows.filter(function (r) { return r.status === f.status; });
-      if (f.source) rows = rows.filter(function (r) { return r.source === f.source; });
+      if (f.source) rows = rows.filter(function (r) { return r.sourceType === f.source; });
       if (typeof f.minRisk === "number") rows = rows.filter(function (r) { return r.riskScore >= f.minRisk; });
       if (f.query) {
         var q = f.query.toLowerCase();

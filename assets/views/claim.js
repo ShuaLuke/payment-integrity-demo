@@ -181,7 +181,7 @@
       stat("Risk", '<span style="color:' + bandColor(a.riskScore) + '">' + a.riskScore + ' <span style="font-size:10px;font-weight:500">' + bandLabel(a.riskScore) + '</span></span>') +
       stat("Confidence", a.confidence + "%") +
       stat(prepay ? "At risk" : "Exposure", window.DP.usd(prepay ? a.exposurePre : a.exposurePost)) +
-      stat("Source", '<span style="font-size:12.5px">' + (a.source === "Both" ? "ML/AI + Rules" : a.source === "Pattern Recognition" ? "ML/AI" : "Rules") + '</span>') +
+      stat("Source", '<span style="font-size:12.5px">' + window.APP.esc(a.source === "Both" ? "ML/AI + Rules" : window.DP.sourceOf(a)) + '</span>' + (a.manual ? ' <span class="tag" style="background:var(--med-bg);color:var(--med-tx)">manual</span>' : '')) +
       stat("FWA type", '<span style="font-size:12.5px">' + a.fwaType + '</span>') +
       '</div>' +
       (a.xai ? '<div class="xai"><div class="xai-h"><i class="ti ti-sparkles" style="color:var(--accent-d)"></i><span class="t">Why this was flagged</span><span style="font-size:10.5px;color:#5f8a80;margin-left:auto">Explainable AI</span></div>' +
@@ -206,7 +206,9 @@
       return '<div style="display:flex;gap:9px;align-items:flex-start"><i class="ti ti-gavel" style="color:var(--high);margin-top:2px"></i><div><div style="font-size:12px;font-weight:500">' + window.APP.esc(r.name) + ' <span class="mono" style="font-weight:400;color:var(--text2)">' + window.APP.esc(r.code) + '</span> <span class="tag">' + window.APP.esc(r.source) + '</span></div><div style="font-size:11.5px;color:var(--text2)">' + window.APP.esc(r.description) + '</div></div></div>';
     }).join("");
     if (a.model) rulesHtml += '<div style="display:flex;gap:9px;align-items:center;padding-top:2px"><i class="ti ti-brain" style="color:var(--accent-d)"></i><div style="font-size:11.5px;color:var(--text2)">ML/AI model: <span style="color:var(--ink);font-weight:500">' + window.APP.esc(a.model.name) + '</span> (' + window.APP.esc(a.model.type) + ')</div></div>';
-    if (!rulesHtml) rulesHtml = '<div style="font-size:11.5px;color:var(--text2)">No rules fired — behavioral anomaly flagged by ' + (a.model ? window.APP.esc(a.model.name) : "the ML/AI models") + '.</div>';
+    if (!rulesHtml) rulesHtml = a.manual
+      ? '<div style="font-size:11.5px;color:var(--text2)"><i class="ti ti-user-edit" style="color:var(--med)"></i> Analyst-created lead from <b>' + window.APP.esc(window.DP.sourceOf(a)) + '</b>' + (a.createdBy ? ' (' + window.APP.esc(a.createdBy) + ')' : '') + ' — no automated rule or model fired. Attach records on this tab to build the evidence.</div>'
+      : '<div style="font-size:11.5px;color:var(--text2)">No rules fired — behavioral anomaly flagged by ' + (a.model ? window.APP.esc(a.model.name) : "the ML/AI models") + '.</div>';
     return '<div style="display:flex;flex-direction:column;gap:10px">' +
       (cl ? '<div class="card" style="padding:0;overflow:hidden"><div style="padding:9px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:0.5px solid var(--border2)"><span style="font-weight:500;font-size:13px">Claim <span class="mono" style="font-weight:400;color:var(--text2)">' + cl.claimNumber + '</span></span><span style="font-size:11px;color:var(--text2)">' + cl.type + ' · DOS ' + cl.dateOfService + ' · Dx ' + (cl.diagnosisCodes.join(",") || "—") + ' · ' + cl.claimStatus + ' / ' + cl.paymentType + '</span></div>' +
         '<table><thead><tr><th>CPT</th><th>Description</th><th>Mod</th><th class="right">Units</th><th class="right">Billed</th><th class="right">Paid</th><th></th></tr></thead><tbody>' + lines + '</tbody></table></div>' : '') +

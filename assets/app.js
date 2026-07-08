@@ -142,6 +142,41 @@
       return c;
     },
 
+    // ---- analyst-created leads (some leads are manual, not data-driven) ----
+    LEAD_SEQ: 0,
+    createLead: function (data) {
+      data = data || {};
+      var p = window.DP.getProvider(data.providerId); if (!p) return null;
+      var id = "M" + String(2001 + (APP.LEAD_SEQ++));
+      var src = data.sourceType || "Hotline / tip";
+      var lead = {
+        id: id, providerId: data.providerId, claimId: null,
+        fwaType: data.fwaType || "Other / manual",
+        riskScore: typeof data.riskScore === "number" ? data.riskScore : 60,
+        confidence: 100, source: src, sourceType: src,
+        status: "New", mode: "retrospective",
+        exposurePost: data.exposure || 0, exposurePre: 0,
+        createdDate: new Date().toISOString().slice(0, 10),
+        assignee: null, manual: true, createdBy: (APP.ROLES[APP.state.role] || {}).name || "Dana Whitmore",
+        xai: { summary: data.rationale ? data.rationale : "Analyst-created lead sourced from " + src + ". Pending evidence linkage and validation." }
+      };
+      window.DP.raw.allegations.push(lead);
+      APP.auditLog("LEAD_CREATED", "Lead #" + id + " · " + p.name + " · source: " + src + (data.fwaType ? " · " + data.fwaType : ""));
+      return lead;
+    },
+    // A few manual-origin leads so the "not everything is data-driven" story shows out of the box.
+    seedManualLeads: function () {
+      [
+        { id: "M0007", providerId: "PR205", fwaType: "Phantom billing", src: "Hotline / tip", risk: 74, exp: 8400, by: "OIG Hotline intake", note: "Whistleblower tip: a home-health aide reports visits billed for a veteran who was hospitalized on the service dates. Manual lead — pending records pull." },
+        { id: "M0008", providerId: "PR003", fwaType: "Upcoding", src: "Referral", risk: 63, exp: 5200, by: "VISN clinical reviewer", note: "Referred by a VISN clinical reviewer who noticed consistent level-5 E/M on routine follow-ups. Not model-flagged — a human referral." },
+        { id: "M0009", providerId: "PR002", fwaType: "Kickback / self-referral", src: "OIG", risk: 81, exp: 12600, by: "VA-OIG", note: "OIG case referral tied to the shared-TIN ring; potential inducement arrangement. Data mining did not surface this — an investigative referral." }
+      ].forEach(function (s) {
+        if (!window.DP.getProvider(s.providerId)) return;
+        if (window.DP.raw.allegations.some(function (x) { return x.id === s.id; })) return;
+        window.DP.raw.allegations.push({ id: s.id, providerId: s.providerId, claimId: null, fwaType: s.fwaType, riskScore: s.risk, confidence: 100, source: s.src, sourceType: s.src, status: "New", mode: "retrospective", exposurePost: s.exp, exposurePre: 0, createdDate: "2026-07-07", assignee: null, manual: true, createdBy: s.by, xai: { summary: s.note } });
+      });
+    },
+
     // ---- prepay vs retrospective (global mode / lens) ----
     // Retrospective = post-payment review & recoupment (the default "pay and report"
     // world). Prepay = pending claims scored BEFORE payment; analyst decides Pay/Hold/Deny.
@@ -263,6 +298,7 @@
       APP.setModeHeader();
       APP.setRoleHeader();
       APP.auditLog("SESSION_START", APP.ROLES[APP.state.role].name + " signed in · " + (window.SB && window.SB.enabled ? "authenticated" : "PIV authenticated"));
+      APP.seedManualLeads();
       APP.seedComments();
       APP.nav("home");
       APP.ready = true;
@@ -292,7 +328,7 @@
       var m = { "New": "p-new", "Assigned": "p-asg", "Under review": "p-rev", "Recommended close": "p-rec", "Confirmed": "p-conf", "Dismissed": "p-dis", "Escalated": "p-esc", "Pending review": "p-pend", "Returned": "p-ret", "Pending": "p-new", "Cleared to pay": "p-dis", "On hold": "p-esc", "Denied": "p-conf" };
       return '<span class="pill ' + (m[s] || "p-asg") + '">' + s + '</span>';
     },
-    srcTag: function (s) { return '<span class="muted" style="font-size:10.5px">' + (s === "Pattern Recognition" ? "ML/AI" : s === "Rules Engine" ? "Rules" : "ML/AI + Rules") + '</span>'; }
+    srcTag: function (s) { var lbl = s === "Pattern Recognition" ? "ML/AI" : s === "Rules Engine" ? "Rules" : s === "Both" ? "ML/AI + Rules" : s; return '<span class="muted" style="font-size:10.5px">' + window.APP.esc(lbl) + '</span>'; }
   };
 
   // Boot is orchestrated by supabase.js (auth gate in Supabase mode, or immediate in local mode).
