@@ -27,9 +27,13 @@ soon-to-change vocabulary.
 
 **Vocabulary shift (stakeholder's words):** Allegation → **"Lead"**, Investigation → **"Case"**. Change
 user-facing copy/labels/nav only; keep internal object ids / data keys / method names stable (`openAllegation`,
-`state.allegationId`, `D.allegations`, `listAllegations` all unchanged). **Case model:** a Case is **provider-level**
-(typically one open case per provider) and aggregates all that provider's Leads (flagged claims); new leads
-auto-attach to the provider's existing case.
+`state.allegationId`, `D.allegations`, `listAllegations` all unchanged). **Case model (per Patel, 2026-07-08 — RESOLVED):**
+a flagged item is a **Lead**; it becomes / joins a **Case** only once it is **reviewed & confirmed** (or escalated).
+A Case is **provider-level** — multiple confirmed leads on one provider roll into that provider's single case (new or
+existing). Providers with only open leads have **no case yet** (leads "feed in" until confirmed); dismissed leads never
+open one. Implemented `e5b592f`: `DP.isCaseLead`, confirmation-gated `DP.listCases`, `CASE_OPENED`/`CASE_UPDATED`
+audit on confirm/escalate. **Also:** adjudicators often receive leads **by email or phone** and enter them manually —
+`DP.SOURCES` gained Email + Phone/call alongside the existing Create-a-Lead flow.
 
 - **Phase A — Lead/Case model + IA + full-screen** · [now M] · **✅ DONE** (`7c5db22`)
   - Rename to Lead/Case across nav, titles, list headers, copilot/AI copy, audit strings.
@@ -62,8 +66,10 @@ auto-attach to the provider's existing case.
 **Deferred (note only, don't build):** beneficiary/veteran-side fraud; ingesting Jack's real millions-of-payloads
 report-card JSON — keep the `DP` seam shaped to accept it.
 
-**Open item:** Patel to message a precise "lead → case" definition. Proceeding on the provider-level model above;
-flag any mismatch if his definition arrives.
+**Open item — RESOLVED (2026-07-08):** Patel's "lead → case" definition arrived: *flagged = lead; reviewed &
+confirmed = case; multiple leads on one provider feed into one case (new or existing).* Model updated accordingly
+(`e5b592f`) — the earlier "a case for every provider with any lead" was replaced with confirmation-gating. Plus:
+manual lead entry via **email/call** is a real channel (adjudicators get leads that way) — added as sources.
 
 **Round-2 build order (done):** A → D-comments → E1/E2/E3 → F → B/C verified. ✅ Complete 2026-07-08.
 
