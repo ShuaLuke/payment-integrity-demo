@@ -29,7 +29,7 @@
   // Structured "Summarize this case for adjudication" brief: talks through the
   // anomaly, the evidence, the network signal, precedent, and a recommended action.
   function adjudicationSummary(a) {
-    var p = a.provider || {}, exp = window.DP.usd(a.exposurePost || 0);
+    var p = a.provider || {}, exp = window.DP.usd((a.mode === "prepay" ? a.exposurePre : a.exposurePost) || 0);
 
     // 1) anomaly
     var anomaly = (a.xai && a.xai.summary) || (p.name + " was flagged for " + a.fwaType.toLowerCase() + " at risk " + a.riskScore + "/100.");
@@ -68,7 +68,17 @@
     // 5) recommendation — scenario overrides, else a rule over risk/confidence/network
     var rec;
     var isRing = net && net.isRing;
-    if (a.id === "20463") rec = { action: "request-records", label: "Request records first", rationale: "Confidence is only " + a.confidence + "% and frequency alone drives the flag. If the medical record shows an ESRD dialysis regimen, dismiss as a false positive — recovering here would be an error." };
+    if (a.mode === "prepay") {
+      var pa = a.recommendedAction || "hold";
+      var plabel = { pay: "Pay", hold: "Hold for records", deny: "Deny" }[pa];
+      var prat = {
+        pay: "Low risk and the amount matches the fee schedule — release " + window.DP.usd(a.exposurePre || 0) + " for payment.",
+        hold: "Confidence is " + a.confidence + "% — hold the claim and pull the supporting records before " + window.DP.usd(a.exposurePre || 0) + " is paid.",
+        deny: "The anomaly is corroborated" + (isRing ? " and the provider sits in a collusion network" : "") + " — deny to stop the " + window.DP.usd(a.exposurePre || 0) + " payment before it leaves."
+      }[pa];
+      rec = { action: pa, label: plabel, rationale: prat };
+    }
+    else if (a.id === "20463") rec = { action: "request-records", label: "Request records first", rationale: "Confidence is only " + a.confidence + "% and frequency alone drives the flag. If the medical record shows an ESRD dialysis regimen, dismiss as a false positive — recovering here would be an error." };
     else if (a.id === "20517") rec = { action: "confirm-escalate", label: "Confirm & escalate", rationale: "Two rules fired and the shared-TIN link to a partner provider lifts this above single-claim recovery. Confirm the " + exp + " and escalate the ring to Investigation." };
     else if (a.id === "20544") rec = { action: "confirm-escalate", label: "Confirm & escalate", rationale: "The length-of-stay abuse is corroborated by rule + model, and the 4-facility holding-company chain makes this coordinated. Confirm " + exp + " and escalate the chain to Investigation." };
     else if (a.id === "20481") rec = { action: "confirm", label: "Confirm", rationale: "Upcoding is 5.8σ above the specialty-peer median with low documented complexity. Confirm and recover the overpayment differential." };

@@ -91,7 +91,10 @@
     "confirm-escalate": { bg: "var(--high-bg)", tx: "var(--high-tx)", icon: "check", cta: "Open decision · pre-fill Confirm" },
     "escalate": { bg: "var(--med-bg)", tx: "var(--med-tx)", icon: "arrow-up-right", cta: "Open decision · pre-fill Escalate" },
     "dismiss": { bg: "var(--low-bg)", tx: "var(--low-tx)", icon: "x", cta: "Open decision · pre-fill Dismiss" },
-    "request-records": { bg: "var(--accent-l)", tx: "var(--accent-d)", icon: "file-text", cta: "Request additional records" }
+    "request-records": { bg: "var(--accent-l)", tx: "var(--accent-d)", icon: "file-text", cta: "Request additional records" },
+    "pay": { bg: "var(--low-bg)", tx: "var(--low-tx)", icon: "check", cta: "Open decision · pre-fill Pay" },
+    "hold": { bg: "var(--med-bg)", tx: "var(--med-tx)", icon: "clock-hour-4", cta: "Open decision · pre-fill Hold" },
+    "deny": { bg: "var(--high-bg)", tx: "var(--high-tx)", icon: "ban", cta: "Open decision · pre-fill Deny" }
   };
   function sect(title, body) { return '<div><div style="font-weight:600;font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--text3);margin-bottom:3px">' + title + '</div><div style="line-height:1.5;color:var(--text);font-size:12px">' + body + '</div></div>'; }
   function briefHtml(s) {
@@ -117,11 +120,12 @@
       '</div></div>';
   }
   // Take the analyst to the decision control, pre-selecting the recommended action.
+  // The claim view (tabbed) handles switching to the Decision tab + selecting the seg.
   function applyRec(action) {
     if (open) toggle();
+    if (window.Views && window.Views.claim && window.Views.claim.gotoDecision) { window.Views.claim.gotoDecision(action); return; }
     if (action === "request-records") { var rq = document.getElementById("c-req"); if (rq) { rq.scrollIntoView({ behavior: "smooth", block: "center" }); setTimeout(function () { rq.click(); }, 300); } return; }
     var seg = { "confirm": "c", "confirm-escalate": "c", "dismiss": "d", "escalate": "e" }[action];
-    var dc = document.getElementById("c-decision"); if (dc) dc.scrollIntoView({ behavior: "smooth", block: "center" });
     setTimeout(function () { var el = document.querySelector('.seg[data-d="' + seg + '"]'); if (el) el.click(); }, 360);
   }
 
