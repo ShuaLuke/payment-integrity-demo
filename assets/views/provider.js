@@ -70,6 +70,9 @@
         // outlier comparison across providers on the selected group
         '<div class="card" id="pv-compare">' + compareHtml(id, selGroup) + '</div>' +
 
+        // TrackLight-style external profile / secondary scoring
+        secondaryPanel(id) +
+
         // flagged claims — adjudicate from provider
         '<div class="card" style="padding:0;overflow:hidden"><div style="padding:11px 13px 6px;font-weight:500;font-size:13px">Leads on this case (' + allegs.length + ') <span class="muted" style="font-weight:400;font-size:11px">· start an adjudication from here</span></div>' +
         '<table><thead><tr><th>Risk</th><th>FWA type</th><th>Status</th><th class="right">Exposure</th><th></th></tr></thead><tbody>' +
@@ -198,4 +201,49 @@
   }
 
   function kpi(l, v) { return '<div class="kpi"><div class="l">' + l + '</div><div class="v">' + v + '</div></div>'; }
+
+  // ---- TrackLight-style external profile / secondary scoring ----
+  function secondaryPanel(id) {
+    var s = window.DP.getSecondaryProfile(id); if (!s) return "";
+    var b = s.business, o = s.officer;
+    var band = s.score >= 75 ? "rh" : s.score >= 50 ? "rm" : "rl";
+    var metric = function (label, val, flag) { return '<div style="display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-top:0.5px solid var(--border2);font-size:11.5px"><span style="color:var(--text2)">' + label + '</span><span style="font-weight:500' + (flag ? ";color:var(--high-tx)" : "") + '">' + val + '</span></div>'; };
+    var osintList = function (arr) {
+      return arr.map(function (t) {
+        var adverse = !/^No adverse|^No SSA Death/i.test(t);
+        return '<div style="display:flex;gap:6px;font-size:11px;color:' + (adverse ? "var(--high-tx)" : "var(--low-tx)") + ';padding:2px 0"><i class="ti ti-' + (adverse ? "alert-triangle" : "circle-check") + '" style="margin-top:1px"></i><span>' + window.APP.esc(t) + '</span></div>';
+      }).join("");
+    };
+    return '<div class="card">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:10px;flex-wrap:wrap">' +
+      '<div style="font-weight:500;font-size:13px"><i class="ti ti-world-search" style="color:var(--accent-d)"></i> External profile &amp; secondary scoring <span class="muted" style="font-weight:400;font-size:11px">· TrackLight-style corroboration from outside the claims data (synthetic)</span></div>' +
+      '<span class="chip ' + band + '"><span class="s">' + s.score + '</span> secondary risk</span></div>' +
+      '<div style="display:flex;gap:16px;flex-wrap:wrap">' +
+      '<div style="flex:1;min-width:250px">' +
+      '<div style="font-size:11.5px;font-weight:600;margin-bottom:1px"><i class="ti ti-building"></i> Business — ' + window.APP.esc(b.name) + '</div>' +
+      '<div class="muted" style="font-size:10.5px;margin-bottom:3px">State registry · OpenCorporates · liens / judgments / bankruptcies · court dockets</div>' +
+      metric("Registry status", b.registryStatus + " · " + b.state, b.registryStatus !== "Active") +
+      metric("Incorporated · entity #", b.incorporated + " · " + b.entityNo) +
+      metric("Related registrations (OpenCorporates)", b.openCorporatesRelated, b.openCorporatesRelated >= 2) +
+      metric("Liens", b.liens + (b.liens ? " · " + window.DP.usd(b.lienAmount) : ""), b.liens > 0) +
+      metric("Judgments", b.judgments + (b.judgments ? " · " + window.DP.usd(b.judgmentAmount) : ""), b.judgments > 0) +
+      metric("Bankruptcies", b.bankruptcies, b.bankruptcies > 0) +
+      metric("Court dockets", b.courtDockets, b.courtDockets > 0) +
+      '<div style="margin-top:6px">' + osintList(b.osint) + '</div>' +
+      '</div>' +
+      '<div style="flex:1;min-width:250px">' +
+      (o ? '<div style="font-size:11.5px;font-weight:600;margin-bottom:1px"><i class="ti ti-user-search"></i> Individual — ' + window.APP.esc(o.name) + '</div>' +
+        '<div class="muted" style="font-size:10.5px;margin-bottom:3px">LexisNexis · Enformion · public records · death-index OSINT</div>' +
+        metric("LexisNexis identity confidence", o.lexisConfidence + "%") +
+        metric("Associated addresses", o.addresses) +
+        metric("Associated businesses (Enformion)", o.enformionBusinesses, o.enformionBusinesses >= 3) +
+        metric("Relatives / associates", o.relatives) +
+        metric("Professional license", o.licenseStatus) +
+        metric("SSA Death Master File", o.ssdiMatch ? "MATCH" : "No match", o.ssdiMatch) +
+        '<div style="margin-top:6px">' + osintList(o.osint) + '</div>'
+        : '<div style="font-size:11.5px;font-weight:600;margin-bottom:1px"><i class="ti ti-user-search"></i> Individual / officer</div><div class="muted" style="font-size:11px;padding:8px 0">No named officer on the business registration — individual OSINT enrichment not applicable.</div>') +
+      '</div></div>' +
+      '<div style="font-size:10.5px;color:var(--text3);margin-top:8px"><i class="ti ti-info-circle"></i> Synthetic external data for the demo. Secondary scoring corroborates the claims-based flag with registry, litigation and OSINT signals — the DataProvider seam accepts a real TrackLight / LexisNexis feed.</div>' +
+      '</div>';
+  }
 })();

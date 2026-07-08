@@ -160,6 +160,59 @@
     },
     getCase: function (providerId, mode) { return this.listCases({ all: true, mode: mode || "all" }).find(function (c) { return c.providerId === providerId; }) || null; },
 
+    // ---- TrackLight-style secondary scoring / external enrichment --------------
+    // Synthetic external-data profile (business registry + individual/officer OSINT)
+    // used to corroborate a claims-based flag with outside signals. Deterministic
+    // per provider. Seam: a real feed can populate p.secondaryProfile to override.
+    getSecondaryProfile: function (id) {
+      var p = providers[id]; if (!p) return null;
+      if (p.secondaryProfile) return p.secondaryProfile;
+      var seed = 0; for (var i = 0; i < id.length; i++) seed = (seed * 31 + id.charCodeAt(i)) >>> 0;
+      var rnd = function () { seed = (seed * 1103515245 + 12345) >>> 0; return seed / 4294967296; };
+      var money = function (min, max) { return Math.round((min + rnd() * (max - min)) / 1000) * 1000; };
+      var chain = p.role === "chain";
+      var ring = D.providers.filter(function (x) { return x.tin === p.tin; }).length > 1;
+      var tier = chain ? "chain" : ring ? "ring" : (p.riskScore || 0) >= 78 ? "risky" : "clean";
+      var base = { chain: { regs: 3, liens: 2, judg: 1, bank: 1, dock: 2, score: 88 }, ring: { regs: 2, liens: 1, judg: 1, bank: 0, dock: 1, score: 73 }, risky: { regs: 1, liens: 1, judg: 0, bank: 0, dock: 1, score: 61 }, clean: { regs: 0, liens: 0, judg: 0, bank: 0, dock: 0, score: 24 } }[tier];
+      var bizOsint = [];
+      if (chain) { bizOsint.push("Registered agent shared with 3 affiliated facilities"); bizOsint.push("Principal address is a commercial mail-drop (CMRA)"); }
+      else if (ring) { bizOsint.push("Suite # matches an unrelated billing company at the same address"); }
+      else if (tier === "risky") { bizOsint.push("No active web presence; listed phone disconnected"); }
+      else { bizOsint.push("No adverse business records found"); }
+      var offOsint = [];
+      if (p.officer) {
+        if (chain) { offOsint.push("Named on " + base.regs + " other active registrations (Enformion)"); offOsint.push("Linked to a dissolved behavioral-health entity (2019)"); }
+        else if (ring) { offOsint.push("Associated with the partner provider on state filings"); }
+        offOsint.push("No SSA Death Master File match");
+      }
+      return {
+        tier: tier, score: Math.min(99, base.score + Math.floor(rnd() * 8)),
+        business: {
+          name: p.registration || ("Billing entity · TIN " + p.tin),
+          registryStatus: tier === "risky" ? "Delinquent" : "Active",
+          state: p.state || "—",
+          incorporated: (2011 + Math.floor(rnd() * 11)) + "-" + String(1 + Math.floor(rnd() * 9)).padStart(2, "0"),
+          entityNo: (p.state || "US") + "-" + (1000000 + Math.floor(rnd() * 8999999)),
+          openCorporatesRelated: base.regs,
+          liens: base.liens, lienAmount: base.liens ? money(8000, 90000) : 0,
+          judgments: base.judg, judgmentAmount: base.judg ? money(5000, 120000) : 0,
+          bankruptcies: base.bank,
+          courtDockets: base.dock,
+          osint: bizOsint
+        },
+        officer: p.officer ? {
+          name: p.officer,
+          lexisConfidence: 82 + Math.floor(rnd() * 17),
+          addresses: 2 + Math.floor(rnd() * 4),
+          enformionBusinesses: base.regs + 1 + Math.floor(rnd() * 2),
+          relatives: 2 + Math.floor(rnd() * 5),
+          licenseStatus: chain ? "Active — 3 states" : "Active",
+          ssdiMatch: false,
+          osint: offOsint
+        } : null
+      };
+    },
+
     // ---- provider report card (radar spokes + drill-down) ----
     getGroups: function () { var p = D.providers.find(function (x) { return x.groupScores; }); return p ? p.groupScores.map(function (g) { return g.group; }) : []; },
     getReportCard: function (id) { var p = providers[id]; return p ? { groups: p.groupScores || [], attributes: p.groupAttributes || {} } : null; },
