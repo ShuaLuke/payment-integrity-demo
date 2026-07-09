@@ -285,6 +285,135 @@
         vetLinks: vetLinks,
         isRing: provIds.length > 1
       };
+    },
+
+    // ---- 837 EDI / CMS Pricing (Zellis) / Utilization Mgmt (Milliman) mocks ----
+    // Deterministic per-claim synthetic data. Seams for real third-party feeds:
+    // a real 837 parser, the Zellis pricing service, and Milliman MCG guidelines.
+    _seed: function (id, salt) { var s = 0; id = String(id) + (salt || ""); for (var i = 0; i < id.length; i++) s = (s * 31 + id.charCodeAt(i)) >>> 0; return function () { s = (s * 1103515245 + 12345) >>> 0; return s / 4294967296; }; },
+
+    // Map an internal claim to X12 837 loops/segments (837P professional / 837I institutional).
+    get837: function (claimId) {
+      var cl = claims[claimId]; if (!cl) return null;
+      var p = providers[cl.providerId] || {}, ve = veterans[cl.veteranId] || {};
+      var inst = cl.type === "837I", resid = (cl.lines || []).some(function (l) { return l.cpt === "H0018"; });
+      var rnd = this._seed(claimId, "edi"), npi = function () { return "1" + String(100000000 + Math.floor(rnd() * 899999999)); };
+      var pos = inst ? (resid ? "55" : "21") : ((cl.lines || []).some(function (l) { return l.cpt === "90935"; }) ? "65" : "11");
+      var posLabel = { "11": "Office", "21": "Inpatient Hospital", "22": "Outpatient Hospital", "55": "Residential Facility", "65": "ESRD Facility", "12": "Home" }[pos] || pos;
+      var rp = { "Dr. A. Morgan": 0, "Dr. L. Chen": 0, "Dr. R. Patel": 0, "Dr. S. Okafor": 0 };
+      var refName = Object.keys(rp)[Math.floor(rnd() * 4)];
+      return {
+        transaction: { setId: "837", implementationGuide: inst ? "005010X223A2 (Institutional)" : "005010X222A1 (Professional)", purpose: "CH — Chargeable", controlNumber: "0" + (1001 + Math.floor(rnd() * 8999)) },
+        submitter: { name: "VA Community Care Network", id: "VACCN01" },
+        receiver: { name: "VHA Payment Integrity", id: "VHAPI" },
+        billingProvider: { loop: "2010AA · NM1*85", npi: p.npi, name: p.name, taxIdType: "EI", taxId: p.tin, taxonomy: p.taxonomyCode || "—", address: (p.city || "") + ", " + (p.state || "") },
+        renderingProvider: { loop: "2310B · NM1*82", npi: npi(), name: p.name },
+        referringProvider: { loop: "2310A · NM1*DN", npi: npi(), name: refName },
+        subscriber: { loop: "2010BA · NM1*IL", memberId: ve.memberId || "—", name: ve.name || "—", dob: ve.dob || "—", gender: ve.sex || "—", relationship: "18 — Self", responsibility: "P — Primary" },
+        payer: { loop: "2010BB · NM1*PR", name: "VA CCN", id: "VACCN", claimControlNumber: "VACCN" + (1000000 + Math.floor(rnd() * 8999999)) },
+        claim: {
+          loop: "2300 · CLM", patientControlNumber: cl.claimNumber, totalClaimCharge: cl.billedAmount,
+          placeOfService: pos + " — " + posLabel, facilityQualifier: inst ? "A — Institutional" : "B — Professional",
+          frequencyCode: "1 — Original", providerSignature: "Y", assignmentOfBenefits: "Y", benefitAssignment: "Y", releaseOfInfo: "I — Informed consent",
+          billType: inst ? (resid ? "86X — Special facility (residential)" : "111 — Hospital inpatient") : null,
+          admissionType: inst ? "3 — Elective" : null,
+          statementDates: inst ? (cl.dateOfService + " – " + cl.dateOfService) : null,
+          diagnoses: (cl.diagnosisCodes || []).map(function (dx, i) { return { pointer: i + 1, qualifier: i === 0 ? "ABK — Principal (ICD-10-CM)" : "ABF — Other (ICD-10-CM)", code: dx }; })
+        },
+        serviceLines: (cl.lines || []).map(function (l, i) {
+          return {
+            lineNumber: i + 1, segment: inst ? "SV2 (2400)" : "SV1 (2400)",
+            procedure: "HC:" + l.cpt + ((l.modifiers || []).length ? ":" + l.modifiers.join(":") : ""),
+            revenueCode: inst ? (l.cpt === "H0018" ? "1002" : "0" + (250 + i * 50)) : null,
+            chargeAmount: l.billed, unitBasis: "UN", units: l.units || 1,
+            placeOfService: pos, diagnosisPointers: "1", serviceDate: "472 — " + cl.dateOfService,
+            flagged: (l.violatesRuleIds || []).length > 0
+          };
+        })
+      };
+    },
+
+    // CMS reference pricing (Zellis): submitted charge vs CMS-allowed per line + methodology.
+    getCmsPricing: function (claimId) {
+      var cl = claims[claimId]; if (!cl) return null;
+      var p = providers[cl.providerId] || {}, inst = cl.type === "837I";
+      var rnd = this._seed(claimId, "cms");
+      var method = function (l) {
+        if (inst) return l.cpt === "H0018" ? "Per-diem (residential)" : "OPPS / APC";
+        if (/^7/.test(l.cpt)) return "MPFS — Radiology";
+        if (/^9[0-3]/.test(l.cpt) && !/^99/.test(l.cpt)) return "MPFS — Medicine";
+        if (/^99/.test(l.cpt)) return "MPFS — E/M";
+        if (/^E/.test(l.cpt)) return "DMEPOS fee schedule";
+        return "MPFS";
+      };
+      var lines = (cl.lines || []).map(function (l) {
+        var flagged = (l.violatesRuleIds || []).length > 0;
+        // CMS reference pricing: a flagged line prices LOWER than paid (correct code /
+        // bundled / MUE-limited); clean lines price at the fee-schedule allowed.
+        var cms = flagged ? Math.round(l.allowed * (0.4 + rnd() * 0.2) * 100) / 100 : l.allowed;
+        var charge = Math.max(l.billed, Math.round(l.allowed * (1.7 + rnd() * 1.1)));
+        return {
+          cpt: l.cpt, description: l.description, modifiers: l.modifiers || [],
+          submittedCharge: charge, cmsAllowed: cms, paid: l.paid,
+          variance: Math.round((charge - cms) * 100) / 100, variancePct: cms ? Math.round(((charge - cms) / cms) * 100) : 0,
+          overPaid: l.paid > cms + 0.5, methodology: method(l), flagged: flagged
+        };
+      });
+      var sum = function (k) { return Math.round(lines.reduce(function (s, l) { return s + l[k]; }, 0) * 100) / 100; };
+      return {
+        source: "Zellis — CMS reference pricing", asOf: "2025 CMS fee schedules", locality: (p.state || "TX") + " · locality 05",
+        lines: lines,
+        totals: { submitted: sum("submittedCharge"), cmsAllowed: sum("cmsAllowed"), paid: sum("paid"), variance: Math.round((sum("submittedCharge") - sum("cmsAllowed")) * 100) / 100, overpayment: Math.round(Math.max(0, sum("paid") - sum("cmsAllowed")) * 100) / 100 },
+        rulesApplied: ["MPFS locality adjustment (" + (p.state || "TX") + " 05)", inst ? "OPPS status-indicator pricing" : "RVU × conversion factor ($32.74)", "MPPR — multiple-procedure payment reduction", "NCCI PTP bundling edits", "Site-of-service differential"]
+      };
+    },
+
+    // Utilization management (Milliman MCG): clinical criteria, level of care, LOS.
+    getUtilizationMgmt: function (claimId) {
+      var cl = claims[claimId]; if (!cl) return null;
+      var resid = (cl.lines || []).some(function (l) { return l.cpt === "H0018"; });
+      var dialysis = (cl.lines || []).some(function (l) { return l.cpt === "90935"; });
+      var em = (cl.lines || []).some(function (l) { return /^99/.test(l.cpt); });
+      var rnd = this._seed(claimId, "um"), base = { source: "Milliman MCG Care Guidelines", edition: "28th Edition (2025)" };
+      if (resid) {
+        return Object.assign(base, {
+          guideline: { code: "BHG-RES", title: "Residential Behavioral Health Treatment" },
+          levelOfCare: { recommended: "Intensive Outpatient / Partial Hospitalization", billed: "Residential — 24-hour" },
+          lengthOfStay: { recommendedDays: 14, actualDays: 27 + Math.floor(rnd() * 4), unit: "days" },
+          priorAuth: { required: true, number: "UM-" + (100000 + Math.floor(rnd() * 899999)), status: "Approved — 14 days" },
+          criteria: [
+            { label: "24-hour supervision medically necessary", met: false, note: "Documentation does not support 24-hour level of care beyond day 14." },
+            { label: "Active treatment plan with measurable goals", met: true },
+            { label: "Failed a lower level of care", met: true },
+            { label: "Continued-stay criteria met (day 15+)", met: false, note: "Patient stable, no worsening — step-down indicated." }
+          ],
+          determination: "Does not meet continued-stay criteria beyond the authorized 14 days"
+        });
+      }
+      if (dialysis) {
+        return Object.assign(base, {
+          guideline: { code: "ORG-DIAL", title: "Hemodialysis — Chronic (ESRD)" },
+          levelOfCare: { recommended: "Outpatient dialysis 3×/week", billed: "Outpatient dialysis" },
+          priorAuth: { required: false, number: null, status: "Standing ESRD order on file" },
+          criteria: [
+            { label: "ESRD diagnosis documented (N18.6)", met: true },
+            { label: "Frequency ≤ 3 sessions / week", met: true, note: "Standing M/W/F regimen consistent with guideline." },
+            { label: "Vascular access functioning", met: true }
+          ],
+          determination: "Meets criteria — frequency consistent with ESRD standing order"
+        });
+      }
+      return Object.assign(base, {
+        guideline: { code: "AMB-EM", title: "Ambulatory Evaluation & Management" },
+        levelOfCare: { recommended: "Outpatient office visit", billed: "Outpatient office visit" },
+        priorAuth: { required: false, number: null, status: "Not required for this service" },
+        criteria: [
+          { label: "Service medically necessary for documented condition", met: true },
+          { label: "Level of service supported by documentation", met: !em, note: em ? "MCG complexity mapping supports a lower E/M level than billed." : undefined },
+          { label: "Frequency within expected range", met: true }
+        ],
+        determination: em ? "Review — documented complexity maps to a lower E/M level" : "Meets criteria"
+      });
     }
   };
 })();

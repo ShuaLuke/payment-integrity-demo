@@ -114,7 +114,7 @@
 
   // ---------- tabs ----------
   function tabBar(active, undecided) {
-    var tabs = [["overview", "Overview"], ["evidence", "Evidence"], ["analysis", "Analysis"], ["network", "Network"], ["decision", "Decision"]];
+    var tabs = [["overview", "Overview"], ["evidence", "Evidence"], ["pricing", "Pricing"], ["utilization", "Utilization"], ["analysis", "Analysis"], ["network", "Network"], ["decision", "Decision"]];
     return '<div style="display:flex;gap:2px;border-bottom:0.5px solid var(--border);margin-bottom:10px">' +
       tabs.map(function (t) { return '<button class="ctab' + (t[0] === active ? " active" : "") + '" data-tab="' + t[0] + '">' + t[1] + (t[0] === "decision" && undecided ? ' <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);vertical-align:middle;margin-left:2px"></span>' : "") + '</button>'; }).join("") +
       '</div>';
@@ -163,6 +163,8 @@
     document.querySelectorAll(".ctab").forEach(function (b) { b.classList.toggle("active", b.getAttribute("data-tab") === name); });
     if (name === "overview") { panel.innerHTML = overviewHtml(ctx.a, ctx.prepay); var ovd = document.getElementById("c-ov-decide"); if (ovd) ovd.onclick = function () { showTab("decision"); }; wireWorkingRecord(ctx.id); wirePeerStats(ctx.a); }
     else if (name === "evidence") { panel.innerHTML = evidenceHtml(ctx.a, ctx.cl); wireEvidenceUploads(ctx.id); wireEvidenceDocs(ctx.id, ctx.a, ctx.cl); wireClaimLines(panel); }
+    else if (name === "pricing") { panel.innerHTML = pricingHtml(ctx.a, ctx.cl); }
+    else if (name === "utilization") { panel.innerHTML = umHtml(ctx.a, ctx.cl); }
     else if (name === "analysis") { panel.innerHTML = analysisHtml(ctx.a); var rc = document.getElementById("c-openrc"); if (rc) rc.onclick = function () { window.APP.openProvider(ctx.p.id); }; }
     else if (name === "network") { panel.innerHTML = networkHtml(); renderCollusion(ctx.p, ctx.id); }
     else if (name === "decision") {
@@ -364,6 +366,73 @@
       '<div style="font-weight:500;font-size:13px"><i class="ti ti-paperclip" style="color:var(--accent-d)"></i> Attached documents <span class="muted" style="font-weight:400;font-size:11px">· upload supporting records to the case (demo — files are not stored)</span></div>' +
       '<div><input type="file" id="c-upload-input" style="display:none"><button class="btn primary" id="c-upload-btn" style="font-size:12px"><i class="ti ti-upload"></i> Attach document</button></div></div>' +
       '<div id="c-uploads-list">' + uploadsListHtml(a.id) + '</div></div>' +
+      edi837Html(a, cl) +
+      '</div>';
+  }
+
+  // ---------- 837 EDI elements (claim mapped to X12 837 loops/segments) ----------
+  function edi837Html(a, cl) {
+    if (!cl) return "";
+    var d = window.DP.get837(cl.id); if (!d) return "";
+    var kv = function (k, v) { return '<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0;font-size:11.5px;border-top:0.5px solid var(--border2)"><span style="color:var(--text2)">' + k + '</span><span class="mono" style="text-align:right">' + window.APP.esc(String(v == null ? "—" : v)) + '</span></div>'; };
+    var sect = function (title, loop, rows) { return '<div style="margin-bottom:8px;break-inside:avoid"><div style="font-size:11px;font-weight:600;color:var(--accent-d)">' + title + ' <span class="mono" style="font-weight:400;color:var(--text3);font-size:10px">' + loop + '</span></div>' + rows + '</div>'; };
+    var b = d.billingProvider, s = d.subscriber, py = d.payer, c = d.claim, t = d.transaction;
+    var dxRows = c.diagnoses.length ? c.diagnoses.map(function (x) { return kv("Dx " + x.pointer + " · " + x.qualifier, x.code); }).join("") : kv("Diagnosis", "—");
+    var lineRows = d.serviceLines.map(function (l) {
+      return '<div style="padding:5px 0;border-top:0.5px solid var(--border2)' + (l.flagged ? ';background:var(--high-bg)' : '') + '"><div style="font-size:11.5px;font-weight:500">Line ' + l.lineNumber + ' · <span class="mono">' + window.APP.esc(l.procedure) + '</span> ' + (l.flagged ? '<i class="ti ti-flag" style="color:var(--high-tx)"></i>' : '') + '</div><div style="font-size:10.5px;color:var(--text2)" class="mono">' + l.segment + ' · chg $' + l.chargeAmount + ' · ' + l.unitBasis + ' ' + l.units + (l.revenueCode ? ' · rev ' + l.revenueCode : '') + ' · POS ' + l.placeOfService + ' · dx ptr ' + l.diagnosisPointers + ' · DTP ' + l.serviceDate + '</div></div>';
+    }).join("");
+    var body =
+      sect("Transaction", "ST · 837", kv("Set / IG", t.setId + " · " + t.implementationGuide) + kv("Purpose", t.purpose) + kv("Submitter", d.submitter.name) + kv("Receiver", d.receiver.name)) +
+      sect("Billing provider", b.loop, kv("NPI", b.npi) + kv("Name", b.name) + kv("Tax ID (" + b.taxIdType + ")", b.taxId) + kv("Taxonomy", b.taxonomy) + kv("Address", b.address)) +
+      sect("Rendering / referring", "2310", kv("Rendering NPI", d.renderingProvider.npi) + kv("Referring", d.referringProvider.name + " · " + d.referringProvider.npi)) +
+      sect("Subscriber", s.loop, kv("Member ID", s.memberId) + kv("Name", s.name) + kv("DOB / sex", s.dob + " · " + s.gender) + kv("Relationship", s.relationship)) +
+      sect("Payer", py.loop, kv("Payer", py.name + " (" + py.id + ")") + kv("Claim control #", py.claimControlNumber)) +
+      sect("Claim", c.loop, kv("Patient control # · CLM01", c.patientControlNumber) + kv("Total charge · CLM02", "$" + c.totalClaimCharge) + kv("Place of service · CLM05-1", c.placeOfService) + kv("Frequency · CLM05-3", c.frequencyCode) + (c.billType ? kv("Bill type", c.billType) : "") + (c.admissionType ? kv("Admission type", c.admissionType) : "") + (c.statementDates ? kv("Statement dates", c.statementDates) : "") + kv("Benefit assignment", c.benefitAssignment) + dxRows) +
+      sect("Service lines", "2400 · " + (d.serviceLines[0] ? d.serviceLines[0].segment : "SV"), lineRows);
+    return '<div class="card"><details><summary style="cursor:pointer;font-weight:500;font-size:13px;list-style:none"><i class="ti ti-file-code" style="color:var(--accent-d)"></i> 837 EDI elements <span class="muted" style="font-weight:400;font-size:11px">· this claim mapped to X12 837 loops &amp; segments</span></summary><div style="margin-top:9px;display:grid;grid-template-columns:1fr 1fr;gap:0 18px">' + body + '</div></details></div>';
+  }
+
+  // ---------- CMS pricing (Zellis) — submitted charge vs CMS-allowed ----------
+  function noClaimCard(what) { return '<div class="card" style="text-align:center;padding:28px"><i class="ti ti-file-off" style="font-size:26px;color:var(--text3)"></i><div style="font-size:12.5px;color:var(--text2);margin-top:8px">No itemized claim on this lead — ' + what + ' is unavailable.</div><div style="font-size:11px;color:var(--text3);margin-top:3px">Manual / referral leads have no 837 claim until records are attached.</div></div>'; }
+  function pricingHtml(a, cl) {
+    if (!cl) return noClaimCard("CMS pricing");
+    var d = window.DP.getCmsPricing(cl.id); if (!d) return noClaimCard("CMS pricing");
+    var m = window.DP.usd;
+    var rows = d.lines.map(function (l) {
+      var vpos = l.variance > 0;
+      return '<tr' + (l.flagged ? ' class="flag-row"' : '') + '><td class="mono">' + l.cpt + ((l.modifiers || []).length ? '-' + l.modifiers.join(",") : '') + '</td>' +
+        '<td>' + window.APP.esc(l.description) + '</td><td class="right">' + m(l.submittedCharge) + '</td><td class="right">' + m(l.cmsAllowed) + '</td><td class="right">' + m(l.paid) + '</td>' +
+        '<td class="right" style="color:' + (vpos ? "var(--high-tx)" : "var(--text2)") + ';font-weight:500">' + (vpos ? "+" : "") + m(l.variance) + ' <span style="font-size:10px">(' + l.variancePct + '%)</span></td>' +
+        '<td style="font-size:11px">' + window.APP.esc(l.methodology) + (l.overPaid ? ' <span class="tag" style="background:var(--high-bg);color:var(--high-tx)">over CMS</span>' : '') + '</td></tr>';
+    }).join("");
+    return '<div style="display:flex;flex-direction:column;gap:10px">' +
+      '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div style="font-weight:500;font-size:13px"><i class="ti ti-currency-dollar" style="color:var(--accent-d)"></i> CMS pricing comparison <span class="muted" style="font-weight:400;font-size:11px">· submitted charge vs CMS-allowed</span></div>' +
+      '<span class="tag" style="background:var(--surface)"><i class="ti ti-plug-connected"></i> ' + window.APP.esc(d.source) + '</span></div><div style="font-size:11px;color:var(--text2);margin-top:4px">' + d.asOf + ' · ' + window.APP.esc(d.locality) + '</div></div>' +
+      '<div class="card" style="padding:0;overflow:hidden"><table><thead><tr><th>CPT</th><th>Description</th><th class="right">Submitted</th><th class="right">CMS allowed</th><th class="right">Paid</th><th class="right">Variance</th><th>Methodology</th></tr></thead><tbody>' + rows +
+      '<tr style="font-weight:600;border-top:1px solid var(--border)"><td colspan="2">Claim total</td><td class="right">' + m(d.totals.submitted) + '</td><td class="right">' + m(d.totals.cmsAllowed) + '</td><td class="right">' + m(d.totals.paid) + '</td><td class="right" style="color:var(--high-tx)">+' + m(d.totals.variance) + '</td><td></td></tr></tbody></table></div>' +
+      (d.totals.overpayment > 0 ? '<div style="background:var(--high-bg);border:0.5px solid #f3c9c9;border-radius:7px;padding:9px 11px;font-size:11.5px;color:var(--high-tx)"><b>' + m(d.totals.overpayment) + '</b> paid above the CMS-allowed amount — recoverable per CMS reference pricing.</div>' : '') +
+      '<div class="card"><div style="font-weight:500;font-size:12.5px;margin-bottom:6px">Pricing rules applied</div>' + d.rulesApplied.map(function (r) { return '<div style="display:flex;gap:7px;font-size:11.5px;color:var(--text2);padding:2px 0"><i class="ti ti-check" style="color:var(--accent-d)"></i>' + window.APP.esc(r) + '</div>'; }).join("") + '</div>' +
+      '</div>';
+  }
+
+  // ---------- Utilization management (Milliman MCG) ----------
+  function umKv(k, v) { return '<div class="card" style="padding:7px 9px;box-shadow:none;background:var(--surface)"><div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.03em">' + k + '</div><div style="font-size:12px;font-weight:500;margin-top:2px">' + window.APP.esc(v) + '</div></div>'; }
+  function losRow(label, val, rec, act, color) { var max = Math.max(rec, act, 1); var w = Math.round(val / max * 100); return '<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:2px"><span>' + label + '</span><span style="font-weight:600">' + val + ' days</span></div><div style="height:9px;background:var(--border2);border-radius:5px;overflow:hidden"><div style="height:100%;width:' + w + '%;background:' + color + '"></div></div></div>'; }
+  function umHtml(a, cl) {
+    if (!cl) return noClaimCard("utilization management");
+    var d = window.DP.getUtilizationMgmt(cl.id); if (!d) return noClaimCard("utilization management");
+    var los = d.lengthOfStay;
+    var dl = d.determination.toLowerCase();
+    var meets = dl.indexOf("does not") < 0 && dl.indexOf("review") < 0;
+    var critRows = d.criteria.map(function (c) { return '<div style="display:flex;gap:9px;align-items:flex-start;padding:6px 0;border-top:0.5px solid var(--border2)"><i class="ti ti-' + (c.met ? "circle-check" : "circle-x") + '" style="color:' + (c.met ? "var(--low)" : "var(--high)") + ';font-size:16px;margin-top:1px"></i><div><div style="font-size:12px' + (c.met ? "" : ";font-weight:500") + '">' + window.APP.esc(c.label) + '</div>' + (c.note ? '<div style="font-size:11px;color:var(--text2)">' + window.APP.esc(c.note) + '</div>' : '') + '</div></div>'; }).join("");
+    var losBar = los ? ('<div class="card"><div style="font-weight:500;font-size:12.5px;margin-bottom:7px">Length of stay</div>' + losRow("MCG recommended", los.recommendedDays, los.recommendedDays, los.actualDays, "#98a4b3") + losRow("Actual (billed)", los.actualDays, los.recommendedDays, los.actualDays, los.actualDays > los.recommendedDays ? "var(--high)" : "var(--accent)") + '<div style="font-size:11px;color:var(--text2);margin-top:4px">' + (los.actualDays > los.recommendedDays ? ('<b style="color:var(--high-tx)">' + (los.actualDays - los.recommendedDays) + ' days</b> beyond the MCG-recommended ' + los.recommendedDays + '-day stay.') : 'Within the recommended range.') + '</div></div>') : '';
+    return '<div style="display:flex;flex-direction:column;gap:10px">' +
+      '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div style="font-weight:500;font-size:13px"><i class="ti ti-clipboard-heart" style="color:var(--accent-d)"></i> Utilization management <span class="muted" style="font-weight:400;font-size:11px">· clinical criteria &amp; medical necessity</span></div>' +
+      '<span class="tag" style="background:var(--surface)"><i class="ti ti-plug-connected"></i> ' + window.APP.esc(d.source) + ' · ' + d.edition + '</span></div>' +
+      '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px">' + umKv("Guideline", d.guideline.code + " — " + d.guideline.title) + umKv("Recommended level of care", d.levelOfCare.recommended) + umKv("Billed level of care", d.levelOfCare.billed) + umKv("Prior authorization", d.priorAuth.required ? ((d.priorAuth.number || "—") + " · " + d.priorAuth.status) : d.priorAuth.status) + '</div></div>' +
+      losBar +
+      '<div class="card"><div style="font-weight:500;font-size:12.5px;margin-bottom:2px">MCG criteria</div>' + critRows + '</div>' +
+      '<div style="background:' + (meets ? "var(--low-bg)" : "var(--high-bg)") + ';border:0.5px solid ' + (meets ? "#bfe0c9" : "#f3c9c9") + ';border-radius:7px;padding:10px 12px;font-size:12px;color:' + (meets ? "var(--low-tx)" : "var(--high-tx)") + '"><i class="ti ti-' + (meets ? "circle-check" : "alert-triangle") + '"></i> <b>Determination:</b> ' + window.APP.esc(d.determination) + '</div>' +
       '</div>';
   }
   function fmtSize(b) { return b >= 1048576 ? (b / 1048576).toFixed(1) + " MB" : b >= 1024 ? Math.round(b / 1024) + " KB" : b + " B"; }
