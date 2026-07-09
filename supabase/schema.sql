@@ -15,8 +15,19 @@ create table if not exists public.case_state (
   rationale        text,
   review_state     text,          -- pending | approved | returned | final | null
   return_note      text,
+  case_link        text,          -- explicit case assignment: new:<leadId> or an existing caseKey
   updated_by       text,
   updated_at       timestamptz default now()
+);
+-- additive migration for existing installs:
+alter table public.case_state add column if not exists case_link text;
+
+-- Per-case closure state (keyed by the case's primary provider id)
+create table if not exists public.case_closure (
+  provider_id text primary key,
+  reason      text,
+  closed_by   text,
+  updated_at  timestamptz default now()
 );
 
 -- Immutable audit trail
@@ -40,17 +51,34 @@ create policy "auth read case_state"   on public.case_state for select to authen
 create policy "auth write case_state"  on public.case_state for insert to authenticated with check (true);
 create policy "auth update case_state" on public.case_state for update to authenticated using (true) with check (true);
 
+alter table public.case_closure enable row level security;
+drop policy if exists "auth read case_closure"   on public.case_closure;
+drop policy if exists "auth write case_closure"  on public.case_closure;
+drop policy if exists "auth update case_closure" on public.case_closure;
+drop policy if exists "auth delete case_closure" on public.case_closure;
+create policy "auth read case_closure"   on public.case_closure for select to authenticated using (true);
+create policy "auth write case_closure"  on public.case_closure for insert to authenticated with check (true);
+create policy "auth update case_closure" on public.case_closure for update to authenticated using (true) with check (true);
+create policy "auth delete case_closure" on public.case_closure for delete to authenticated using (true);
+
 drop policy if exists "auth read audit"  on public.audit_log;
 drop policy if exists "auth write audit" on public.audit_log;
 create policy "auth read audit"  on public.audit_log for select to authenticated using (true);
 create policy "auth write audit" on public.audit_log for insert to authenticated with check (true);
 
 -- Realtime (optional, enables live analyst⇄supervisor updates later)
-alter publication supabase_realtime add table public.case_state;
-alter publication supabase_realtime add table public.audit_log;
+do $$ begin
+  alter publication supabase_realtime add table public.case_state;
+exception when duplicate_object then null; end $$;
+do $$ begin
+  alter publication supabase_realtime add table public.audit_log;
+exception when duplicate_object then null; end $$;
+do $$ begin
+  alter publication supabase_realtime add table public.case_closure;
+exception when duplicate_object then null; end $$;
 
 -- ---- Reset helper (for the "Reset demo" button) ----
 create or replace function public.reset_demo() returns void language sql security definer as $$
-  delete from public.case_state; delete from public.audit_log;
+  delete from public.case_state; delete from public.audit_log; delete from public.case_closure;
 $$;
 grant execute on function public.reset_demo() to authenticated;

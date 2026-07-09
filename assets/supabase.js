@@ -22,6 +22,20 @@
       updated_by: window.APP.ROLES[window.APP.state.role].name, updated_at: new Date().toISOString()
     }).then(function (r) { if (r.error) console.warn("saveCase:", r.error.message); });
   }
+  // persist a lead's case assignment. Separate write so a missing case_link column
+  // (migration not yet applied) can never break the core decision/case_state save.
+  function saveCaseLink(id) {
+    if (!SB.ready) return;
+    client.from("case_state").upsert({ claim_id: id, case_link: (window.APP.state.caseLinks || {})[id] || null, updated_by: window.APP.ROLES[window.APP.state.role].name, updated_at: new Date().toISOString() })
+      .then(function (r) { if (r.error) console.warn("saveCaseLink:", r.error.message); });
+  }
+  // persist (or clear) a case closure, keyed by the case's primary provider id
+  function saveClosure(pid) {
+    if (!SB.ready) return;
+    var c = (window.APP.state.closedCases || {})[pid];
+    if (!c) { client.from("case_closure").delete().eq("provider_id", pid).then(function (r) { if (r.error) console.warn("reopenCase:", r.error.message); }); return; }
+    client.from("case_closure").upsert({ provider_id: pid, reason: c.reason || null, closed_by: c.by || window.APP.ROLES[window.APP.state.role].name, updated_at: new Date().toISOString() }).then(function (r) { if (r.error) console.warn("closeCase:", r.error.message); });
+  }
   function saveAudit(action, detail) {
     if (!SB.ready) return;
     client.from("audit_log").insert({ action: action, detail: detail, user_name: window.APP.ROLES[window.APP.state.role].name })
@@ -30,14 +44,17 @@
   function loadState() {
     return Promise.all([
       client.from("case_state").select("*"),
-      client.from("audit_log").select("*").order("ts", { ascending: false }).limit(1000)
+      client.from("audit_log").select("*").order("ts", { ascending: false }).limit(1000),
+      client.from("case_closure").select("*")
     ]).then(function (res) {
-      var cs = res[0].data || [], al = res[1].data || [];
+      var cs = res[0].data || [], al = res[1].data || [], cc = res[2].data || [];
       cs.forEach(function (row) {
         var a = window.DP.raw.allegations.find(function (x) { return x.id === row.claim_id; });
         if (a) { if (row.status) a.status = row.status; a.assignee = row.assignee || null; }
         if (row.decision_outcome) window.APP.state.decisions[row.claim_id] = { outcome: row.decision_outcome, rationale: row.rationale, reviewState: row.review_state, returnNote: row.return_note, status: row.status, ts: new Date(row.updated_at) };
+        if (row.case_link) (window.APP.state.caseLinks = window.APP.state.caseLinks || {})[row.claim_id] = row.case_link;
       });
+      cc.forEach(function (row) { (window.APP.state.closedCases = window.APP.state.closedCases || {})[row.provider_id] = { reason: row.reason, by: row.closed_by, ts: new Date(row.updated_at) }; });
       window.APP.state.audit = al.map(function (e) { return { ts: new Date(e.ts), action: e.action, detail: e.detail, user: e.user_name }; });
     });
   }
@@ -47,6 +64,9 @@
     var _d = window.APP.applyDecision; window.APP.applyDecision = function (id, o, r) { _d(id, o, r); saveCase(id); };
     var _s = window.APP.supervisorAction; window.APP.supervisorAction = function (id, ac, n) { _s(id, ac, n); saveCase(id); };
     var _as = window.APP.assignCase; window.APP.assignCase = function (id, n) { _as(id, n); saveCase(id); };
+    var _sl = window.APP.setLeadCase; window.APP.setLeadCase = function (id, choice) { _sl(id, choice); saveCaseLink(id); };
+    var _cc = window.APP.closeCase; window.APP.closeCase = function (pid, reason) { _cc(pid, reason); saveClosure(pid); };
+    var _rc = window.APP.reopenCase; window.APP.reopenCase = function (pid) { _rc(pid); saveClosure(pid); };
     window.APP.resetDemo = function () { client.rpc("reset_demo").then(function () { location.reload(); }); };
     window.APP.signOut = function () { client.auth.signOut().then(function () { location.reload(); }); };
   }

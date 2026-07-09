@@ -115,7 +115,7 @@
   // ---------- tabs ----------
   function tabBar(active, undecided) {
     var tabs = [["overview", "Overview"], ["evidence", "Evidence"], ["pricing", "Pricing"], ["utilization", "Utilization"], ["analysis", "Analysis"], ["network", "Network"], ["decision", "Decision"]];
-    return '<div style="display:flex;gap:2px;border-bottom:0.5px solid var(--border);margin-bottom:10px">' +
+    return '<div style="display:flex;flex-wrap:wrap;gap:2px;border-bottom:0.5px solid var(--border);margin-bottom:10px">' +
       tabs.map(function (t) { return '<button class="ctab' + (t[0] === active ? " active" : "") + '" data-tab="' + t[0] + '">' + t[1] + (t[0] === "decision" && undecided ? ' <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);vertical-align:middle;margin-left:2px"></span>' : "") + '</button>'; }).join("") +
       '</div>';
   }
@@ -502,7 +502,7 @@
   function analysisHtml(a) {
     var p = a.provider;
     return '<div style="display:flex;flex-direction:column;gap:10px">' +
-      exposureBreakdown(a) + emMix(p) + volumeChart(p, a) + reportCardSnippet(p) + '</div>';
+      exposureBreakdown(a) + emMix(p) + volumeChart(p, a) + '</div>';
   }
   function exposureBreakdown(a) {
     var cl = a.claim, prepay = a.mode === "prepay";
@@ -693,7 +693,7 @@
       '<button id="c-submit" class="btn primary" style="margin-top:9px" disabled><i class="ti ti-send"></i>Submit decision</button>';
     var choice = null;
     var outMap = { c: "confirm", d: "dismiss", e: "escalate" };
-    var hints = { c: "Confirms improper payment — " + window.DP.usd(a.exposurePost) + " moves to Submitted for recovery, and this lead opens (or joins) " + window.APP.esc(a.provider ? a.provider.name + "'s" : "the provider's") + " case.", d: "Logged as a false positive — outcome feeds model retraining. No case is opened.", e: "Escalates as coordinated behavior — opens (or joins) the provider's case for investigation." };
+    var hints = { c: "Confirms improper payment — " + window.DP.usd(a.exposurePost) + " moves to Submitted for recovery. Assign it to a case below.", d: "Logged as a false positive — outcome feeds model retraining. No case is opened.", e: "Escalates as coordinated behavior for investigation. Assign it to a case below." };
     var needsCase = function () { return choice === "c" || choice === "e"; };
     var caseValid = function () {
       if (!needsCase()) return true;
