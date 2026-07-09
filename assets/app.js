@@ -107,6 +107,19 @@
     decisionFor: function (id) { return APP.state.decisions[id] || null; },
 
     ANALYSTS: ["Dana Whitmore", "Maria Delgado", "Devon Carter", "Priya Nair"],
+    // Per-analyst profile for supervisor workload management: FWA-type strengths
+    // (assign work to whoever is best at it) + performance indicators.
+    ANALYST_META: {
+      "Dana Whitmore": { strengths: ["Upcoding", "Duplicate claim"], completed: 38, avgDays: 5.8, closedExp2w: 142000 },
+      "Maria Delgado": { strengths: ["Unbundling", "Modifier misuse"], completed: 44, avgDays: 6.5, closedExp2w: 98000 },
+      "Devon Carter": { strengths: ["Residential length-of-stay abuse", "Kickback / self-referral", "Deceased patient"], completed: 29, avgDays: 8.1, closedExp2w: 210000 },
+      "Priya Nair": { strengths: ["Frequency / over-utilization", "Phantom billing", "Billing outside specialty", "Authorization mismatch"], completed: 33, avgDays: 6.9, closedExp2w: 76000 }
+    },
+    // The analyst who specializes in a given FWA type (for assign-by-strength).
+    bestAnalystFor: function (fwaType) {
+      var names = APP.ANALYSTS.filter(function (n) { return (APP.ANALYST_META[n] || {}).strengths && APP.ANALYST_META[n].strengths.indexOf(fwaType) >= 0; });
+      return names.length ? names[0] : null;
+    },
     // Supervisor assigns / reassigns a flagged claim to an analyst (or unassigns).
     assignCase: function (id, name) {
       var a = window.DP.raw.allegations.find(function (x) { return x.id === id; });
@@ -114,6 +127,17 @@
       a.assignee = name || null;
       if (name && a.status === "New") a.status = "Assigned";
       APP.auditLog("CASE_ASSIGNED", "Lead #" + id + " · " + (name ? "→ " + name : "unassigned"));
+    },
+    // ---- case closure (a case can be Closed once its work is done) ----
+    isCaseClosed: function (pid) { return !!(APP.state.closedCases && APP.state.closedCases[pid]); },
+    closeCase: function (pid, reason) {
+      (APP.state.closedCases = APP.state.closedCases || {})[pid] = { reason: reason || "Resolved", ts: new Date(), by: (APP.ROLES[APP.state.role] || {}).name };
+      var p = window.DP.getProvider(pid);
+      APP.auditLog("CASE_CLOSED", "Case " + pid + (p ? " (" + p.name + ")" : "") + (reason ? " · " + reason : ""));
+    },
+    reopenCase: function (pid) {
+      if (APP.state.closedCases) delete APP.state.closedCases[pid];
+      APP.auditLog("CASE_REOPENED", "Case " + pid + " reopened");
     },
     openTeam: function (sel) { APP.state.teamSel = sel; APP.nav("team"); },
     openBusiness: function (id) { (APP.state.hist = APP.state.hist || []).push(APP.snapshot()); APP.state.businessId = id; APP.nav("business", { id: id }); },
@@ -275,7 +299,7 @@
     // ---- information architecture: 4 areas, each with sub-views ----
     SUBS: {
       home: [],
-      casework: [{ v: "queue", l: "Work queue", role: "analyst" }, { v: "approvals", l: "Approvals", role: "supervisor" }, { v: "team", l: "Team", role: "supervisor" }, { v: "investigations", l: "Cases" }],
+      casework: [{ v: "queue", l: "Leads", role: "analyst" }, { v: "approvals", l: "Approvals", role: "supervisor" }, { v: "team", l: "Team", role: "supervisor" }, { v: "investigations", l: "Cases" }],
       insights: [{ v: "analytics", l: "Overview" }, { v: "network", l: "Network" }, { v: "businesses", l: "Businesses" }, { v: "heatmap", l: "Heatmap" }],
       library: [{ v: "rules", l: "Rules" }, { v: "audit", l: "Audit" }]
     },
@@ -296,10 +320,10 @@
       if (s.view === "claim") return "Lead #" + s.allegationId;
       if (s.view === "provider") { var p = window.DP.getProvider(s.providerId); return p ? p.name : "Provider"; }
       if (s.view === "business") { var b = window.DP.getBusiness(s.businessId); return b ? b.name : "Business"; }
-      var map = { queue: "Work queue", home: "Home", investigations: "Cases", approvals: "Approvals", analytics: "Analytics", network: "Network", businesses: "Businesses", heatmap: "Heatmap", rules: "Rules", audit: "Audit" };
+      var map = { queue: "Leads", home: "Home", investigations: "Cases", approvals: "Approvals", analytics: "Analytics", network: "Network", businesses: "Businesses", heatmap: "Heatmap", rules: "Rules", audit: "Audit" };
       return map[s.view] || "Back";
     },
-    backLabel: function () { return APP.state.hist && APP.state.hist.length ? APP.labelForSnap(APP.state.hist[APP.state.hist.length - 1]) : "Work queue"; },
+    backLabel: function () { return APP.state.hist && APP.state.hist.length ? APP.labelForSnap(APP.state.hist[APP.state.hist.length - 1]) : "Leads"; },
     goBack: function () {
       var t = (APP.state.hist || []).pop();
       if (!t) return APP.nav(APP.isSupervisor() ? "approvals" : "queue");
@@ -376,9 +400,12 @@
       return '<span class="chip ' + cls + '"><span class="s">' + r + '</span> ' + lbl + '</span>';
     },
     statusPill: function (s) {
-      var m = { "New": "p-new", "Assigned": "p-asg", "Under review": "p-rev", "Recommended close": "p-rec", "Confirmed": "p-conf", "Dismissed": "p-dis", "Escalated": "p-esc", "Pending review": "p-pend", "Returned": "p-ret", "Pending": "p-new", "Cleared to pay": "p-dis", "On hold": "p-esc", "Denied": "p-conf" };
+      var m = { "New": "p-new", "Assigned": "p-asg", "Under review": "p-rev", "Recommended close": "p-rec", "Confirmed": "p-conf", "Dismissed": "p-dis", "Escalated": "p-esc", "Pending review": "p-pend", "Returned": "p-ret", "Pending": "p-new", "Cleared to pay": "p-dis", "On hold": "p-esc", "Denied": "p-conf", "Pending Case": "p-pend", "Closed": "p-dis" };
       return '<span class="pill ' + (m[s] || "p-asg") + '">' + s + '</span>';
     },
+    // A lead's shown status: once it's reviewed & confirmed/escalated it has fed a
+    // case, so it reads "Pending Case" (the lead's terminal state) in the queues.
+    leadStatus: function (a) { return (window.DP && window.DP.isCaseLead && window.DP.isCaseLead(a)) ? "Pending Case" : a.status; },
     srcTag: function (s) { var lbl = s === "Pattern Recognition" ? "ML/AI" : s === "Rules Engine" ? "Rules" : s === "Both" ? "ML/AI + Rules" : s; return '<span class="muted" style="font-size:10.5px">' + window.APP.esc(lbl) + '</span>'; }
   };
 

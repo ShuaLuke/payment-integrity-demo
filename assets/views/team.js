@@ -29,10 +29,33 @@
       var selName = isPool ? "Unassigned pool" : sel;
       var selList = (isPool ? unassigned : forAnalyst(sel)).sort(function (a, b) { return b.riskScore - a.riskScore; });
 
+      // Team performance & workload — KPIs per analyst incl. completed + avg time.
+      function perfCard() {
+        var rows = team.map(function (n) {
+          var list = forAnalyst(n);
+          var high = list.filter(function (a) { return a.riskScore >= 80; }).length;
+          var exp = list.reduce(function (s, a) { return s + (a.exposurePost || 0); }, 0);
+          var m = window.APP.ANALYST_META[n] || {};
+          var strengths = (m.strengths || []).slice(0, 3).map(function (t) { return '<span class="tag fwa">' + window.APP.esc(t) + '</span>'; }).join(" ");
+          return '<tr><td><div style="display:flex;align-items:center;gap:8px"><span class="avatar" style="width:24px;height:24px;font-size:9px">' + initials(n) + '</span>' + window.APP.esc(n) + '</div></td>' +
+            '<td>' + (strengths || '<span class="muted">—</span>') + '</td>' +
+            '<td class="right" style="font-weight:500">' + list.length + '</td>' +
+            '<td class="right">' + high + '</td>' +
+            '<td class="right">' + (m.completed != null ? m.completed : '—') + '</td>' +
+            '<td class="right">' + (m.avgDays != null ? m.avgDays + 'd' : '—') + '</td>' +
+            '<td class="right" style="font-weight:500">' + window.DP.usdShort(exp) + '</td>' +
+            '<td class="right" style="font-weight:500;color:var(--low-tx)">' + (m.closedExp2w != null ? window.DP.usdShort(m.closedExp2w) : '—') + '</td></tr>';
+        }).join("");
+        return '<div class="card" style="margin-bottom:12px;padding:0;overflow:hidden">' +
+          '<div style="padding:11px 13px;border-bottom:0.5px solid var(--border2);font-weight:500;font-size:13px"><i class="ti ti-gauge" style="color:var(--accent-d)"></i> Team performance &amp; workload <span class="muted" style="font-weight:400;font-size:11px">· open load, completed, average handling time &amp; recovery per analyst</span></div>' +
+          '<table><thead><tr><th>Analyst</th><th>Specialties (best at)</th><th class="right">Open</th><th class="right">High-risk</th><th class="right">Completed</th><th class="right">Avg time</th><th class="right">Open exposure</th><th class="right">Closed exp (2w)</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+      }
+
       mount.innerHTML =
         '<div class="page">' +
-        '<div class="page-head"><div><div class="page-title">Team &amp; assignments</div><div class="page-sub">Balance workload and assign leads to analysts</div></div>' +
+        '<div class="page-head"><div><div class="page-title">Team &amp; assignments</div><div class="page-sub">Track team performance, balance workload, and assign leads to the analyst who\'s best at them</div></div>' +
         '<span class="tag"><i class="ti ti-user-shield"></i> Supervisor · Karen Boyd</span></div>' +
+        perfCard() +
         '<div style="display:flex;gap:12px;align-items:flex-start">' +
         '<div style="width:280px;flex:none;display:flex;flex-direction:column;gap:6px">' +
         '<div class="l" style="font-size:10.5px;color:var(--text2);margin-bottom:2px">Analysts</div>' +
@@ -43,7 +66,7 @@
         '<div style="flex:1;min-width:0">' +
         '<div class="card" style="padding:0;overflow:hidden">' +
         '<div style="padding:11px 13px;display:flex;justify-content:space-between;align-items:center;border-bottom:0.5px solid var(--border2)"><div style="font-weight:500;font-size:13px">' + window.APP.esc(selName) + ' <span class="muted" style="font-weight:400;font-size:11px">· ' + selList.length + ' open</span></div>' +
-        (isPool && selList.length ? '<button class="btn" id="tm-balance" style="font-size:11.5px"><i class="ti ti-scale"></i> Balance workload</button>' : '') + '</div>' +
+        (isPool && selList.length ? '<span style="display:flex;gap:6px"><button class="btn" id="tm-strength" style="font-size:11.5px"><i class="ti ti-target-arrow"></i> Assign by strength</button><button class="btn" id="tm-balance" style="font-size:11.5px"><i class="ti ti-scale"></i> Balance workload</button></span>' : '') + '</div>' +
         '<div id="tm-bulk" style="display:none;padding:8px 13px;background:var(--accent-l);border-bottom:0.5px solid #cdeee8;align-items:center;gap:10px"><span id="tm-bulk-n" style="font-weight:500;font-size:12.5px;color:var(--accent-d)"></span><span style="flex:1"></span><span style="font-size:12px;color:var(--text2)">Assign to</span><select id="tm-bulk-who" class="input" style="width:auto;font-size:12px">' + team.map(function (n) { return '<option value="' + n + '">' + n + '</option>'; }).join("") + '<option value="__unassigned__">Unassign</option></select><button class="btn primary" id="tm-bulk-apply" style="font-size:12px"><i class="ti ti-user-check"></i> Assign</button><button class="btn" id="tm-bulk-clear" style="font-size:12px">Clear</button></div>' +
         '<table><thead><tr><th style="width:30px"><input type="checkbox" class="tm-all"></th><th>Risk</th><th>Lead</th><th>Provider</th><th class="right">Exposure</th><th>Status</th><th>Assign to</th></tr></thead><tbody>' +
         (selList.length ? selList.map(function (a) {
@@ -81,8 +104,36 @@
       // workload-balancing suggestion
       var bb = document.getElementById("tm-balance");
       if (bb) bb.addEventListener("click", function () { showBalancePlan(mount, unassigned, team, forAnalyst); });
+      var sb = document.getElementById("tm-strength");
+      if (sb) sb.addEventListener("click", function () { showStrengthPlan(mount, unassigned, team, forAnalyst); });
     }
   };
+
+  // Route each unassigned lead to the analyst who specializes in its FWA type
+  // (fallback: least-loaded analyst when no specialist matches).
+  function showStrengthPlan(mount, unassigned, team, forAnalyst) {
+    var loads = {}; team.forEach(function (n) { loads[n] = forAnalyst(n).length; });
+    var plan = unassigned.slice().sort(function (a, b) { return b.riskScore - a.riskScore; }).map(function (c) {
+      var best = window.APP.bestAnalystFor(c.fwaType);
+      var pick = best || team.reduce(function (m, n) { return loads[n] < loads[m] ? n : m; }, team[0]);
+      loads[pick]++;
+      return { id: c.id, risk: c.riskScore, provider: window.DP.getProvider(c.providerId).name, fwa: c.fwaType, who: pick, byStrength: !!best };
+    });
+    document.getElementById("tm-plan").innerHTML =
+      '<div class="card" style="margin-top:10px;border:0.5px solid #9fe1d8">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-weight:500;font-size:13px"><i class="ti ti-target-arrow" style="color:var(--accent-d)"></i> Suggested assignment by specialty</div>' +
+      '<div><button class="btn" id="tm-plan-cancel" style="font-size:12px;margin-right:6px">Cancel</button><button class="btn primary" id="tm-plan-apply" style="font-size:12px"><i class="ti ti-check"></i> Apply all (' + plan.length + ')</button></div></div>' +
+      '<div style="font-size:11.5px;color:var(--text2);margin-bottom:8px">Routes each unassigned lead to the analyst who specializes in that FWA type, falling back to the least-loaded analyst when no specialist matches.</div>' +
+      '<table><thead><tr><th>Risk</th><th>Lead</th><th>Provider</th><th>Suggested analyst</th><th>Basis</th></tr></thead><tbody>' +
+      plan.map(function (r) { return '<tr><td>' + window.UI.riskChip(r.risk) + '</td><td><span class="mono" style="font-weight:500">#' + r.id + '</span> <span class="tag fwa">' + r.fwa + '</span></td><td>' + window.APP.esc(r.provider) + '</td><td><span class="avatar" style="width:22px;height:22px;font-size:9px;display:inline-flex;vertical-align:middle;margin-right:5px">' + initials(r.who) + '</span>' + window.APP.esc(r.who) + '</td><td>' + (r.byStrength ? '<span class="tag" style="background:var(--low-bg);color:var(--low-tx)">specialist</span>' : '<span class="muted">least-loaded</span>') + '</td></tr>'; }).join("") +
+      '</tbody></table></div>';
+    document.getElementById("tm-plan-cancel").addEventListener("click", function () { document.getElementById("tm-plan").innerHTML = ""; });
+    document.getElementById("tm-plan-apply").addEventListener("click", function () {
+      plan.forEach(function (r) { window.APP.assignCase(r.id, r.who); });
+      window.APP.auditLog("WORKLOAD_ASSIGNED_BY_STRENGTH", plan.length + " leads routed to specialists by FWA type");
+      window.Views.team.render(mount);
+    });
+  }
 
   function showBalancePlan(mount, unassigned, team, forAnalyst) {
     var loads = {}; team.forEach(function (n) { loads[n] = forAnalyst(n).length; });

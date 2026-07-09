@@ -153,27 +153,51 @@
         (byProv[a.providerId] = byProv[a.providerId] || []).push(a);
       });
       var exposureKey = mode === "prepay" ? "exposurePre" : "exposurePost";
-      return Object.keys(byProv).map(function (pid) {
+      var closedOf = function (pid) { return !!(window.APP && window.APP.isCaseClosed && window.APP.isCaseClosed(pid)); };
+      // one cell per provider that has leads
+      var cells = Object.keys(byProv).map(function (pid) {
         var all = byProv[pid].slice().sort(function (a, b) { return b.riskScore - a.riskScore; });
-        var p = providers[pid] || {};
-        var caseLeads = all.filter(isCaseLead);
-        var openLeads = all.filter(function (a) { return !isCaseLead(a) && !CLOSED_STATUS[a.status]; });
-        var escalated = caseLeads.some(function (a) { return a.status === "Escalated"; });
         return {
-          providerId: pid, provider: p, name: p.name || "—", npi: p.npi || "", state: p.state || "",
+          pid: pid, p: providers[pid] || {},
+          caseLeads: all.filter(isCaseLead),
+          openLeads: all.filter(function (a) { return !isCaseLead(a) && !CLOSED_STATUS[a.status]; })
+        };
+      });
+      // A Case usually maps to ONE provider. Providers that share a business
+      // registration (holding company) or a TIN (billing ring) roll up into a SINGLE
+      // multi-provider case; everyone else keeps their own one-provider case.
+      var ringKey = function (p) {
+        if (p.registrationId) return "reg:" + p.registrationId;
+        var sharedTin = p.tin && D.providers.filter(function (x) { return x.tin === p.tin; }).length > 1;
+        return sharedTin ? "tin:" + p.tin : "solo:" + p.id;
+      };
+      var provRisk = function (c) { return Math.max.apply(null, c.caseLeads.map(function (a) { return a.riskScore || 0; }).concat([c.p.riskScore || 0, 0])); };
+      var groups = {};
+      cells.forEach(function (c) { (groups[ringKey(c.p)] = groups[ringKey(c.p)] || []).push(c); });
+      return Object.keys(groups).map(function (k) {
+        var members = groups[k].slice().sort(function (a, b) { return provRisk(b) - provRisk(a); });
+        var primary = members[0].p;
+        var caseLeads = [], openLeads = [];
+        members.forEach(function (m) { caseLeads = caseLeads.concat(m.caseLeads); openLeads = openLeads.concat(m.openLeads); });
+        var escalated = caseLeads.some(function (a) { return a.status === "Escalated"; });
+        var closed = members.some(function (m) { return closedOf(m.pid); });
+        return {
+          providerId: primary.id, provider: primary, name: primary.name || "—", npi: primary.npi || "", state: primary.state || "",
+          providerIds: members.map(function (m) { return m.pid; }), providers: members.map(function (m) { return m.p; }),
+          multiProvider: members.length > 1, providerCount: members.length,
           leads: caseLeads, caseLeads: caseLeads, openLeads: openLeads,
           leadCount: caseLeads.length, openCount: openLeads.length,
           exposure: caseLeads.reduce(function (s, a) { return s + (a[exposureKey] || 0); }, 0),
           riskScore: Math.max.apply(null, caseLeads.map(function (a) { return a.riskScore || 0; }).concat([0])),
           fwaTypes: caseLeads.map(function (a) { return a.fwaType; }).filter(function (t, i, arr) { return t && arr.indexOf(t) === i; }),
           assignee: (caseLeads.find(function (a) { return a.assignee; }) || {}).assignee || null,
-          escalated: escalated,
-          status: escalated ? "Under investigation" : "Open case"
+          escalated: escalated, closed: closed,
+          status: closed ? "Closed" : escalated ? "Under investigation" : "Open case"
         };
       }).filter(function (c) { return opts.all ? true : c.leadCount > 0; })
         .sort(function (a, b) { return b.exposure - a.exposure; });
     },
-    getCase: function (providerId, mode) { return this.listCases({ all: true, mode: mode || "all" }).find(function (c) { return c.providerId === providerId; }) || null; },
+    getCase: function (providerId, mode) { return this.listCases({ all: true, mode: mode || "all" }).find(function (c) { return c.providerId === providerId || (c.providerIds && c.providerIds.indexOf(providerId) >= 0); }) || null; },
 
     // ---- TrackLight-style secondary scoring / external enrichment --------------
     // Synthetic external-data profile (business registry + individual/officer OSINT)

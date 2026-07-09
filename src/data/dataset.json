@@ -8,9 +8,9 @@
     "counts": {
       "providers": 22,
       "veterans": 45,
-      "claims": 593,
+      "claims": 614,
       "allegations": 37,
-      "edges": 122,
+      "edges": 143,
       "graphNodes": 65
     }
   },
@@ -24462,6 +24462,893 @@
           "violatesRuleIds": []
         }
       ]
+    },
+    {
+      "id": "C00594",
+      "claimNumber": "O674X36K8-07-13",
+      "type": "837P",
+      "providerId": "PR200",
+      "veteranId": "V0007",
+      "dateOfService": "2025-11-08",
+      "billedAmount": 157,
+      "allowedAmount": 157,
+      "paidAmount": 157,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00594",
+      "paymentId": "P00585",
+      "diagnosisCodes": [
+        "M54.5"
+      ],
+      "lines": [
+        {
+          "lineId": "C00594-L1",
+          "cpt": "20610",
+          "modifiers": [
+            "59"
+          ],
+          "units": 1,
+          "billed": 65,
+          "allowed": 65,
+          "paid": 65,
+          "description": "Arthrocentesis, major joint",
+          "violatesRuleIds": [
+            "rule_mod59"
+          ]
+        },
+        {
+          "lineId": "C00594-L2",
+          "cpt": "99213",
+          "modifiers": [],
+          "units": 1,
+          "billed": 92,
+          "allowed": 92,
+          "paid": 92,
+          "description": "Office visit, established, level 3",
+          "violatesRuleIds": []
+        }
+      ]
+    },
+    {
+      "id": "C00595",
+      "claimNumber": "H465X94K6-05-12",
+      "type": "837P",
+      "providerId": "PR201",
+      "veteranId": "V0017",
+      "dateOfService": "2025-03-06",
+      "billedAmount": 420,
+      "allowedAmount": 420,
+      "paidAmount": 420,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00595",
+      "paymentId": "P00586",
+      "diagnosisCodes": [],
+      "lines": [
+        {
+          "lineId": "C00595-L1",
+          "cpt": "E1390",
+          "modifiers": [],
+          "units": 1,
+          "billed": 210,
+          "allowed": 210,
+          "paid": 210,
+          "description": "Oxygen concentrator (DME)",
+          "violatesRuleIds": [
+            "rule_dup"
+          ]
+        },
+        {
+          "lineId": "C00595-L2",
+          "cpt": "E1390",
+          "modifiers": [],
+          "units": 1,
+          "billed": 210,
+          "allowed": 210,
+          "paid": 210,
+          "description": "Oxygen concentrator (DME)",
+          "violatesRuleIds": []
+        }
+      ]
+    },
+    {
+      "id": "C00596",
+      "claimNumber": "Q688X58K5-08-05",
+      "type": "837I",
+      "providerId": "PR202",
+      "veteranId": "V0006",
+      "dateOfService": "2025-06-18",
+      "billedAmount": 276,
+      "allowedAmount": 276,
+      "paidAmount": 276,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00596",
+      "paymentId": "P00587",
+      "diagnosisCodes": [
+        "I10"
+      ],
+      "lines": [
+        {
+          "lineId": "C00596-L1",
+          "cpt": "99215",
+          "modifiers": [],
+          "units": 1,
+          "billed": 184,
+          "allowed": 184,
+          "paid": 184,
+          "description": "Office visit, established, level 5",
+          "violatesRuleIds": [
+            "rule_fee"
+          ]
+        },
+        {
+          "lineId": "C00596-L2",
+          "cpt": "99213",
+          "modifiers": [],
+          "units": 1,
+          "billed": 92,
+          "allowed": 92,
+          "paid": 92,
+          "description": "Office visit, established, level 3",
+          "violatesRuleIds": []
+        }
+      ]
+    },
+    {
+      "id": "C00597",
+      "claimNumber": "M565X79K6-09-33",
+      "type": "837D",
+      "providerId": "PR203",
+      "veteranId": "V0018",
+      "dateOfService": "2025-05-25",
+      "billedAmount": 342,
+      "allowedAmount": 342,
+      "paidAmount": 342,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00597",
+      "paymentId": "P00588",
+      "diagnosisCodes": [],
+      "lines": [
+        {
+          "lineId": "C00597-L1",
+          "cpt": "70551",
+          "modifiers": [],
+          "units": 1,
+          "billed": 250,
+          "allowed": 250,
+          "paid": 250,
+          "description": "MRI brain without contrast",
+          "violatesRuleIds": [
+            "rule_fee"
+          ]
+        },
+        {
+          "lineId": "C00597-L2",
+          "cpt": "99213",
+          "modifiers": [],
+          "units": 1,
+          "billed": 92,
+          "allowed": 92,
+          "paid": 92,
+          "description": "Office visit, established, level 3",
+          "violatesRuleIds": []
+        }
+      ]
+    },
+    {
+      "id": "C00598",
+      "claimNumber": "Y213X96K9-05-08",
+      "type": "837P",
+      "providerId": "PR204",
+      "veteranId": "V0007",
+      "dateOfService": "2025-07-06",
+      "billedAmount": 1010,
+      "allowedAmount": 1010,
+      "paidAmount": 1010,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00598",
+      "paymentId": "P00589",
+      "diagnosisCodes": [
+        "K21.9"
+      ],
+      "lines": [
+        {
+          "lineId": "C00598-L1",
+          "cpt": "43239",
+          "modifiers": [],
+          "units": 1,
+          "billed": 600,
+          "allowed": 600,
+          "paid": 600,
+          "description": "Upper GI endoscopy with biopsy",
+          "violatesRuleIds": []
+        },
+        {
+          "lineId": "C00598-L2",
+          "cpt": "43235",
+          "modifiers": [
+            "59"
+          ],
+          "units": 1,
+          "billed": 410,
+          "allowed": 410,
+          "paid": 410,
+          "description": "Upper GI endoscopy, diagnostic",
+          "violatesRuleIds": [
+            "rule_ncci_43235_43239",
+            "rule_mod59"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C00599",
+      "claimNumber": "K928X66K2-02-01",
+      "type": "837I",
+      "providerId": "PR205",
+      "veteranId": "V0004",
+      "dateOfService": "2025-05-13",
+      "billedAmount": 256,
+      "allowedAmount": 256,
+      "paidAmount": 256,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00599",
+      "paymentId": "P00590",
+      "diagnosisCodes": [],
+      "lines": [
+        {
+          "lineId": "C00599-L1",
+          "cpt": "97110",
+          "modifiers": [],
+          "units": 8,
+          "billed": 256,
+          "allowed": 256,
+          "paid": 256,
+          "description": "Therapeutic exercise, 15 min",
+          "violatesRuleIds": [
+            "rule_fee"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C00600",
+      "claimNumber": "Q590X90K6-05-20",
+      "type": "837P",
+      "providerId": "PR001",
+      "veteranId": "V0028",
+      "dateOfService": "2025-01-27",
+      "billedAmount": 131,
+      "allowedAmount": 131,
+      "paidAmount": 131,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00600",
+      "paymentId": "P00591",
+      "diagnosisCodes": [
+        "Z00.00"
+      ],
+      "lines": [
+        {
+          "lineId": "C00600-L1",
+          "cpt": "99214",
+          "modifiers": [],
+          "units": 1,
+          "billed": 131,
+          "allowed": 131,
+          "paid": 131,
+          "description": "Office visit, established, level 4",
+          "violatesRuleIds": [
+            "rule_fee"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C00601",
+      "claimNumber": "O400X88K3-06-01",
+      "type": "837P",
+      "providerId": "PR002",
+      "veteranId": "V0011",
+      "dateOfService": "2025-05-22",
+      "billedAmount": 122,
+      "allowedAmount": 122,
+      "paidAmount": 122,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00601",
+      "paymentId": "P00592",
+      "diagnosisCodes": [],
+      "lines": [
+        {
+          "lineId": "C00601-L1",
+          "cpt": "71046",
+          "modifiers": [],
+          "units": 1,
+          "billed": 30,
+          "allowed": 30,
+          "paid": 30,
+          "description": "Chest X-ray, 2 views",
+          "violatesRuleIds": [
+            "rule_auth"
+          ]
+        },
+        {
+          "lineId": "C00601-L2",
+          "cpt": "99213",
+          "modifiers": [],
+          "units": 1,
+          "billed": 92,
+          "allowed": 92,
+          "paid": 92,
+          "description": "Office visit, established, level 3",
+          "violatesRuleIds": []
+        }
+      ]
+    },
+    {
+      "id": "C00602",
+      "claimNumber": "M112X69K5-06-05",
+      "type": "837P",
+      "providerId": "PR003",
+      "veteranId": "V0006",
+      "dateOfService": "2025-07-11",
+      "billedAmount": 157,
+      "allowedAmount": 157,
+      "paidAmount": 157,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00602",
+      "paymentId": "P00593",
+      "diagnosisCodes": [
+        "M54.5"
+      ],
+      "lines": [
+        {
+          "lineId": "C00602-L1",
+          "cpt": "20610",
+          "modifiers": [
+            "59"
+          ],
+          "units": 1,
+          "billed": 65,
+          "allowed": 65,
+          "paid": 65,
+          "description": "Arthrocentesis, major joint",
+          "violatesRuleIds": [
+            "rule_mod59"
+          ]
+        },
+        {
+          "lineId": "C00602-L2",
+          "cpt": "99213",
+          "modifiers": [],
+          "units": 1,
+          "billed": 92,
+          "allowed": 92,
+          "paid": 92,
+          "description": "Office visit, established, level 3",
+          "violatesRuleIds": []
+        }
+      ]
+    },
+    {
+      "id": "C00603",
+      "claimNumber": "X284X79K6-01-12",
+      "type": "837P",
+      "providerId": "PR204",
+      "veteranId": "V0002",
+      "dateOfService": "2025-08-21",
+      "billedAmount": 157,
+      "allowedAmount": 157,
+      "paidAmount": 157,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00603",
+      "paymentId": "P00594",
+      "diagnosisCodes": [
+        "M54.5"
+      ],
+      "lines": [
+        {
+          "lineId": "C00603-L1",
+          "cpt": "20610",
+          "modifiers": [
+            "59"
+          ],
+          "units": 1,
+          "billed": 65,
+          "allowed": 65,
+          "paid": 65,
+          "description": "Arthrocentesis, major joint",
+          "violatesRuleIds": [
+            "rule_mod59"
+          ]
+        },
+        {
+          "lineId": "C00603-L2",
+          "cpt": "99213",
+          "modifiers": [],
+          "units": 1,
+          "billed": 92,
+          "allowed": 92,
+          "paid": 92,
+          "description": "Office visit, established, level 3",
+          "violatesRuleIds": []
+        }
+      ]
+    },
+    {
+      "id": "C00604",
+      "claimNumber": "L882X57K5-09-02",
+      "type": "837P",
+      "providerId": "PR205",
+      "veteranId": "V0026",
+      "dateOfService": "2025-07-15",
+      "billedAmount": 420,
+      "allowedAmount": 420,
+      "paidAmount": 420,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00604",
+      "paymentId": "P00595",
+      "diagnosisCodes": [],
+      "lines": [
+        {
+          "lineId": "C00604-L1",
+          "cpt": "E1390",
+          "modifiers": [],
+          "units": 1,
+          "billed": 210,
+          "allowed": 210,
+          "paid": 210,
+          "description": "Oxygen concentrator (DME)",
+          "violatesRuleIds": [
+            "rule_dup"
+          ]
+        },
+        {
+          "lineId": "C00604-L2",
+          "cpt": "E1390",
+          "modifiers": [],
+          "units": 1,
+          "billed": 210,
+          "allowed": 210,
+          "paid": 210,
+          "description": "Oxygen concentrator (DME)",
+          "violatesRuleIds": []
+        }
+      ]
+    },
+    {
+      "id": "C00605",
+      "claimNumber": "N980X30K2-06-38",
+      "type": "837P",
+      "providerId": "PR200",
+      "veteranId": "V0020",
+      "dateOfService": "2025-04-09",
+      "billedAmount": 1010,
+      "allowedAmount": 1010,
+      "paidAmount": 1010,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00605",
+      "paymentId": "P00596",
+      "diagnosisCodes": [
+        "K21.9"
+      ],
+      "lines": [
+        {
+          "lineId": "C00605-L1",
+          "cpt": "43239",
+          "modifiers": [],
+          "units": 1,
+          "billed": 600,
+          "allowed": 600,
+          "paid": 600,
+          "description": "Upper GI endoscopy with biopsy",
+          "violatesRuleIds": []
+        },
+        {
+          "lineId": "C00605-L2",
+          "cpt": "43235",
+          "modifiers": [
+            "59"
+          ],
+          "units": 1,
+          "billed": 410,
+          "allowed": 410,
+          "paid": 410,
+          "description": "Upper GI endoscopy, diagnostic",
+          "violatesRuleIds": [
+            "rule_ncci_43235_43239",
+            "rule_mod59"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C00606",
+      "claimNumber": "F760X22K5-05-21",
+      "type": "837P",
+      "providerId": "PR204",
+      "veteranId": "V0035",
+      "dateOfService": "2025-03-27",
+      "billedAmount": 276,
+      "allowedAmount": 276,
+      "paidAmount": 276,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00606",
+      "paymentId": "P00597",
+      "diagnosisCodes": [
+        "I10"
+      ],
+      "lines": [
+        {
+          "lineId": "C00606-L1",
+          "cpt": "99215",
+          "modifiers": [],
+          "units": 1,
+          "billed": 184,
+          "allowed": 184,
+          "paid": 184,
+          "description": "Office visit, established, level 5",
+          "violatesRuleIds": [
+            "rule_fee"
+          ]
+        },
+        {
+          "lineId": "C00606-L2",
+          "cpt": "99213",
+          "modifiers": [],
+          "units": 1,
+          "billed": 92,
+          "allowed": 92,
+          "paid": 92,
+          "description": "Office visit, established, level 3",
+          "violatesRuleIds": []
+        }
+      ]
+    },
+    {
+      "id": "C00607",
+      "claimNumber": "I161X97K5-06-16",
+      "type": "837P",
+      "providerId": "PR208",
+      "veteranId": "V0003",
+      "dateOfService": "2025-01-09",
+      "billedAmount": 157,
+      "allowedAmount": 157,
+      "paidAmount": 157,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00607",
+      "paymentId": "P00598",
+      "diagnosisCodes": [
+        "M54.5"
+      ],
+      "lines": [
+        {
+          "lineId": "C00607-L1",
+          "cpt": "20610",
+          "modifiers": [
+            "59"
+          ],
+          "units": 1,
+          "billed": 65,
+          "allowed": 65,
+          "paid": 65,
+          "description": "Arthrocentesis, major joint",
+          "violatesRuleIds": [
+            "rule_mod59"
+          ]
+        },
+        {
+          "lineId": "C00607-L2",
+          "cpt": "99213",
+          "modifiers": [],
+          "units": 1,
+          "billed": 92,
+          "allowed": 92,
+          "paid": 92,
+          "description": "Office visit, established, level 3",
+          "violatesRuleIds": []
+        }
+      ]
+    },
+    {
+      "id": "C00608",
+      "claimNumber": "V749X95K6-08-24",
+      "type": "837P",
+      "providerId": "PR204",
+      "veteranId": "V0036",
+      "dateOfService": "2025-01-07",
+      "billedAmount": 1010,
+      "allowedAmount": 1010,
+      "paidAmount": 1010,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00608",
+      "paymentId": "P00599",
+      "diagnosisCodes": [
+        "K21.9"
+      ],
+      "lines": [
+        {
+          "lineId": "C00608-L1",
+          "cpt": "43239",
+          "modifiers": [],
+          "units": 1,
+          "billed": 600,
+          "allowed": 600,
+          "paid": 600,
+          "description": "Upper GI endoscopy with biopsy",
+          "violatesRuleIds": []
+        },
+        {
+          "lineId": "C00608-L2",
+          "cpt": "43235",
+          "modifiers": [
+            "59"
+          ],
+          "units": 1,
+          "billed": 410,
+          "allowed": 410,
+          "paid": 410,
+          "description": "Upper GI endoscopy, diagnostic",
+          "violatesRuleIds": [
+            "rule_ncci_43235_43239",
+            "rule_mod59"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C00609",
+      "claimNumber": "R395X43K1-08-39",
+      "type": "837P",
+      "providerId": "PR200",
+      "veteranId": "V0005",
+      "dateOfService": "2025-04-23",
+      "billedAmount": 157,
+      "allowedAmount": 157,
+      "paidAmount": 157,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00609",
+      "paymentId": "P00600",
+      "diagnosisCodes": [
+        "M54.5"
+      ],
+      "lines": [
+        {
+          "lineId": "C00609-L1",
+          "cpt": "20610",
+          "modifiers": [
+            "59"
+          ],
+          "units": 1,
+          "billed": 65,
+          "allowed": 65,
+          "paid": 65,
+          "description": "Arthrocentesis, major joint",
+          "violatesRuleIds": [
+            "rule_mod59"
+          ]
+        },
+        {
+          "lineId": "C00609-L2",
+          "cpt": "99213",
+          "modifiers": [],
+          "units": 1,
+          "billed": 92,
+          "allowed": 92,
+          "paid": 92,
+          "description": "Office visit, established, level 3",
+          "violatesRuleIds": []
+        }
+      ]
+    },
+    {
+      "id": "C00610",
+      "claimNumber": "P923X57K3-04-08",
+      "type": "837P",
+      "providerId": "PR206",
+      "veteranId": "V0013",
+      "dateOfService": "2025-12-14",
+      "billedAmount": 122,
+      "allowedAmount": 122,
+      "paidAmount": 122,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00610",
+      "paymentId": "P00601",
+      "diagnosisCodes": [],
+      "lines": [
+        {
+          "lineId": "C00610-L1",
+          "cpt": "71046",
+          "modifiers": [],
+          "units": 1,
+          "billed": 30,
+          "allowed": 30,
+          "paid": 30,
+          "description": "Chest X-ray, 2 views",
+          "violatesRuleIds": [
+            "rule_auth"
+          ]
+        },
+        {
+          "lineId": "C00610-L2",
+          "cpt": "99213",
+          "modifiers": [],
+          "units": 1,
+          "billed": 92,
+          "allowed": 92,
+          "paid": 92,
+          "description": "Office visit, established, level 3",
+          "violatesRuleIds": []
+        }
+      ]
+    },
+    {
+      "id": "C00611",
+      "claimNumber": "H734X67K3-05-35",
+      "type": "837P",
+      "providerId": "PR200",
+      "veteranId": "V0010",
+      "dateOfService": "2025-06-27",
+      "billedAmount": 131,
+      "allowedAmount": 131,
+      "paidAmount": 131,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00611",
+      "paymentId": "P00602",
+      "diagnosisCodes": [
+        "Z00.00"
+      ],
+      "lines": [
+        {
+          "lineId": "C00611-L1",
+          "cpt": "99214",
+          "modifiers": [],
+          "units": 1,
+          "billed": 131,
+          "allowed": 131,
+          "paid": 131,
+          "description": "Office visit, established, level 4",
+          "violatesRuleIds": [
+            "rule_fee"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C00612",
+      "claimNumber": "A289X89K9-08-02",
+      "type": "837P",
+      "providerId": "PR205",
+      "veteranId": "V0030",
+      "dateOfService": "2025-12-28",
+      "billedAmount": 131,
+      "allowedAmount": 131,
+      "paidAmount": 131,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00612",
+      "paymentId": "P00603",
+      "diagnosisCodes": [
+        "Z00.00"
+      ],
+      "lines": [
+        {
+          "lineId": "C00612-L1",
+          "cpt": "99214",
+          "modifiers": [],
+          "units": 1,
+          "billed": 131,
+          "allowed": 131,
+          "paid": 131,
+          "description": "Office visit, established, level 4",
+          "violatesRuleIds": [
+            "rule_fee"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C00613",
+      "claimNumber": "W125X93K8-00-07",
+      "type": "837P",
+      "providerId": "PR204",
+      "veteranId": "V0028",
+      "dateOfService": "2025-09-04",
+      "billedAmount": 157,
+      "allowedAmount": 157,
+      "paidAmount": 157,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00613",
+      "paymentId": "P00604",
+      "diagnosisCodes": [
+        "M54.5"
+      ],
+      "lines": [
+        {
+          "lineId": "C00613-L1",
+          "cpt": "20610",
+          "modifiers": [
+            "59"
+          ],
+          "units": 1,
+          "billed": 65,
+          "allowed": 65,
+          "paid": 65,
+          "description": "Arthrocentesis, major joint",
+          "violatesRuleIds": [
+            "rule_mod59"
+          ]
+        },
+        {
+          "lineId": "C00613-L2",
+          "cpt": "99213",
+          "modifiers": [],
+          "units": 1,
+          "billed": 92,
+          "allowed": 92,
+          "paid": 92,
+          "description": "Office visit, established, level 3",
+          "violatesRuleIds": []
+        }
+      ]
+    },
+    {
+      "id": "C00614",
+      "claimNumber": "P699X38K6-08-04",
+      "type": "837P",
+      "providerId": "PR204",
+      "veteranId": "V0014",
+      "dateOfService": "2025-03-06",
+      "billedAmount": 122,
+      "allowedAmount": 122,
+      "paidAmount": 122,
+      "claimStatus": "Paid",
+      "paymentType": "POST",
+      "authorizationId": "A00614",
+      "paymentId": "P00605",
+      "diagnosisCodes": [],
+      "lines": [
+        {
+          "lineId": "C00614-L1",
+          "cpt": "71046",
+          "modifiers": [],
+          "units": 1,
+          "billed": 30,
+          "allowed": 30,
+          "paid": 30,
+          "description": "Chest X-ray, 2 views",
+          "violatesRuleIds": [
+            "rule_auth"
+          ]
+        },
+        {
+          "lineId": "C00614-L2",
+          "cpt": "99213",
+          "modifiers": [],
+          "units": 1,
+          "billed": 92,
+          "allowed": 92,
+          "paid": 92,
+          "description": "Office visit, established, level 3",
+          "violatesRuleIds": []
+        }
+      ]
     }
   ],
   "authorizations": [
@@ -30394,6 +31281,216 @@
       "validFrom": "2025-01-01",
       "validTo": "2025-12-31",
       "status": "Active"
+    },
+    {
+      "id": "A00594",
+      "authId": "AUTH-486646",
+      "veteranId": "V0007",
+      "providerId": "PR200",
+      "service": "Arthrocentesis, major joint",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00595",
+      "authId": "AUTH-903132",
+      "veteranId": "V0017",
+      "providerId": "PR201",
+      "service": "Oxygen concentrator (DME)",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00596",
+      "authId": "AUTH-754449",
+      "veteranId": "V0006",
+      "providerId": "PR202",
+      "service": "Office visit, established, level 5",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00597",
+      "authId": "AUTH-551294",
+      "veteranId": "V0018",
+      "providerId": "PR203",
+      "service": "MRI brain without contrast",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00598",
+      "authId": "AUTH-964730",
+      "veteranId": "V0007",
+      "providerId": "PR204",
+      "service": "Upper GI endoscopy with biopsy",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00599",
+      "authId": "AUTH-443185",
+      "veteranId": "V0004",
+      "providerId": "PR205",
+      "service": "Therapeutic exercise, 15 min",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00600",
+      "authId": "AUTH-350065",
+      "veteranId": "V0028",
+      "providerId": "PR001",
+      "service": "Office visit, established, level 4",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00601",
+      "authId": "AUTH-956286",
+      "veteranId": "V0011",
+      "providerId": "PR002",
+      "service": "Chest X-ray, 2 views",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00602",
+      "authId": "AUTH-763301",
+      "veteranId": "V0006",
+      "providerId": "PR003",
+      "service": "Arthrocentesis, major joint",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00603",
+      "authId": "AUTH-966219",
+      "veteranId": "V0002",
+      "providerId": "PR204",
+      "service": "Arthrocentesis, major joint",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00604",
+      "authId": "AUTH-965888",
+      "veteranId": "V0026",
+      "providerId": "PR205",
+      "service": "Oxygen concentrator (DME)",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00605",
+      "authId": "AUTH-239726",
+      "veteranId": "V0020",
+      "providerId": "PR200",
+      "service": "Upper GI endoscopy with biopsy",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00606",
+      "authId": "AUTH-317509",
+      "veteranId": "V0035",
+      "providerId": "PR204",
+      "service": "Office visit, established, level 5",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00607",
+      "authId": "AUTH-418494",
+      "veteranId": "V0003",
+      "providerId": "PR208",
+      "service": "Arthrocentesis, major joint",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00608",
+      "authId": "AUTH-684056",
+      "veteranId": "V0036",
+      "providerId": "PR204",
+      "service": "Upper GI endoscopy with biopsy",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00609",
+      "authId": "AUTH-957180",
+      "veteranId": "V0005",
+      "providerId": "PR200",
+      "service": "Arthrocentesis, major joint",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00610",
+      "authId": "AUTH-518860",
+      "veteranId": "V0013",
+      "providerId": "PR206",
+      "service": "Chest X-ray, 2 views",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00611",
+      "authId": "AUTH-436166",
+      "veteranId": "V0010",
+      "providerId": "PR200",
+      "service": "Office visit, established, level 4",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00612",
+      "authId": "AUTH-981989",
+      "veteranId": "V0030",
+      "providerId": "PR205",
+      "service": "Office visit, established, level 4",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00613",
+      "authId": "AUTH-518270",
+      "veteranId": "V0028",
+      "providerId": "PR204",
+      "service": "Arthrocentesis, major joint",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
+    },
+    {
+      "id": "A00614",
+      "authId": "AUTH-690087",
+      "veteranId": "V0014",
+      "providerId": "PR204",
+      "service": "Chest X-ray, 2 views",
+      "validFrom": "2025-01-01",
+      "validTo": "2025-12-31",
+      "status": "Active"
     }
   ],
   "payments": [
@@ -35068,6 +36165,174 @@
       "amount": 16640,
       "date": "2025-02-10",
       "remittance835": "835-794136"
+    },
+    {
+      "id": "P00585",
+      "paymentId": "RA-9118974",
+      "claimId": "C00594",
+      "amount": 157,
+      "date": "2025-11-08",
+      "remittance835": "835-339984"
+    },
+    {
+      "id": "P00586",
+      "paymentId": "RA-8924670",
+      "claimId": "C00595",
+      "amount": 420,
+      "date": "2025-03-06",
+      "remittance835": "835-777756"
+    },
+    {
+      "id": "P00587",
+      "paymentId": "RA-8437502",
+      "claimId": "C00596",
+      "amount": 276,
+      "date": "2025-06-18",
+      "remittance835": "835-160886"
+    },
+    {
+      "id": "P00588",
+      "paymentId": "RA-8505839",
+      "claimId": "C00597",
+      "amount": 342,
+      "date": "2025-05-25",
+      "remittance835": "835-893651"
+    },
+    {
+      "id": "P00589",
+      "paymentId": "RA-1550506",
+      "claimId": "C00598",
+      "amount": 1010,
+      "date": "2025-07-06",
+      "remittance835": "835-967019"
+    },
+    {
+      "id": "P00590",
+      "paymentId": "RA-6001108",
+      "claimId": "C00599",
+      "amount": 256,
+      "date": "2025-05-13",
+      "remittance835": "835-215849"
+    },
+    {
+      "id": "P00591",
+      "paymentId": "RA-9921589",
+      "claimId": "C00600",
+      "amount": 131,
+      "date": "2025-01-27",
+      "remittance835": "835-167875"
+    },
+    {
+      "id": "P00592",
+      "paymentId": "RA-8693215",
+      "claimId": "C00601",
+      "amount": 122,
+      "date": "2025-05-22",
+      "remittance835": "835-181932"
+    },
+    {
+      "id": "P00593",
+      "paymentId": "RA-9141162",
+      "claimId": "C00602",
+      "amount": 157,
+      "date": "2025-07-11",
+      "remittance835": "835-771820"
+    },
+    {
+      "id": "P00594",
+      "paymentId": "RA-7244861",
+      "claimId": "C00603",
+      "amount": 157,
+      "date": "2025-08-21",
+      "remittance835": "835-740323"
+    },
+    {
+      "id": "P00595",
+      "paymentId": "RA-5673064",
+      "claimId": "C00604",
+      "amount": 420,
+      "date": "2025-07-15",
+      "remittance835": "835-227208"
+    },
+    {
+      "id": "P00596",
+      "paymentId": "RA-3798368",
+      "claimId": "C00605",
+      "amount": 1010,
+      "date": "2025-04-09",
+      "remittance835": "835-570602"
+    },
+    {
+      "id": "P00597",
+      "paymentId": "RA-8969598",
+      "claimId": "C00606",
+      "amount": 276,
+      "date": "2025-03-27",
+      "remittance835": "835-262377"
+    },
+    {
+      "id": "P00598",
+      "paymentId": "RA-2409620",
+      "claimId": "C00607",
+      "amount": 157,
+      "date": "2025-01-09",
+      "remittance835": "835-983232"
+    },
+    {
+      "id": "P00599",
+      "paymentId": "RA-7548065",
+      "claimId": "C00608",
+      "amount": 1010,
+      "date": "2025-01-07",
+      "remittance835": "835-872680"
+    },
+    {
+      "id": "P00600",
+      "paymentId": "RA-7728605",
+      "claimId": "C00609",
+      "amount": 157,
+      "date": "2025-04-23",
+      "remittance835": "835-576384"
+    },
+    {
+      "id": "P00601",
+      "paymentId": "RA-8611720",
+      "claimId": "C00610",
+      "amount": 122,
+      "date": "2025-12-14",
+      "remittance835": "835-346138"
+    },
+    {
+      "id": "P00602",
+      "paymentId": "RA-5989841",
+      "claimId": "C00611",
+      "amount": 131,
+      "date": "2025-06-27",
+      "remittance835": "835-689881"
+    },
+    {
+      "id": "P00603",
+      "paymentId": "RA-2162812",
+      "claimId": "C00612",
+      "amount": 131,
+      "date": "2025-12-28",
+      "remittance835": "835-506462"
+    },
+    {
+      "id": "P00604",
+      "paymentId": "RA-6741408",
+      "claimId": "C00613",
+      "amount": 157,
+      "date": "2025-09-04",
+      "remittance835": "835-879565"
+    },
+    {
+      "id": "P00605",
+      "paymentId": "RA-6656159",
+      "claimId": "C00614",
+      "amount": 122,
+      "date": "2025-03-06",
+      "remittance835": "835-608082"
     }
   ],
   "rules": [
@@ -35327,7 +36592,7 @@
     {
       "id": "20390",
       "providerId": "PR200",
-      "claimId": null,
+      "claimId": "C00594",
       "fwaType": "Modifier misuse",
       "riskScore": 83,
       "confidence": 79,
@@ -35354,7 +36619,7 @@
     {
       "id": "20355",
       "providerId": "PR201",
-      "claimId": null,
+      "claimId": "C00595",
       "fwaType": "Duplicate claim",
       "riskScore": 71,
       "confidence": 84,
@@ -35383,7 +36648,7 @@
     {
       "id": "20318",
       "providerId": "PR202",
-      "claimId": null,
+      "claimId": "C00596",
       "fwaType": "Upcoding",
       "riskScore": 88,
       "confidence": 76,
@@ -35410,7 +36675,7 @@
     {
       "id": "20274",
       "providerId": "PR203",
-      "claimId": null,
+      "claimId": "C00597",
       "fwaType": "Billing outside specialty",
       "riskScore": 64,
       "confidence": 70,
@@ -35437,7 +36702,7 @@
     {
       "id": "20208",
       "providerId": "PR204",
-      "claimId": null,
+      "claimId": "C00598",
       "fwaType": "Unbundling",
       "riskScore": 80,
       "confidence": 81,
@@ -35466,7 +36731,7 @@
     {
       "id": "20155",
       "providerId": "PR205",
-      "claimId": null,
+      "claimId": "C00599",
       "fwaType": "Phantom billing",
       "riskScore": 90,
       "confidence": 69,
@@ -35493,7 +36758,7 @@
     {
       "id": "20092",
       "providerId": "PR001",
-      "claimId": null,
+      "claimId": "C00600",
       "fwaType": "Deceased patient",
       "riskScore": 96,
       "confidence": 74,
@@ -35520,7 +36785,7 @@
     {
       "id": "20061",
       "providerId": "PR002",
-      "claimId": null,
+      "claimId": "C00601",
       "fwaType": "Authorization mismatch",
       "riskScore": 68,
       "confidence": 83,
@@ -35549,7 +36814,7 @@
     {
       "id": "20033",
       "providerId": "PR003",
-      "claimId": null,
+      "claimId": "C00602",
       "fwaType": "Modifier misuse",
       "riskScore": 52,
       "confidence": 66,
@@ -35768,7 +37033,7 @@
     {
       "id": "20601",
       "providerId": "PR204",
-      "claimId": null,
+      "claimId": "C00603",
       "fwaType": "Modifier misuse",
       "riskScore": 74,
       "confidence": 74,
@@ -35795,7 +37060,7 @@
     {
       "id": "20602",
       "providerId": "PR205",
-      "claimId": null,
+      "claimId": "C00604",
       "fwaType": "Duplicate claim",
       "riskScore": 56,
       "confidence": 69,
@@ -35822,7 +37087,7 @@
     {
       "id": "20603",
       "providerId": "PR200",
-      "claimId": null,
+      "claimId": "C00605",
       "fwaType": "Unbundling",
       "riskScore": 76,
       "confidence": 85,
@@ -35849,7 +37114,7 @@
     {
       "id": "20604",
       "providerId": "PR204",
-      "claimId": null,
+      "claimId": "C00606",
       "fwaType": "Upcoding",
       "riskScore": 43,
       "confidence": 85,
@@ -35876,7 +37141,7 @@
     {
       "id": "20605",
       "providerId": "PR208",
-      "claimId": null,
+      "claimId": "C00607",
       "fwaType": "Modifier misuse",
       "riskScore": 68,
       "confidence": 72,
@@ -35903,7 +37168,7 @@
     {
       "id": "20606",
       "providerId": "PR204",
-      "claimId": null,
+      "claimId": "C00608",
       "fwaType": "Unbundling",
       "riskScore": 65,
       "confidence": 60,
@@ -35930,7 +37195,7 @@
     {
       "id": "20607",
       "providerId": "PR200",
-      "claimId": null,
+      "claimId": "C00609",
       "fwaType": "Modifier misuse",
       "riskScore": 61,
       "confidence": 87,
@@ -35957,7 +37222,7 @@
     {
       "id": "20608",
       "providerId": "PR206",
-      "claimId": null,
+      "claimId": "C00610",
       "fwaType": "Authorization mismatch",
       "riskScore": 49,
       "confidence": 79,
@@ -35984,7 +37249,7 @@
     {
       "id": "20609",
       "providerId": "PR200",
-      "claimId": null,
+      "claimId": "C00611",
       "fwaType": "Deceased patient",
       "riskScore": 51,
       "confidence": 74,
@@ -36011,7 +37276,7 @@
     {
       "id": "20610",
       "providerId": "PR205",
-      "claimId": null,
+      "claimId": "C00612",
       "fwaType": "Deceased patient",
       "riskScore": 75,
       "confidence": 67,
@@ -36038,7 +37303,7 @@
     {
       "id": "20611",
       "providerId": "PR204",
-      "claimId": null,
+      "claimId": "C00613",
       "fwaType": "Modifier misuse",
       "riskScore": 46,
       "confidence": 60,
@@ -36065,7 +37330,7 @@
     {
       "id": "20612",
       "providerId": "PR204",
-      "claimId": null,
+      "claimId": "C00614",
       "fwaType": "Authorization mismatch",
       "riskScore": 67,
       "confidence": 65,
@@ -38224,6 +39489,132 @@
         "props": {
           "fwaType": "Routine — no anomaly"
         }
+      },
+      {
+        "type": "FLAGS",
+        "source": "ALLG-20390",
+        "target": "C00594",
+        "props": {}
+      },
+      {
+        "type": "FLAGS",
+        "source": "ALLG-20355",
+        "target": "C00595",
+        "props": {}
+      },
+      {
+        "type": "FLAGS",
+        "source": "ALLG-20318",
+        "target": "C00596",
+        "props": {}
+      },
+      {
+        "type": "FLAGS",
+        "source": "ALLG-20274",
+        "target": "C00597",
+        "props": {}
+      },
+      {
+        "type": "FLAGS",
+        "source": "ALLG-20208",
+        "target": "C00598",
+        "props": {}
+      },
+      {
+        "type": "FLAGS",
+        "source": "ALLG-20155",
+        "target": "C00599",
+        "props": {}
+      },
+      {
+        "type": "FLAGS",
+        "source": "ALLG-20092",
+        "target": "C00600",
+        "props": {}
+      },
+      {
+        "type": "FLAGS",
+        "source": "ALLG-20061",
+        "target": "C00601",
+        "props": {}
+      },
+      {
+        "type": "FLAGS",
+        "source": "ALLG-20033",
+        "target": "C00602",
+        "props": {}
+      },
+      {
+        "type": "FLAGS",
+        "source": "ALLG-20601",
+        "target": "C00603",
+        "props": {}
+      },
+      {
+        "type": "FLAGS",
+        "source": "ALLG-20602",
+        "target": "C00604",
+        "props": {}
+      },
+      {
+        "type": "FLAGS",
+        "source": "ALLG-20603",
+        "target": "C00605",
+        "props": {}
+      },
+      {
+        "type": "FLAGS",
+        "source": "ALLG-20604",
+        "target": "C00606",
+        "props": {}
+      },
+      {
+        "type": "FLAGS",
+        "source": "ALLG-20605",
+        "target": "C00607",
+        "props": {}
+      },
+      {
+        "type": "FLAGS",
+        "source": "ALLG-20606",
+        "target": "C00608",
+        "props": {}
+      },
+      {
+        "type": "FLAGS",
+        "source": "ALLG-20607",
+        "target": "C00609",
+        "props": {}
+      },
+      {
+        "type": "FLAGS",
+        "source": "ALLG-20608",
+        "target": "C00610",
+        "props": {}
+      },
+      {
+        "type": "FLAGS",
+        "source": "ALLG-20609",
+        "target": "C00611",
+        "props": {}
+      },
+      {
+        "type": "FLAGS",
+        "source": "ALLG-20610",
+        "target": "C00612",
+        "props": {}
+      },
+      {
+        "type": "FLAGS",
+        "source": "ALLG-20611",
+        "target": "C00613",
+        "props": {}
+      },
+      {
+        "type": "FLAGS",
+        "source": "ALLG-20612",
+        "target": "C00614",
+        "props": {}
       }
     ]
   }

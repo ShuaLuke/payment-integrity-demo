@@ -78,10 +78,13 @@
 
         // flagged claims — adjudicate from provider
         '<div class="card" style="padding:0;overflow:hidden"><div style="padding:11px 13px 6px;font-weight:500;font-size:13px">' + (hasCase ? 'Leads — case (' + caseInfo.leadCount + ' confirmed · ' + caseInfo.openCount + ' open feeding in)' : 'Leads (' + allegs.length + ' open · no case yet)') + ' <span class="muted" style="font-weight:400;font-size:11px">· confirm a lead to add it to the case</span></div>' +
-        '<table><thead><tr><th>Risk</th><th>FWA type</th><th>Status</th><th class="right">Exposure</th><th></th></tr></thead><tbody>' +
-        (allegs.length ? allegs.slice().sort(function (a, b) { return b.riskScore - a.riskScore; }).map(function (a) {
-          return '<tr class="row" data-id="' + a.id + '"><td>' + window.UI.riskChip(a.riskScore) + '</td><td><span class="tag fwa">' + a.fwaType + '</span> <span class="mono" style="font-size:10.5px;color:var(--text3)">#' + a.id + '</span></td><td>' + window.UI.statusPill(a.status) + '</td><td class="right" style="font-weight:500">' + window.DP.usd(a.exposurePost || 0) + '</td><td class="right"><span style="font-size:11px;color:var(--accent-d)">Review <i class="ti ti-chevron-right"></i></span></td></tr>';
-        }).join("") : '<tr><td colspan="5" class="muted" style="padding:12px">No leads.</td></tr>') +
+        '<table><thead><tr><th style="width:22px"></th><th>Risk</th><th>FWA type</th><th>Status</th><th class="right">Exposure</th><th></th></tr></thead><tbody>' +
+        (allegs.length ? allegs.slice().sort(function (a, b) { return b.riskScore - a.riskScore; }).map(function (a, i) {
+          var cl = a.claimId ? window.DP.getClaim(a.claimId) : null;
+          var main = '<tr class="pv-lead" data-i="' + i + '" data-id="' + a.id + '" style="cursor:pointer"><td style="width:22px"><i class="ti ti-chevron-down pv-lcaret" style="color:var(--text3);font-size:13px"></i></td><td>' + window.UI.riskChip(a.riskScore) + '</td><td><span class="tag fwa">' + a.fwaType + '</span> <span class="mono" style="font-size:10.5px;color:var(--text3)">#' + a.id + '</span></td><td>' + window.UI.statusPill(window.UI.leadStatus(a)) + '</td><td class="right" style="font-weight:500">' + window.DP.usd(a.exposurePost || 0) + '</td><td class="right"><span class="pv-review" data-id="' + a.id + '" style="font-size:11px;color:var(--accent-d);cursor:pointer">Review <i class="ti ti-chevron-right"></i></span></td></tr>';
+          var detail = '<tr class="pv-ldetail" data-i="' + i + '" style="display:none"><td colspan="6" style="background:var(--surface);padding:10px 13px">' + leadLinesHtml(a, cl) + '</td></tr>';
+          return main + detail;
+        }).join("") : '<tr><td colspan="6" class="muted" style="padding:12px">No leads.</td></tr>') +
         '</tbody></table></div>' +
 
         // historical claims
@@ -100,6 +103,17 @@
       var pvBiz = document.getElementById("pv-biz"); if (pvBiz) pvBiz.addEventListener("click", function () { window.APP.openBusiness(bizId); });
       document.getElementById("pv-flag").addEventListener("click", function () { window.APP.toggleProviderWatch(id); rerender(id); });
       mount.querySelectorAll("tr.row").forEach(function (tr) { tr.addEventListener("click", function () { window.APP.openAllegation(tr.getAttribute("data-id")); }); });
+      // expandable leads: click a lead row to reveal its full claim line items
+      mount.querySelectorAll(".pv-lead").forEach(function (tr) {
+        tr.addEventListener("click", function () {
+          var i = tr.getAttribute("data-i");
+          var d = mount.querySelector('.pv-ldetail[data-i="' + i + '"]'); if (!d) return;
+          var open = d.style.display !== "none";
+          d.style.display = open ? "none" : "table-row";
+          var c = tr.querySelector(".pv-lcaret"); if (c) c.style.transform = open ? "" : "rotate(180deg)";
+        });
+      });
+      mount.querySelectorAll(".pv-review").forEach(function (el) { el.addEventListener("click", function (e) { e.stopPropagation(); window.APP.openAllegation(el.getAttribute("data-id")); }); });
       wireRadar(mount, id);
 
       // ---- report-card export ----
@@ -193,17 +207,31 @@
     var max = rows.length ? rows[0].score : 100;
     var top = rows.slice(0, 8);
     if (!top.find(function (r) { return r.id === id; })) { var me = rows.find(function (r) { return r.id === id; }); if (me) top.push(me); }
+    var peerPct = Math.round(peer / Math.max(max, 1) * 100);
     return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-weight:500;font-size:13px">Outlier comparison — ' + window.APP.esc(group) + '</div><span class="muted" style="font-size:11px">how providers differ · peer norm ' + peer + '</span></div>' +
+      // peer-norm reference marker labelled above the bars
+      '<div style="position:relative;height:15px;margin-bottom:3px"><div style="position:absolute;left:' + peerPct + '%;transform:translateX(-50%);white-space:nowrap;font-size:9.5px;font-weight:600;color:var(--ink)"><i class="ti ti-caret-down-filled" style="font-size:11px;vertical-align:middle"></i> peer norm ' + peer + '</div></div>' +
       top.map(function (r) {
         var self = r.id === id;
         var w = Math.round(r.score / Math.max(max, 1) * 100);
-        return '<div style="margin-bottom:7px"><div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:3px"><span' + (self ? ' style="font-weight:600;color:var(--accent-d)"' : '') + '>' + window.APP.esc(r.name) + (self ? ' ◀ this provider' : '') + ' <span class="muted" style="font-weight:400">· ' + window.APP.esc(r.specialty || "") + '</span></span><span style="font-weight:500' + (r.outlier ? ';color:var(--high-tx)' : '') + '">' + r.score + '</span></div>' +
-          '<div style="height:8px;background:var(--border2);border-radius:4px;overflow:hidden;position:relative"><div style="position:absolute;left:' + Math.round(peer / Math.max(max, 1) * 100) + '%;top:0;bottom:0;width:1px;background:#98a4b3"></div><div style="height:100%;width:' + w + '%;background:' + (self ? "var(--accent)" : r.outlier ? "var(--high)" : "#c2cad4") + '"></div></div></div>';
+        return '<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:3px"><span' + (self ? ' style="font-weight:600;color:var(--accent-d)"' : '') + '>' + window.APP.esc(r.name) + (self ? ' ◀ this provider' : '') + ' <span class="muted" style="font-weight:400">· ' + window.APP.esc(r.specialty || "") + '</span></span><span style="font-weight:500' + (r.outlier ? ';color:var(--high-tx)' : '') + '">' + r.score + '</span></div>' +
+          '<div style="height:10px;background:var(--border2);border-radius:4px;position:relative"><div style="height:100%;width:' + w + '%;background:' + (self ? "var(--accent)" : r.outlier ? "var(--high)" : "#c2cad4") + ';border-radius:4px 0 0 4px"></div><div style="position:absolute;left:' + peerPct + '%;top:-2px;bottom:-2px;width:2px;background:var(--ink);border-radius:1px"></div></div></div>';
       }).join("") +
-      '<div style="font-size:10.5px;color:var(--text3);margin-top:4px">Vertical line = peer norm. Red = outlier providers; teal = the provider in view.</div>';
+      '<div style="font-size:10.5px;color:var(--text3);margin-top:4px"><i class="ti ti-caret-down-filled" style="color:var(--ink)"></i> Dark line = peer norm (' + peer + '). Red bars = outlier providers; teal = the provider in view.</div>';
   }
 
   function kpi(l, v) { return '<div class="kpi"><div class="l">' + l + '</div><div class="v">' + v + '</div></div>'; }
+
+  // full claim line-item detail for an expanded lead on the case page
+  function leadLinesHtml(a, cl) {
+    if (!cl || !(cl.lines || []).length) return '<div style="font-size:11.5px;color:var(--text2)"><i class="ti ti-info-circle"></i> Manual / referral lead — no itemized claim on file yet. Open the lead to attach supporting records.</div>';
+    var head = '<div style="font-size:11px;color:var(--text2);margin-bottom:6px"><span class="mono">' + cl.claimNumber + '</span> · ' + cl.type + ' · DOS ' + cl.dateOfService + ' · Dx ' + ((cl.diagnosisCodes || []).join(",") || "—") + ' · billed ' + window.DP.usd(cl.billedAmount) + ' · paid ' + window.DP.usd(cl.paidAmount) + '</div>';
+    var rows = cl.lines.map(function (l) {
+      var fl = (l.violatesRuleIds || []).length > 0;
+      return '<tr' + (fl ? ' style="background:var(--high-bg)"' : '') + '><td class="mono">' + l.cpt + '</td><td>' + window.APP.esc(l.description) + '</td><td>' + ((l.modifiers || []).length ? '<span class="mono" style="background:var(--high-bg);color:var(--high-tx);padding:1px 5px;border-radius:4px">' + l.modifiers.join(",") + '</span>' : "—") + '</td><td class="right">' + l.units + '</td><td class="right">$' + l.billed + '</td><td class="right">$' + l.paid + '</td><td style="font-size:10.5px;white-space:nowrap">' + (fl ? '<span style="color:var(--high-tx)"><i class="ti ti-flag"></i> flagged</span>' : '<span style="color:var(--text3)">clean</span>') + '</td></tr>';
+    }).join("");
+    return head + '<table style="width:100%"><thead><tr><th>CPT</th><th>Description</th><th>Mod</th><th class="right">Units</th><th class="right">Billed</th><th class="right">Paid</th><th>Status</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  }
 
   // ---- TrackLight-style external profile / secondary scoring ----
   function secondaryPanel(id) {

@@ -21,15 +21,20 @@
     var me = "Dana Whitmore";
     var mine = A.filter(function (a) { return a.assignee === me && OPEN.indexOf(a.status) >= 0; });
     var mineHigh = mine.filter(function (a) { return a.riskScore >= 80; });
-    var returned = A.filter(function (a) { return a.status === "Returned"; });
     var myExp = mine.reduce(function (s, a) { return s + (a.exposurePost || 0); }, 0);
     var next = A.filter(function (a) { return !a.assignee && a.status === "New"; }).sort(function (a, b) { return b.riskScore - a.riskScore; })[0];
+    var allCases = window.DP.listCases({ mode: "retrospective" });
+    var myCases = allCases.filter(function (c) { return c.assignee === me; });
+    var caseSrc = myCases.length ? myCases : allCases;
+    // Two separate lists per the analyst's request: pending Leads and Cases, each
+    // navigating to its own detail page (lead → claim view · case → provider case).
     return kpis([
-      ["Assigned to me", mine.length], ["High-risk (mine)", mineHigh.length],
-      ["Returned to me", returned.length], ["My flagged exposure", window.DP.usdShort(myExp)]
+      ["Leads assigned to me", mine.length], ["High-risk (mine)", mineHigh.length],
+      ["My cases", caseSrc.length], ["My flagged exposure", window.DP.usdShort(myExp)]
     ]) +
       (next ? nextCard(next, "Highest-risk unassigned claim — pick it up and review.") : "") +
-      caseList("My open cases", mine.sort(function (a, b) { return b.riskScore - a.riskScore; }), "You have no open cases assigned.");
+      leadRows("Leads assigned to me", mine.sort(function (a, b) { return b.riskScore - a.riskScore; }), "You have no leads assigned.") +
+      caseRows(myCases.length ? "My cases" : "Open cases", caseSrc, "No cases yet — confirm or escalate a lead to open one.");
   }
 
   function supervisorHome(A) {
@@ -85,11 +90,21 @@
       '<button class="btn primary" data-id="' + a.id + '" id="h-next"><i class="ti ti-player-play"></i> Review</button></div>';
   }
 
-  function caseList(title, rows, emptyMsg) {
-    return '<div class="card" style="padding:0;overflow:hidden"><div style="padding:11px 13px 6px;font-weight:500;font-size:13px">' + title + ' <span class="muted" style="font-weight:400;font-size:11px">· ' + rows.length + '</span></div>' +
+  // Pending leads assigned to me — each row opens the lead (claim) detail.
+  function leadRows(title, rows, emptyMsg) {
+    return '<div class="card" style="padding:0;overflow:hidden;margin-bottom:10px"><div style="padding:11px 13px 6px;font-weight:500;font-size:13px"><i class="ti ti-flag" style="color:var(--high)"></i> ' + title + ' <span class="muted" style="font-weight:400;font-size:11px">· ' + rows.length + '</span></div>' +
       (rows.length ? '<table><tbody>' + rows.map(function (a) {
         var p = window.DP.getProvider(a.providerId);
-        return '<tr class="row" data-id="' + a.id + '"><td style="width:70px">' + window.UI.riskChip(a.riskScore) + '</td><td><span style="font-weight:500">' + window.APP.esc(p.name) + '</span> <span class="tag fwa">' + a.fwaType + '</span></td><td>' + window.UI.statusPill(a.status) + '</td><td class="right" style="font-weight:500">' + window.DP.usd(a.exposurePost || 0) + '</td></tr>';
+        return '<tr class="row" data-id="' + a.id + '"><td style="width:70px">' + window.UI.riskChip(a.riskScore) + '</td><td><span style="font-weight:500">' + window.APP.esc(p.name) + '</span> <span class="tag fwa">' + a.fwaType + '</span></td><td>' + window.UI.statusPill(window.UI.leadStatus(a)) + '</td><td class="right" style="font-weight:500">' + window.DP.usd(a.exposurePost || 0) + '</td></tr>';
+      }).join("") + '</tbody></table>' : '<div class="muted" style="font-size:12px;padding:0 13px 13px">' + emptyMsg + '</div>') + '</div>';
+  }
+  // Cases (provider-level rollups of leads) — each row opens the provider Case detail.
+  function caseRows(title, cases, emptyMsg) {
+    var caseCls = function (s) { return s === "Under investigation" ? "p-esc" : s === "Closed" ? "p-dis" : "p-new"; };
+    return '<div class="card" style="padding:0;overflow:hidden"><div style="padding:11px 13px 6px;font-weight:500;font-size:13px"><i class="ti ti-folders" style="color:var(--accent-d)"></i> ' + title + ' <span class="muted" style="font-weight:400;font-size:11px">· ' + cases.length + '</span></div>' +
+      (cases.length ? '<table><tbody>' + cases.map(function (c) {
+        var types = c.fwaTypes.slice(0, 2).map(function (t) { return '<span class="tag fwa">' + window.APP.esc(t) + '</span>'; }).join(" ");
+        return '<tr class="case-row" data-pid="' + c.providerId + '" style="cursor:pointer"><td style="width:70px">' + window.UI.riskChip(c.riskScore) + '</td><td><span style="font-weight:500">' + window.APP.esc(c.name) + '</span> ' + types + '<div class="mono" style="font-size:10px;color:var(--text3)">' + c.leadCount + ' lead' + (c.leadCount === 1 ? '' : 's') + (c.openCount ? ' · +' + c.openCount + ' feeding in' : '') + '</div></td><td><span class="pill ' + caseCls(c.status) + '">' + c.status + '</span></td><td class="right" style="font-weight:500">' + window.DP.usd(c.exposure || 0) + '</td></tr>';
       }).join("") + '</tbody></table>' : '<div class="muted" style="font-size:12px;padding:0 13px 13px">' + emptyMsg + '</div>') + '</div>';
   }
 
@@ -108,6 +123,7 @@
     var team = document.getElementById("h-team"); if (team) team.addEventListener("click", function () { window.APP.nav("team"); });
     var triage = document.getElementById("h-triage"); if (triage) triage.addEventListener("click", function () { window.APP.nav("queue"); });
     mount.querySelectorAll(".tm-link").forEach(function (el) { el.addEventListener("click", function () { window.APP.openTeam(el.getAttribute("data-team")); }); });
+    mount.querySelectorAll(".case-row[data-pid]").forEach(function (el) { el.addEventListener("click", function () { window.APP.openProvider(el.getAttribute("data-pid")); }); });
     mount.querySelectorAll("tr.row, .row[data-id]").forEach(function (el) { el.addEventListener("click", function () { window.APP.openAllegation(el.getAttribute("data-id")); }); });
   }
 })();

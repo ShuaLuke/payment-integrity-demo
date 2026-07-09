@@ -692,6 +692,33 @@ providers.forEach((p) => {
   });
 });
 
+// ========== ensure EVERY lead carries an itemized claim (consistency) ==========
+// Some data-driven leads were created without a claim reference, so they couldn't be
+// expanded to line items on the case page. Attach a synthetic itemized claim to each
+// claimless retrospective lead — FWA-appropriate CPT lines, at least one flagged — so
+// all leads load their claim data the same way. Runs LAST: no earlier RNG shifts, so
+// the tuned hero scenarios stay byte-stable.
+const FWA_LINES = {
+  [FWA.UPCODING]: () => [cptLine("99215", { dx: "I10", violatesRuleIds: ["rule_fee"] }), cptLine("99213", { dx: "I10" })],
+  [FWA.UNBUNDLING]: () => [cptLine("43239", { dx: "K21.9" }), cptLine("43235", { dx: "K21.9", modifiers: ["59"], violatesRuleIds: ["rule_ncci_43235_43239", "rule_mod59"] })],
+  [FWA.MODIFIER]: () => [cptLine("20610", { dx: "M54.5", modifiers: ["59"], violatesRuleIds: ["rule_mod59"] }), cptLine("99213", { dx: "M54.5" })],
+  [FWA.DUPLICATE]: () => [cptLine("E1390", { violatesRuleIds: ["rule_dup"] }), cptLine("E1390", {})],
+  [FWA.FREQUENCY]: () => [cptLine("90935", { dx: "N18.6", units: 4, billed: CPT["90935"].allowed * 4, allowed: CPT["90935"].allowed * 4, paid: CPT["90935"].allowed * 4, violatesRuleIds: ["rule_mue"] })],
+  [FWA.OUTSIDE_SPECIALTY]: () => [cptLine("70551", { violatesRuleIds: ["rule_fee"] }), cptLine("99213", { dx: "Z00.00" })],
+  [FWA.DECEASED]: () => [cptLine("99214", { dx: "Z00.00", violatesRuleIds: ["rule_fee"] })],
+  [FWA.PHANTOM]: () => [cptLine("97110", { units: 8, billed: CPT["97110"].allowed * 8, allowed: CPT["97110"].allowed * 8, paid: CPT["97110"].allowed * 8, violatesRuleIds: ["rule_fee"] })],
+  [FWA.AUTH_MISMATCH]: () => [cptLine("71046", { violatesRuleIds: ["rule_auth"] }), cptLine("99213", { dx: "R07.9" })],
+  [FWA.RESIDENTIAL_LOS]: () => [cptLine("H0018", { units: 28, billed: CPT["H0018"].allowed * 28, allowed: CPT["H0018"].allowed * 28, paid: CPT["H0018"].allowed * 28, violatesRuleIds: ["rule_fee"] })]
+};
+const defaultLines = () => [cptLine("99214", { dx: "I10", violatesRuleIds: ["rule_fee"] }), cptLine("99213", { dx: "I10" })];
+allegations.forEach((a) => {
+  if (a.claimId || a.mode === "prepay") return;
+  const prov = provById(a.providerId); if (!prov) return;
+  const claim = addClaim({ provider: prov, veteran: pick(veterans), type: a.claimType || "837P", dos: randomDOS(), lines: (FWA_LINES[a.fwaType] || defaultLines)() });
+  a.claimId = claim.id;
+  edges.push({ type: "FLAGS", source: `ALLG-${a.id}`, target: claim.id, props: {} });
+});
+
 // ========== assemble + write ==========
 const dataset = {
   meta: {

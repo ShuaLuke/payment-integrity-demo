@@ -33,7 +33,7 @@
         '<div class="page">' +
         '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">' +
         '<span class="btn" id="c-back" style="padding:5px 9px"><i class="ti ti-arrow-left"></i> ' + window.APP.esc(window.APP.backLabel()) + '</span>' +
-        '<span class="page-title">' + window.APP.esc(headText) + '</span><span id="c-status">' + window.UI.statusPill(a.status) + '</span>' +
+        '<span class="page-title">' + window.APP.esc(headText) + '</span><span id="c-status">' + window.UI.statusPill(prepay ? a.status : window.UI.leadStatus(a)) + '</span>' +
         '<span style="font-size:11px;color:var(--text2);display:inline-flex;align-items:center;gap:4px"><i class="ti ti-lock"></i> Locked to you</span>' +
         '<span style="flex:1"></span>' + window.EXPORT.group("c") + '<button class="btn primary" id="c-summarize" style="font-size:12px"><i class="ti ti-file-analytics"></i> Summarize for adjudication</button></div>' +
         '<div class="split" style="display:flex;gap:12px;align-items:flex-start">' +
@@ -161,8 +161,8 @@
     curTab = name;
     var panel = document.getElementById("c-tabpanel"); if (!panel || !ctx) return;
     document.querySelectorAll(".ctab").forEach(function (b) { b.classList.toggle("active", b.getAttribute("data-tab") === name); });
-    if (name === "overview") { panel.innerHTML = overviewHtml(ctx.a, ctx.prepay); var ovd = document.getElementById("c-ov-decide"); if (ovd) ovd.onclick = function () { showTab("decision"); }; wireWorkingRecord(ctx.id); }
-    else if (name === "evidence") { panel.innerHTML = evidenceHtml(ctx.a, ctx.cl); wireEvidenceUploads(ctx.id); wireEvidenceDocs(ctx.id, ctx.a, ctx.cl); }
+    if (name === "overview") { panel.innerHTML = overviewHtml(ctx.a, ctx.prepay); var ovd = document.getElementById("c-ov-decide"); if (ovd) ovd.onclick = function () { showTab("decision"); }; wireWorkingRecord(ctx.id); var rc0 = document.getElementById("c-openrc"); if (rc0) rc0.onclick = function () { window.APP.openProvider(ctx.p.id); }; }
+    else if (name === "evidence") { panel.innerHTML = evidenceHtml(ctx.a, ctx.cl); wireEvidenceUploads(ctx.id); wireEvidenceDocs(ctx.id, ctx.a, ctx.cl); wireClaimLines(panel); }
     else if (name === "analysis") { panel.innerHTML = analysisHtml(ctx.a); var rc = document.getElementById("c-openrc"); if (rc) rc.onclick = function () { window.APP.openProvider(ctx.p.id); }; }
     else if (name === "network") { panel.innerHTML = networkHtml(); renderCollusion(ctx.p, ctx.id); }
     else if (name === "decision") {
@@ -193,10 +193,22 @@
       (a.xai ? '<div class="xai"><div class="xai-h"><i class="ti ti-sparkles" style="color:var(--accent-d)"></i><span class="t">Why this was flagged</span><span style="font-size:10.5px;color:#5f8a80;margin-left:auto">Explainable AI</span></div>' +
         '<div style="padding:11px 12px"><div style="font-size:12.5px;line-height:1.6;margin-bottom:' + (factors ? "9px" : "0") + '">' + window.APP.esc(a.xai.summary) + '</div>' +
         (factors ? '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:7px">' + factors + '</div>' : '') + '</div></div>' : '') +
+      peerStatsHtml(a) +
       recBanner +
       workingRecordCard(a, prepay) +
       '<div style="font-size:11.5px;color:var(--text2)"><i class="ti ti-info-circle"></i> Use the tabs above for the claim & rules (Evidence), decision-supporting graphs (Analysis), the collusion network (Network), and to record a decision.</div>' +
       '</div>';
+  }
+
+  // Peer statistics — rendered directly under the AI review on the Overview tab
+  // (analyst request): how this provider compares to its specialty peer group.
+  function peerStatsHtml(a) {
+    var p = a.provider || {};
+    var body = emMix(p) + reportCardSnippet(p);
+    if (!body) return "";
+    return '<div class="card" style="padding:0;overflow:hidden;border:0.5px solid #cfe7e3">' +
+      '<div style="background:var(--accent-l);padding:8px 12px;font-weight:500;font-size:12.5px;color:var(--accent-d)"><i class="ti ti-chart-dots-3"></i> Peer statistics <span style="font-weight:400;font-size:11px;color:var(--text2)">· how this provider compares to its specialty peer group — part of the AI review</span></div>' +
+      '<div style="padding:11px 12px;display:flex;flex-direction:column;gap:10px">' + body + '</div></div>';
   }
 
   // ---------- case working record (editable overlay, audit-logged) ----------
@@ -259,13 +271,27 @@
 
   // ---------- Evidence ----------
   function evidenceHtml(a, cl) {
-    var lines = cl ? cl.lines.map(function (l) {
+    var ruleIx = {}; (window.DP.getRules() || []).forEach(function (r) { ruleIx[r.id] = r; });
+    // Every claim line is shown — flagged AND clean — and each expands for detail.
+    // (The whole claim is held while the lead is open, regardless of which lines fired.)
+    var lines = cl ? cl.lines.map(function (l, i) {
       var flagged = (l.violatesRuleIds || []).length > 0;
-      return '<tr' + (flagged ? ' class="flag-row"' : '') + '>' +
+      var main = '<tr class="cl-line' + (flagged ? ' flag-row' : '') + '" data-i="' + i + '" style="cursor:pointer">' +
         '<td class="mono">' + l.cpt + '</td><td>' + window.APP.esc(l.description) + '</td>' +
         '<td>' + (l.modifiers.length ? '<span class="mono" style="background:var(--high-bg);color:var(--high-tx);padding:1px 5px;border-radius:4px">' + l.modifiers.join(",") + '</span>' : '—') + '</td>' +
         '<td class="right">' + l.units + '</td><td class="right">$' + l.billed + '</td><td class="right">$' + l.paid + '</td>' +
-        '<td style="color:var(--high-tx);font-size:10.5px;white-space:nowrap">' + (flagged ? '<i class="ti ti-flag"></i> flagged' : '') + '</td></tr>';
+        '<td style="font-size:10.5px;white-space:nowrap">' + (flagged ? '<span style="color:var(--high-tx)"><i class="ti ti-flag"></i> flagged</span>' : '<span style="color:var(--text3)">clean</span>') + ' <i class="ti ti-chevron-down cl-caret" style="color:var(--text3);font-size:13px;vertical-align:middle"></i></td></tr>';
+      var ruleNames = (l.violatesRuleIds || []).map(function (rid) { var r = ruleIx[rid]; return r ? r.name + " (" + r.code + ")" : rid; });
+      var detail = '<tr class="cl-detail" data-i="' + i + '" style="display:none"><td colspan="7" style="background:var(--surface);padding:9px 12px">' +
+        '<div style="font-size:11.5px;color:var(--text2);line-height:1.7">' +
+        '<b>Line ' + (i + 1) + '</b> · CPT <span class="mono">' + l.cpt + '</span> — ' + window.APP.esc(l.description) + '<br>' +
+        'Billed ' + window.DP.usd(l.billed) + ' · Allowed ' + window.DP.usd(l.allowed || 0) + ' · Paid ' + window.DP.usd(l.paid) + ' · Units ' + l.units +
+        (l.modifiers && l.modifiers.length ? ' · Modifiers ' + l.modifiers.join(", ") : '') + '<br>' +
+        (flagged
+          ? '<span style="color:var(--high-tx)"><i class="ti ti-flag"></i> Flagged by: ' + window.APP.esc(ruleNames.join("; ") || (a.model ? a.model.name : "the ML/AI models")) + '</span>'
+          : '<span style="color:var(--low-tx)"><i class="ti ti-check"></i> No rule violation on this line — shown for full claim context.</span>') +
+        '</div></td></tr>';
+      return main + detail;
     }).join("") : "";
     var rulesHtml = (a.rules || []).map(function (r) {
       return '<div style="display:flex;gap:9px;align-items:flex-start"><i class="ti ti-gavel" style="color:var(--high);margin-top:2px"></i><div><div style="font-size:12px;font-weight:500">' + window.APP.esc(r.name) + ' <span class="mono" style="font-weight:400;color:var(--text2)">' + window.APP.esc(r.code) + '</span> <span class="tag">' + window.APP.esc(r.source) + '</span></div><div style="font-size:11.5px;color:var(--text2)">' + window.APP.esc(r.description) + '</div></div></div>';
@@ -275,12 +301,13 @@
       ? '<div style="font-size:11.5px;color:var(--text2)"><i class="ti ti-user-edit" style="color:var(--med)"></i> Analyst-created lead from <b>' + window.APP.esc(window.DP.sourceOf(a)) + '</b>' + (a.createdBy ? ' (' + window.APP.esc(a.createdBy) + ')' : '') + ' — no automated rule or model fired. Attach records on this tab to build the evidence.</div>'
       : '<div style="font-size:11.5px;color:var(--text2)">No rules fired — behavioral anomaly flagged by ' + (a.model ? window.APP.esc(a.model.name) : "the ML/AI models") + '.</div>';
     return '<div style="display:flex;flex-direction:column;gap:10px">' +
+      (cl ? '<div class="card" style="padding:0;overflow:hidden"><div style="padding:9px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:0.5px solid var(--border2)"><span style="font-weight:500;font-size:13px">Claim <span class="mono" style="font-weight:400;color:var(--text2)">' + cl.claimNumber + '</span></span><span style="font-size:11px;color:var(--text2)">' + cl.type + ' · DOS ' + cl.dateOfService + ' · Dx ' + (cl.diagnosisCodes.join(",") || "—") + ' · ' + cl.claimStatus + ' / ' + cl.paymentType + '</span></div>' +
+        '<table><thead><tr><th>CPT</th><th>Description</th><th>Mod</th><th class="right">Units</th><th class="right">Billed</th><th class="right">Paid</th><th>Status</th></tr></thead><tbody>' + lines + '</tbody></table>' +
+        '<div style="padding:7px 12px;font-size:10.5px;color:var(--text3);border-top:0.5px solid var(--border2)"><i class="ti ti-info-circle"></i> All ' + cl.lines.length + ' claim lines shown — flagged and clean. Click any line to expand its detail; the whole claim is held while the lead is open.</div></div>' : '') +
+      '<div class="card"><div style="font-weight:500;font-size:13px;margin-bottom:8px">Rule engine outcomes</div><div style="display:flex;flex-direction:column;gap:7px">' + rulesHtml + '</div></div>' +
       '<div class="card"><div style="font-weight:500;font-size:13px;margin-bottom:8px"><i class="ti ti-folder-open" style="color:var(--accent-d)"></i> Evidence on file <span class="muted" style="font-weight:400;font-size:11px">· click a record to review it</span></div>' +
       '<div style="display:flex;flex-direction:column;gap:6px">' + evidenceDocs(a, cl).map(function (d) { return docRowHtml(d, "ev-doc-row"); }).join("") + '</div>' +
       '<div id="c-ev-doc" style="margin-top:9px"></div></div>' +
-      (cl ? '<div class="card" style="padding:0;overflow:hidden"><div style="padding:9px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:0.5px solid var(--border2)"><span style="font-weight:500;font-size:13px">Claim <span class="mono" style="font-weight:400;color:var(--text2)">' + cl.claimNumber + '</span></span><span style="font-size:11px;color:var(--text2)">' + cl.type + ' · DOS ' + cl.dateOfService + ' · Dx ' + (cl.diagnosisCodes.join(",") || "—") + ' · ' + cl.claimStatus + ' / ' + cl.paymentType + '</span></div>' +
-        '<table><thead><tr><th>CPT</th><th>Description</th><th>Mod</th><th class="right">Units</th><th class="right">Billed</th><th class="right">Paid</th><th></th></tr></thead><tbody>' + lines + '</tbody></table></div>' : '') +
-      '<div class="card"><div style="font-weight:500;font-size:13px;margin-bottom:8px">Rule engine outcomes</div><div style="display:flex;flex-direction:column;gap:7px">' + rulesHtml + '</div></div>' +
       '<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:10px;flex-wrap:wrap">' +
       '<div style="font-weight:500;font-size:13px"><i class="ti ti-paperclip" style="color:var(--accent-d)"></i> Attached documents <span class="muted" style="font-weight:400;font-size:11px">· upload supporting records to the case (demo — files are not stored)</span></div>' +
       '<div><input type="file" id="c-upload-input" style="display:none"><button class="btn primary" id="c-upload-btn" style="font-size:12px"><i class="ti ti-upload"></i> Attach document</button></div></div>' +
@@ -314,6 +341,18 @@
       });
     });
     render("mr"); // preview the medical record by default (no audit entry until the reviewer interacts)
+  }
+  // expand/collapse a claim line's detail row
+  function wireClaimLines(root) {
+    root.querySelectorAll(".cl-line").forEach(function (row) {
+      row.addEventListener("click", function () {
+        var i = row.getAttribute("data-i");
+        var d = root.querySelector('.cl-detail[data-i="' + i + '"]'); if (!d) return;
+        var open = d.style.display !== "none";
+        d.style.display = open ? "none" : "table-row";
+        var c = row.querySelector(".cl-caret"); if (c) c.style.transform = open ? "" : "rotate(180deg)";
+      });
+    });
   }
   function wireEvidenceUploads(id) {
     var btn = document.getElementById("c-upload-btn"), input = document.getElementById("c-upload-input");
