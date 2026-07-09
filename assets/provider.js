@@ -147,46 +147,44 @@
     listCases: function (opts) {
       opts = opts || {};
       var mode = opts.mode || "retrospective";
-      var byProv = {};
-      D.allegations.forEach(function (a) {
-        if (mode !== "all" && (a.mode || "retrospective") !== mode) return;
-        (byProv[a.providerId] = byProv[a.providerId] || []).push(a);
-      });
       var exposureKey = mode === "prepay" ? "exposurePre" : "exposurePost";
       var closedOf = function (pid) { return !!(window.APP && window.APP.isCaseClosed && window.APP.isCaseClosed(pid)); };
-      // one cell per provider that has leads
-      var cells = Object.keys(byProv).map(function (pid) {
-        var all = byProv[pid].slice().sort(function (a, b) { return b.riskScore - a.riskScore; });
-        return {
-          pid: pid, p: providers[pid] || {},
-          caseLeads: all.filter(isCaseLead),
-          openLeads: all.filter(function (a) { return !isCaseLead(a) && !CLOSED_STATUS[a.status]; })
-        };
-      });
-      // A Case usually maps to ONE provider. Providers that share a business
-      // registration (holding company) or a TIN (billing ring) roll up into a SINGLE
-      // multi-provider case; everyone else keeps their own one-provider case.
-      var ringKey = function (p) {
+      // A lead's case key: the analyst's EXPLICIT case link (chosen on the Decision
+      // tab — new case or an existing one) if set, else the provider's ring key
+      // (shared registration / TIN → one multi-provider case) or its own solo case.
+      var ringKey = function (pid) {
+        var p = providers[pid] || {};
         if (p.registrationId) return "reg:" + p.registrationId;
         var sharedTin = p.tin && D.providers.filter(function (x) { return x.tin === p.tin; }).length > 1;
-        return sharedTin ? "tin:" + p.tin : "solo:" + p.id;
+        return sharedTin ? "tin:" + p.tin : "solo:" + pid;
       };
-      var provRisk = function (c) { return Math.max.apply(null, c.caseLeads.map(function (a) { return a.riskScore || 0; }).concat([c.p.riskScore || 0, 0])); };
+      var linkOf = function (id) { return (window.APP && window.APP.state.caseLinks && window.APP.state.caseLinks[id]) || null; };
+      var keyOf = function (a) { return linkOf(a.id) || ringKey(a.providerId); };
+      // group leads (confirmed + still-open) by resolved case key
       var groups = {};
-      cells.forEach(function (c) { (groups[ringKey(c.p)] = groups[ringKey(c.p)] || []).push(c); });
+      D.allegations.forEach(function (a) {
+        if (mode !== "all" && (a.mode || "retrospective") !== mode) return;
+        var k = keyOf(a);
+        var g = groups[k] || (groups[k] = { caseLeads: [], openLeads: [] });
+        if (isCaseLead(a)) g.caseLeads.push(a);
+        else if (!CLOSED_STATUS[a.status]) g.openLeads.push(a);
+      });
+      var byRisk = function (a, b) { return b.riskScore - a.riskScore; };
       return Object.keys(groups).map(function (k) {
-        var members = groups[k].slice().sort(function (a, b) { return provRisk(b) - provRisk(a); });
-        var primary = members[0].p;
-        var caseLeads = [], openLeads = [];
-        members.forEach(function (m) { caseLeads = caseLeads.concat(m.caseLeads); openLeads = openLeads.concat(m.openLeads); });
+        var g = groups[k];
+        var caseLeads = g.caseLeads.slice().sort(byRisk);
+        var src = (caseLeads.length ? caseLeads : g.openLeads).slice().sort(byRisk);
+        var provIds = src.map(function (a) { return a.providerId; }).filter(function (v, i, arr) { return arr.indexOf(v) === i; });
+        var primary = providers[(src[0] || {}).providerId] || {};
         var escalated = caseLeads.some(function (a) { return a.status === "Escalated"; });
-        var closed = members.some(function (m) { return closedOf(m.pid); });
+        var closed = provIds.some(closedOf);
         return {
+          caseKey: k,
           providerId: primary.id, provider: primary, name: primary.name || "—", npi: primary.npi || "", state: primary.state || "",
-          providerIds: members.map(function (m) { return m.pid; }), providers: members.map(function (m) { return m.p; }),
-          multiProvider: members.length > 1, providerCount: members.length,
-          leads: caseLeads, caseLeads: caseLeads, openLeads: openLeads,
-          leadCount: caseLeads.length, openCount: openLeads.length,
+          providerIds: provIds, providers: provIds.map(function (pid) { return providers[pid] || {}; }),
+          multiProvider: provIds.length > 1, providerCount: provIds.length,
+          leads: caseLeads, caseLeads: caseLeads, openLeads: g.openLeads,
+          leadCount: caseLeads.length, openCount: g.openLeads.length,
           exposure: caseLeads.reduce(function (s, a) { return s + (a[exposureKey] || 0); }, 0),
           riskScore: Math.max.apply(null, caseLeads.map(function (a) { return a.riskScore || 0; }).concat([0])),
           fwaTypes: caseLeads.map(function (a) { return a.fwaType; }).filter(function (t, i, arr) { return t && arr.indexOf(t) === i; }),

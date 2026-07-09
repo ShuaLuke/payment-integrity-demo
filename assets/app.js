@@ -63,11 +63,11 @@
       APP.auditLog("DECISION_" + outcome.toUpperCase(), "Lead #" + id + " · " + (final ? "Dismissed (false positive)" : outcome) + (rationale ? " · rationale recorded" : ""));
       if (!final) {
         APP.auditLog("SUBMITTED_FOR_REVIEW", "Lead #" + id + " · " + outcome + " → supervisor (Karen Boyd)");
-        // confirming/escalating a lead opens (or joins) the provider's case
-        var pc = window.DP.getCase(a.providerId, "retrospective");
-        var joins = pc && pc.caseLeads && pc.caseLeads.length > 1;
+        // the analyst chose (Decision tab) to open a new case or add to an existing one
+        var link = (APP.state.caseLinks || {})[id];
+        var isNew = !link || String(link).indexOf("new:") === 0;
         var pv = window.DP.getProvider(a.providerId);
-        APP.auditLog(joins ? "CASE_UPDATED" : "CASE_OPENED", "Lead #" + id + " · " + (outcome === "escalate" ? "escalated" : "confirmed") + " → " + (joins ? "added to existing case" : "opened case") + " for " + a.providerId + (pv ? " (" + pv.name + ")" : ""));
+        APP.auditLog(isNew ? "CASE_OPENED" : "CASE_UPDATED", "Lead #" + id + " · " + (outcome === "escalate" ? "escalated" : "confirmed") + " → " + (isNew ? "opened a new case" : "added to an existing case") + " for " + a.providerId + (pv ? " (" + pv.name + ")" : ""));
       }
       APP.updateSupBadge();
     },
@@ -128,6 +128,15 @@
       if (name && a.status === "New") a.status = "Assigned";
       APP.auditLog("CASE_ASSIGNED", "Lead #" + id + " · " + (name ? "→ " + name : "unassigned"));
     },
+    // Analyst's Decision-tab choice: start a NEW case or add the lead to an existing
+    // one. Stored as a per-lead case link that DP.listCases groups by.
+    setLeadCase: function (id, choice) {
+      choice = choice || {};
+      var key = (choice.mode === "existing" && choice.caseKey) ? choice.caseKey : "new:" + id;
+      (APP.state.caseLinks = APP.state.caseLinks || {})[id] = key;
+      APP.auditLog("CASE_LINK", "Lead #" + id + " · " + (choice.mode === "existing" ? "added to existing case" + (choice.caseName ? " (" + choice.caseName + ")" : "") : "flagged to open a new case"));
+    },
+
     // ---- case closure (a case can be Closed once its work is done) ----
     isCaseClosed: function (pid) { return !!(APP.state.closedCases && APP.state.closedCases[pid]); },
     closeCase: function (pid, reason) {

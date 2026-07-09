@@ -719,6 +719,29 @@ allegations.forEach((a) => {
   edges.push({ type: "FLAGS", source: `ALLG-${a.id}`, target: claim.id, props: {} });
 });
 
+// ---- give every lead's claim a MIX of flagged + unflagged lines (full context) ----
+// Adjudicators need the whole picture: the flagged line(s) AND the routine, clean
+// lines around them. Append clean ancillary context line(s) to any lead-claim that is
+// all-flagged. Non-E/M codes so provider E/M-share metrics stay put. Runs last.
+const _claimById = {}; claims.forEach((c) => { _claimById[c.id] = c; });
+const _payByClaim = {}; payments.forEach((p) => { _payByClaim[p.claimId] = p; });
+const CLEAN_CTX = ["93000", "71046"];
+allegations.forEach((a) => {
+  const c = a.claimId ? _claimById[a.claimId] : null; if (!c) return;
+  const hasFlagged = c.lines.some((l) => (l.violatesRuleIds || []).length);
+  const hasClean = c.lines.some((l) => !(l.violatesRuleIds || []).length);
+  if (!hasFlagged || hasClean) return; // only all-flagged claims need clean context
+  const extras = [cptLine(CLEAN_CTX[0], {})];
+  if (chance(0.6)) extras.push(cptLine(CLEAN_CTX[1], {}));
+  extras.forEach((l) => {
+    c.lines.push({ lineId: `${c.id}-L${c.lines.length + 1}`, cpt: l.cpt, modifiers: [], units: l.units || 1, billed: l.billed, allowed: l.allowed, paid: c.paymentType === "PRE" ? 0 : l.paid, description: l.description, violatesRuleIds: [] });
+  });
+  c.billedAmount = round2(c.lines.reduce((s, l) => s + l.billed, 0));
+  c.allowedAmount = round2(c.lines.reduce((s, l) => s + l.allowed, 0));
+  c.paidAmount = round2(c.lines.reduce((s, l) => s + l.paid, 0));
+  const pay = _payByClaim[c.id]; if (pay) pay.amount = c.paidAmount;
+});
+
 // ========== assemble + write ==========
 const dataset = {
   meta: {

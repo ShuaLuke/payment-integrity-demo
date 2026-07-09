@@ -4846,9 +4846,9 @@
       "providerId": "PR001",
       "veteranId": "V0001",
       "dateOfService": "2025-03-11",
-      "billedAmount": 184,
-      "allowedAmount": 184,
-      "paidAmount": 184,
+      "billedAmount": 232,
+      "allowedAmount": 232,
+      "paidAmount": 232,
       "claimStatus": "Paid",
       "paymentType": "POST",
       "authorizationId": "A00001",
@@ -4869,6 +4869,28 @@
           "violatesRuleIds": [
             "model_em_peer"
           ]
+        },
+        {
+          "lineId": "C00001-L2",
+          "cpt": "93000",
+          "modifiers": [],
+          "units": 1,
+          "billed": 18,
+          "allowed": 18,
+          "paid": 18,
+          "description": "Electrocardiogram, complete",
+          "violatesRuleIds": []
+        },
+        {
+          "lineId": "C00001-L3",
+          "cpt": "71046",
+          "modifiers": [],
+          "units": 1,
+          "billed": 30,
+          "allowed": 30,
+          "paid": 30,
+          "description": "Chest X-ray, 2 views",
+          "violatesRuleIds": []
         }
       ]
     },
@@ -17638,9 +17660,9 @@
       "providerId": "PR003",
       "veteranId": "V0003",
       "dateOfService": "2025-02-01",
-      "billedAmount": 88,
-      "allowedAmount": 88,
-      "paidAmount": 88,
+      "billedAmount": 136,
+      "allowedAmount": 136,
+      "paidAmount": 136,
       "claimStatus": "Paid",
       "paymentType": "POST",
       "authorizationId": "A00378",
@@ -17661,6 +17683,28 @@
           "violatesRuleIds": [
             "model_freq"
           ]
+        },
+        {
+          "lineId": "C00378-L2",
+          "cpt": "93000",
+          "modifiers": [],
+          "units": 1,
+          "billed": 18,
+          "allowed": 18,
+          "paid": 18,
+          "description": "Electrocardiogram, complete",
+          "violatesRuleIds": []
+        },
+        {
+          "lineId": "C00378-L3",
+          "cpt": "71046",
+          "modifiers": [],
+          "units": 1,
+          "billed": 30,
+          "allowed": 30,
+          "paid": 30,
+          "description": "Chest X-ray, 2 views",
+          "violatesRuleIds": []
         }
       ]
     },
@@ -23600,9 +23644,9 @@
       "providerId": "PR300",
       "veteranId": "V0004",
       "dateOfService": "2025-01-03",
-      "billedAmount": 15360,
-      "allowedAmount": 15360,
-      "paidAmount": 15360,
+      "billedAmount": 15378,
+      "allowedAmount": 15378,
+      "paidAmount": 15378,
       "claimStatus": "Paid",
       "paymentType": "POST",
       "authorizationId": "A00568",
@@ -23623,6 +23667,17 @@
           "violatesRuleIds": [
             "model_los"
           ]
+        },
+        {
+          "lineId": "C00568-L2",
+          "cpt": "93000",
+          "modifiers": [],
+          "units": 1,
+          "billed": 18,
+          "allowed": 18,
+          "paid": 18,
+          "description": "Electrocardiogram, complete",
+          "violatesRuleIds": []
         }
       ]
     },
@@ -23633,9 +23688,9 @@
       "providerId": "PR301",
       "veteranId": "V0004",
       "dateOfService": "2025-02-04",
-      "billedAmount": 17920,
-      "allowedAmount": 17920,
-      "paidAmount": 17920,
+      "billedAmount": 17968,
+      "allowedAmount": 17968,
+      "paidAmount": 17968,
       "claimStatus": "Paid",
       "paymentType": "POST",
       "authorizationId": "A00569",
@@ -23656,6 +23711,28 @@
           "violatesRuleIds": [
             "model_los"
           ]
+        },
+        {
+          "lineId": "C00569-L2",
+          "cpt": "93000",
+          "modifiers": [],
+          "units": 1,
+          "billed": 18,
+          "allowed": 18,
+          "paid": 18,
+          "description": "Electrocardiogram, complete",
+          "violatesRuleIds": []
+        },
+        {
+          "lineId": "C00569-L3",
+          "cpt": "71046",
+          "modifiers": [],
+          "units": 1,
+          "billed": 30,
+          "allowed": 30,
+          "paid": 30,
+          "description": "Chest X-ray, 2 views",
+          "violatesRuleIds": []
         }
       ]
     },
@@ -23699,9 +23776,9 @@
       "providerId": "PR302",
       "veteranId": "V0005",
       "dateOfService": "2025-02-06",
-      "billedAmount": 18560,
-      "allowedAmount": 18560,
-      "paidAmount": 18560,
+      "billedAmount": 18608,
+      "allowedAmount": 18608,
+      "paidAmount": 18608,
       "claimStatus": "Paid",
       "paymentType": "POST",
       "authorizationId": "A00571",
@@ -23722,6 +23799,28 @@
           "violatesRuleIds": [
             "model_los"
           ]
+        },
+        {
+          "lineId": "C00571-L2",
+          "cpt": "93000",
+          "modifiers": [],
+          "units": 1,
+          "billed": 18,
+          "allowed": 18,
+          "paid": 18,
+          "description": "Electrocardiogram, complete",
+          "violatesRuleIds": []
+        },
+        {
+          "lineId": "C00571-L3",
+          "cpt": "71046",
+          "modifiers": [],
+          "units": 1,
+          "billed": 30,
+          "allowed": 30,
+          "paid": 30,
+          "description": "Chest X-ray, 2 views",
+          "violatesRuleIds": []
         }
       ]
     },
@@ -23732,9 +23831,9 @@
       "providerId": "PR303",
       "veteranId": "V0005",
       "dateOfService": "2025-03-02",
-      "billedAmount": 14720,
-      "allowedAmount": 14720,
-      "paidAmount": 14720,
+      "billedAmount": 14738,
+      "allowedAmount": 14738,
+      "paidAmount": 14738,
       "claimStatus": "Paid",
       "paymentType": "POST",
       "authorizationId": "A00572",
@@ -23755,6 +23854,17 @@
           "violatesRuleIds": [
             "model_los"
           ]
+        },
+        {
+          "lineId": "C00572-L2",
+          "cpt": "93000",
+          "modifiers": [],
+          "units": 1,
+          "billed": 18,
+          "allowed": 18,
+          "paid": 18,
+          "description": "Electrocardiogram, complete",
+          "violatesRuleIds": []
         }
       ]
     },
@@ -24161,8 +24271,8 @@
       "providerId": "PR300",
       "veteranId": "V0010",
       "dateOfService": "2025-07-04",
-      "billedAmount": 17280,
-      "allowedAmount": 17280,
+      "billedAmount": 17328,
+      "allowedAmount": 17328,
       "paidAmount": 0,
       "claimStatus": "Pending",
       "paymentType": "PRE",
@@ -24182,6 +24292,28 @@
           "violatesRuleIds": [
             "rule_fee"
           ]
+        },
+        {
+          "lineId": "C00585-L2",
+          "cpt": "93000",
+          "modifiers": [],
+          "units": 1,
+          "billed": 18,
+          "allowed": 18,
+          "paid": 0,
+          "description": "Electrocardiogram, complete",
+          "violatesRuleIds": []
+        },
+        {
+          "lineId": "C00585-L3",
+          "cpt": "71046",
+          "modifiers": [],
+          "units": 1,
+          "billed": 30,
+          "allowed": 30,
+          "paid": 0,
+          "description": "Chest X-ray, 2 views",
+          "violatesRuleIds": []
         }
       ]
     },
@@ -24192,8 +24324,8 @@
       "providerId": "PR002",
       "veteranId": "V0016",
       "dateOfService": "2025-07-05",
-      "billedAmount": 1010,
-      "allowedAmount": 1010,
+      "billedAmount": 1058,
+      "allowedAmount": 1058,
       "paidAmount": 0,
       "claimStatus": "Pending",
       "paymentType": "PRE",
@@ -24232,6 +24364,28 @@
             "rule_ncci_43235_43239",
             "rule_mod59"
           ]
+        },
+        {
+          "lineId": "C00586-L3",
+          "cpt": "93000",
+          "modifiers": [],
+          "units": 1,
+          "billed": 18,
+          "allowed": 18,
+          "paid": 0,
+          "description": "Electrocardiogram, complete",
+          "violatesRuleIds": []
+        },
+        {
+          "lineId": "C00586-L4",
+          "cpt": "71046",
+          "modifiers": [],
+          "units": 1,
+          "billed": 30,
+          "allowed": 30,
+          "paid": 0,
+          "description": "Chest X-ray, 2 views",
+          "violatesRuleIds": []
         }
       ]
     },
@@ -24242,8 +24396,8 @@
       "providerId": "PR001",
       "veteranId": "V0033",
       "dateOfService": "2025-07-06",
-      "billedAmount": 184,
-      "allowedAmount": 184,
+      "billedAmount": 232,
+      "allowedAmount": 232,
       "paidAmount": 0,
       "claimStatus": "Pending",
       "paymentType": "PRE",
@@ -24265,6 +24419,28 @@
           "violatesRuleIds": [
             "model_em_peer"
           ]
+        },
+        {
+          "lineId": "C00587-L2",
+          "cpt": "93000",
+          "modifiers": [],
+          "units": 1,
+          "billed": 18,
+          "allowed": 18,
+          "paid": 0,
+          "description": "Electrocardiogram, complete",
+          "violatesRuleIds": []
+        },
+        {
+          "lineId": "C00587-L3",
+          "cpt": "71046",
+          "modifiers": [],
+          "units": 1,
+          "billed": 30,
+          "allowed": 30,
+          "paid": 0,
+          "description": "Chest X-ray, 2 views",
+          "violatesRuleIds": []
         }
       ]
     },
@@ -24275,8 +24451,8 @@
       "providerId": "PR201",
       "veteranId": "V0021",
       "dateOfService": "2025-07-07",
-      "billedAmount": 210,
-      "allowedAmount": 210,
+      "billedAmount": 258,
+      "allowedAmount": 258,
       "paidAmount": 0,
       "claimStatus": "Pending",
       "paymentType": "PRE",
@@ -24296,6 +24472,28 @@
           "violatesRuleIds": [
             "rule_dup"
           ]
+        },
+        {
+          "lineId": "C00588-L2",
+          "cpt": "93000",
+          "modifiers": [],
+          "units": 1,
+          "billed": 18,
+          "allowed": 18,
+          "paid": 0,
+          "description": "Electrocardiogram, complete",
+          "violatesRuleIds": []
+        },
+        {
+          "lineId": "C00588-L3",
+          "cpt": "71046",
+          "modifiers": [],
+          "units": 1,
+          "billed": 30,
+          "allowed": 30,
+          "paid": 0,
+          "description": "Chest X-ray, 2 views",
+          "violatesRuleIds": []
         }
       ]
     },
@@ -24306,8 +24504,8 @@
       "providerId": "PR205",
       "veteranId": "V0023",
       "dateOfService": "2025-07-08",
-      "billedAmount": 256,
-      "allowedAmount": 256,
+      "billedAmount": 304,
+      "allowedAmount": 304,
       "paidAmount": 0,
       "claimStatus": "Pending",
       "paymentType": "PRE",
@@ -24327,6 +24525,28 @@
           "violatesRuleIds": [
             "model_freq"
           ]
+        },
+        {
+          "lineId": "C00589-L2",
+          "cpt": "93000",
+          "modifiers": [],
+          "units": 1,
+          "billed": 18,
+          "allowed": 18,
+          "paid": 0,
+          "description": "Electrocardiogram, complete",
+          "violatesRuleIds": []
+        },
+        {
+          "lineId": "C00589-L3",
+          "cpt": "71046",
+          "modifiers": [],
+          "units": 1,
+          "billed": 30,
+          "allowed": 30,
+          "paid": 0,
+          "description": "Chest X-ray, 2 views",
+          "violatesRuleIds": []
         }
       ]
     },
@@ -24337,8 +24557,8 @@
       "providerId": "PR200",
       "veteranId": "V0020",
       "dateOfService": "2025-07-09",
-      "billedAmount": 250,
-      "allowedAmount": 250,
+      "billedAmount": 298,
+      "allowedAmount": 298,
       "paidAmount": 0,
       "claimStatus": "Pending",
       "paymentType": "PRE",
@@ -24358,6 +24578,28 @@
           "violatesRuleIds": [
             "model_freq"
           ]
+        },
+        {
+          "lineId": "C00590-L2",
+          "cpt": "93000",
+          "modifiers": [],
+          "units": 1,
+          "billed": 18,
+          "allowed": 18,
+          "paid": 0,
+          "description": "Electrocardiogram, complete",
+          "violatesRuleIds": []
+        },
+        {
+          "lineId": "C00590-L3",
+          "cpt": "71046",
+          "modifiers": [],
+          "units": 1,
+          "billed": 30,
+          "allowed": 30,
+          "paid": 0,
+          "description": "Chest X-ray, 2 views",
+          "violatesRuleIds": []
         }
       ]
     },
@@ -24691,9 +24933,9 @@
       "providerId": "PR205",
       "veteranId": "V0004",
       "dateOfService": "2025-05-13",
-      "billedAmount": 256,
-      "allowedAmount": 256,
-      "paidAmount": 256,
+      "billedAmount": 274,
+      "allowedAmount": 274,
+      "paidAmount": 274,
       "claimStatus": "Paid",
       "paymentType": "POST",
       "authorizationId": "A00599",
@@ -24712,6 +24954,17 @@
           "violatesRuleIds": [
             "rule_fee"
           ]
+        },
+        {
+          "lineId": "C00599-L2",
+          "cpt": "93000",
+          "modifiers": [],
+          "units": 1,
+          "billed": 18,
+          "allowed": 18,
+          "paid": 18,
+          "description": "Electrocardiogram, complete",
+          "violatesRuleIds": []
         }
       ]
     },
@@ -24722,9 +24975,9 @@
       "providerId": "PR001",
       "veteranId": "V0028",
       "dateOfService": "2025-01-27",
-      "billedAmount": 131,
-      "allowedAmount": 131,
-      "paidAmount": 131,
+      "billedAmount": 149,
+      "allowedAmount": 149,
+      "paidAmount": 149,
       "claimStatus": "Paid",
       "paymentType": "POST",
       "authorizationId": "A00600",
@@ -24745,6 +24998,17 @@
           "violatesRuleIds": [
             "rule_fee"
           ]
+        },
+        {
+          "lineId": "C00600-L2",
+          "cpt": "93000",
+          "modifiers": [],
+          "units": 1,
+          "billed": 18,
+          "allowed": 18,
+          "paid": 18,
+          "description": "Electrocardiogram, complete",
+          "violatesRuleIds": []
         }
       ]
     },
@@ -25203,9 +25467,9 @@
       "providerId": "PR200",
       "veteranId": "V0010",
       "dateOfService": "2025-06-27",
-      "billedAmount": 131,
-      "allowedAmount": 131,
-      "paidAmount": 131,
+      "billedAmount": 179,
+      "allowedAmount": 179,
+      "paidAmount": 179,
       "claimStatus": "Paid",
       "paymentType": "POST",
       "authorizationId": "A00611",
@@ -25226,6 +25490,28 @@
           "violatesRuleIds": [
             "rule_fee"
           ]
+        },
+        {
+          "lineId": "C00611-L2",
+          "cpt": "93000",
+          "modifiers": [],
+          "units": 1,
+          "billed": 18,
+          "allowed": 18,
+          "paid": 18,
+          "description": "Electrocardiogram, complete",
+          "violatesRuleIds": []
+        },
+        {
+          "lineId": "C00611-L3",
+          "cpt": "71046",
+          "modifiers": [],
+          "units": 1,
+          "billed": 30,
+          "allowed": 30,
+          "paid": 30,
+          "description": "Chest X-ray, 2 views",
+          "violatesRuleIds": []
         }
       ]
     },
@@ -25236,9 +25522,9 @@
       "providerId": "PR205",
       "veteranId": "V0030",
       "dateOfService": "2025-12-28",
-      "billedAmount": 131,
-      "allowedAmount": 131,
-      "paidAmount": 131,
+      "billedAmount": 179,
+      "allowedAmount": 179,
+      "paidAmount": 179,
       "claimStatus": "Paid",
       "paymentType": "POST",
       "authorizationId": "A00612",
@@ -25259,6 +25545,28 @@
           "violatesRuleIds": [
             "rule_fee"
           ]
+        },
+        {
+          "lineId": "C00612-L2",
+          "cpt": "93000",
+          "modifiers": [],
+          "units": 1,
+          "billed": 18,
+          "allowed": 18,
+          "paid": 18,
+          "description": "Electrocardiogram, complete",
+          "violatesRuleIds": []
+        },
+        {
+          "lineId": "C00612-L3",
+          "cpt": "71046",
+          "modifiers": [],
+          "units": 1,
+          "billed": 30,
+          "allowed": 30,
+          "paid": 30,
+          "description": "Chest X-ray, 2 views",
+          "violatesRuleIds": []
         }
       ]
     },
@@ -31498,7 +31806,7 @@
       "id": "P00001",
       "paymentId": "RA-1209219",
       "claimId": "C00001",
-      "amount": 184,
+      "amount": 232,
       "date": "2025-03-11",
       "remittance835": "835-215982"
     },
@@ -34514,7 +34822,7 @@
       "id": "P00378",
       "paymentId": "RA-6015483",
       "claimId": "C00378",
-      "amount": 88,
+      "amount": 136,
       "date": "2025-02-01",
       "remittance835": "835-611214"
     },
@@ -36034,7 +36342,7 @@
       "id": "P00568",
       "paymentId": "RA-9037745",
       "claimId": "C00568",
-      "amount": 15360,
+      "amount": 15378,
       "date": "2025-01-03",
       "remittance835": "835-113421"
     },
@@ -36042,7 +36350,7 @@
       "id": "P00569",
       "paymentId": "RA-8153634",
       "claimId": "C00569",
-      "amount": 17920,
+      "amount": 17968,
       "date": "2025-02-04",
       "remittance835": "835-274779"
     },
@@ -36058,7 +36366,7 @@
       "id": "P00571",
       "paymentId": "RA-5894706",
       "claimId": "C00571",
-      "amount": 18560,
+      "amount": 18608,
       "date": "2025-02-06",
       "remittance835": "835-419310"
     },
@@ -36066,7 +36374,7 @@
       "id": "P00572",
       "paymentId": "RA-2545356",
       "claimId": "C00572",
-      "amount": 14720,
+      "amount": 14738,
       "date": "2025-03-02",
       "remittance835": "835-635051"
     },
@@ -36210,7 +36518,7 @@
       "id": "P00590",
       "paymentId": "RA-6001108",
       "claimId": "C00599",
-      "amount": 256,
+      "amount": 274,
       "date": "2025-05-13",
       "remittance835": "835-215849"
     },
@@ -36218,7 +36526,7 @@
       "id": "P00591",
       "paymentId": "RA-9921589",
       "claimId": "C00600",
-      "amount": 131,
+      "amount": 149,
       "date": "2025-01-27",
       "remittance835": "835-167875"
     },
@@ -36306,7 +36614,7 @@
       "id": "P00602",
       "paymentId": "RA-5989841",
       "claimId": "C00611",
-      "amount": 131,
+      "amount": 179,
       "date": "2025-06-27",
       "remittance835": "835-689881"
     },
@@ -36314,7 +36622,7 @@
       "id": "P00603",
       "paymentId": "RA-2162812",
       "claimId": "C00612",
-      "amount": 131,
+      "amount": 179,
       "date": "2025-12-28",
       "remittance835": "835-506462"
     },

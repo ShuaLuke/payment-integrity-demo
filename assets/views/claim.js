@@ -161,7 +161,7 @@
     curTab = name;
     var panel = document.getElementById("c-tabpanel"); if (!panel || !ctx) return;
     document.querySelectorAll(".ctab").forEach(function (b) { b.classList.toggle("active", b.getAttribute("data-tab") === name); });
-    if (name === "overview") { panel.innerHTML = overviewHtml(ctx.a, ctx.prepay); var ovd = document.getElementById("c-ov-decide"); if (ovd) ovd.onclick = function () { showTab("decision"); }; wireWorkingRecord(ctx.id); var rc0 = document.getElementById("c-openrc"); if (rc0) rc0.onclick = function () { window.APP.openProvider(ctx.p.id); }; }
+    if (name === "overview") { panel.innerHTML = overviewHtml(ctx.a, ctx.prepay); var ovd = document.getElementById("c-ov-decide"); if (ovd) ovd.onclick = function () { showTab("decision"); }; wireWorkingRecord(ctx.id); wirePeerStats(ctx.a); }
     else if (name === "evidence") { panel.innerHTML = evidenceHtml(ctx.a, ctx.cl); wireEvidenceUploads(ctx.id); wireEvidenceDocs(ctx.id, ctx.a, ctx.cl); wireClaimLines(panel); }
     else if (name === "analysis") { panel.innerHTML = analysisHtml(ctx.a); var rc = document.getElementById("c-openrc"); if (rc) rc.onclick = function () { window.APP.openProvider(ctx.p.id); }; }
     else if (name === "network") { panel.innerHTML = networkHtml(); renderCollusion(ctx.p, ctx.id); }
@@ -200,15 +200,67 @@
       '</div>';
   }
 
-  // Peer statistics — rendered directly under the AI review on the Overview tab
-  // (analyst request): how this provider compares to its specialty peer group.
+  // Peer statistics — a spider chart with the peer-average region shaded so the
+  // reviewer sees, across every FAMS composite, where this provider lies vs the norm.
+  // Click a spoke to drill into that composite's detail (score vs peer + attributes).
   function peerStatsHtml(a) {
     var p = a.provider || {};
-    var body = emMix(p) + reportCardSnippet(p);
-    if (!body) return "";
-    return '<div class="card" style="padding:0;overflow:hidden;border:0.5px solid #cfe7e3">' +
-      '<div style="background:var(--accent-l);padding:8px 12px;font-weight:500;font-size:12.5px;color:var(--accent-d)"><i class="ti ti-chart-dots-3"></i> Peer statistics <span style="font-weight:400;font-size:11px;color:var(--text2)">· how this provider compares to its specialty peer group — part of the AI review</span></div>' +
-      '<div style="padding:11px 12px;display:flex;flex-direction:column;gap:10px">' + body + '</div></div>';
+    var card = window.DP.getReportCard(p.id);
+    if (!card || !(card.groups || []).length) return "";
+    var groups = card.groups;
+    var top = groups.slice().sort(function (x, y) { return (y.outlier - x.outlier) || (y.score - x.score); })[0];
+    var sel = top ? top.group : null;
+    return '<div class="card" id="c-peer" style="padding:0;overflow:hidden;border:0.5px solid #cfe7e3">' +
+      '<div style="background:var(--accent-l);padding:8px 12px;font-weight:500;font-size:12.5px;color:var(--accent-d)"><i class="ti ti-chart-dots-3"></i> Peer statistics <span style="font-weight:400;font-size:11px;color:var(--text2)">· how this provider compares to its specialty peer group · click a spoke for detail</span></div>' +
+      '<div style="padding:11px 12px;display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start">' +
+      '<div style="flex:none">' + peerRadar(groups, sel) +
+      '<div style="display:flex;gap:12px;justify-content:center;font-size:10px;color:var(--text2);margin-top:2px"><span><span style="display:inline-block;width:9px;height:9px;background:rgba(23,179,166,0.3);border:1px solid #17b3a6;vertical-align:middle"></span> This provider</span><span><span style="display:inline-block;width:9px;height:9px;background:rgba(120,140,165,0.25);border:1px dashed #98a4b3;vertical-align:middle"></span> Peer average</span></div></div>' +
+      '<div style="flex:1;min-width:230px" id="c-peer-drill">' + peerDrill(a, card, sel) + '</div>' +
+      '</div></div>';
+  }
+  function peerRadar(groups, sel) {
+    var n = groups.length; if (!n) return "";
+    var cx = 118, cy = 116, R = 82;
+    var pt = function (i, v) { var ang = -Math.PI / 2 + i * 2 * Math.PI / n; var r = (Math.max(0, Math.min(100, v)) / 100) * R; return [cx + r * Math.cos(ang), cy + r * Math.sin(ang)]; };
+    var ring = [25, 50, 75, 100].map(function (lvl) { var pts = groups.map(function (_, i) { return pt(i, lvl).join(","); }).join(" "); return '<polygon points="' + pts + '" fill="none" stroke="#e3e8ee" stroke-width="1"></polygon>'; }).join("");
+    var axes = groups.map(function (_, i) { var e = pt(i, 100); return '<line x1="' + cx + '" y1="' + cy + '" x2="' + e[0] + '" y2="' + e[1] + '" stroke="#e3e8ee" stroke-width="1"></line>'; }).join("");
+    var peerPts = groups.map(function (g, i) { return pt(i, g.peer).join(","); }).join(" ");
+    var provPts = groups.map(function (g, i) { return pt(i, g.score).join(","); }).join(" ");
+    var peerPoly = '<polygon points="' + peerPts + '" fill="rgba(120,140,165,0.18)" stroke="#98a4b3" stroke-width="1.2" stroke-dasharray="4,3"></polygon>';
+    var provPoly = '<polygon points="' + provPts + '" fill="rgba(23,179,166,0.14)" stroke="#17b3a6" stroke-width="2"></polygon>';
+    var dots = groups.map(function (g, i) { var c = pt(i, g.score); return '<circle cx="' + c[0] + '" cy="' + c[1] + '" r="' + (g.outlier ? 4 : 2.6) + '" fill="' + (g.outlier ? "#c6362f" : "#17b3a6") + '"></circle>'; }).join("");
+    var labels = groups.map(function (g, i) {
+      var l = pt(i, 116); var anchor = Math.abs(l[0] - cx) < 12 ? "middle" : (l[0] < cx ? "end" : "start");
+      var nm = g.group === "Charge & Payment" ? "Charge/Pay" : g.group === "Diagnostic Testing" ? "Diagnostic" : g.group === "Distance / Travel" ? "Distance" : g.group;
+      var isSel = g.group === sel;
+      return '<g class="c-spoke" data-group="' + window.APP.esc(g.group) + '" style="cursor:pointer"><text x="' + l[0] + '" y="' + (l[1] + 3) + '" text-anchor="' + anchor + '" font-size="9.5" font-family="IBM Plex Sans,sans-serif" font-weight="' + (isSel ? "700" : "500") + '" fill="' + (g.outlier ? "#8b1a13" : "#10243b") + '"' + (isSel ? ' text-decoration="underline"' : '') + '>' + nm + (g.outlier ? " ▲" : "") + '</text></g>';
+    }).join("");
+    return '<svg viewBox="-42 -6 320 244" width="264" height="200" style="display:block">' + ring + axes + peerPoly + provPoly + dots + labels + '</svg>';
+  }
+  function peerDrill(a, card, group) {
+    if (!group) return '';
+    var gs = (card.groups || []).find(function (g) { return g.group === group; }) || {};
+    var attrs = (card.attributes || {})[group] || [];
+    var barMax = Math.max(gs.score || 0, gs.peer || 0, 100);
+    var bar = function (label, val, color) { var w = Math.round((val / barMax) * 100); return '<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span>' + label + '</span><span style="font-weight:600">' + val + '</span></div><div style="height:9px;background:var(--border2);border-radius:5px;overflow:hidden"><div style="height:100%;width:' + w + '%;background:' + color + '"></div></div></div>'; };
+    var attrRows = attrs.length ? attrs.map(function (at) { return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-top:0.5px solid var(--border2);font-size:11px"><span' + (at.outlier ? ' style="color:var(--high-tx);font-weight:500"' : '') + '>' + window.APP.esc(at.label) + (at.outlier ? ' ▲' : '') + '</span><span class="mono">' + window.APP.esc(at.value) + (at.peer ? ' <span style="color:var(--text3)">vs ' + window.APP.esc(at.peer) + '</span>' : '') + '</span></div>'; }).join("") : '';
+    return '<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:7px"><div style="font-weight:600;font-size:12.5px">' + window.APP.esc(group) + '</div><span class="chip ' + (gs.outlier ? "rh" : "rl") + '"><span class="s">' + gs.score + '</span> ' + (gs.outlier ? "outlier" : "in range") + '</span></div>' +
+      bar("This provider", gs.score || 0, gs.outlier ? "var(--high)" : "var(--accent)") +
+      bar("Peer average", gs.peer || 0, "#98a4b3") +
+      (attrRows ? '<div style="margin-top:7px">' + attrRows + '</div>' : '') +
+      '<div style="font-size:11px;color:var(--accent-d);cursor:pointer;margin-top:7px" id="c-peer-openrc"><i class="ti ti-external-link"></i> Open full report card</div>';
+  }
+  function wirePeerStats(a) {
+    var host = document.getElementById("c-peer"); if (!host) return;
+    var card = window.DP.getReportCard((a.provider || {}).id); if (!card) return;
+    function bindOpenRc() { var rc = document.getElementById("c-peer-openrc"); if (rc) rc.onclick = function () { window.APP.openProvider((a.provider || {}).id); }; }
+    function bindSpokes() { host.querySelectorAll(".c-spoke").forEach(function (el) { el.addEventListener("click", function () { select(el.getAttribute("data-group")); }); }); }
+    function select(group) {
+      document.getElementById("c-peer-drill").innerHTML = peerDrill(a, card, group);
+      var svg = host.querySelector("svg"); if (svg) svg.outerHTML = peerRadar(card.groups, group);
+      bindSpokes(); bindOpenRc();
+    }
+    bindSpokes(); bindOpenRc();
   }
 
   // ---------- case working record (editable overlay, audit-logged) ----------
@@ -545,6 +597,19 @@
       return;
     }
     var returnedNote = (dec && dec.reviewState === "returned") ? (dec.returnNote || "(no note)") : null;
+    // case-assignment options (required when confirming/escalating): open a new case
+    // or add this lead to an existing one.
+    var openCases = window.DP.listCases({ mode: "retrospective" }).filter(function (c) { return !c.closed; });
+    var provCase = window.DP.getCase(a.providerId, "retrospective");
+    var provHasCase = !!(provCase && !provCase.closed && provCase.leadCount > 0);
+    var caseOpts = openCases.map(function (c) { return '<option value="' + c.caseKey + '" data-name="' + window.APP.esc(c.name) + '"' + (provHasCase && c.caseKey === provCase.caseKey ? " selected" : "") + '>' + window.APP.esc(c.name) + ' · CASE-' + c.providerId + ' (' + c.leadCount + ' lead' + (c.leadCount === 1 ? '' : 's') + (c.multiProvider ? ', ' + c.providerCount + ' providers' : '') + ')</option>'; }).join("");
+    var caseBlockHtml =
+      '<div id="c-case" style="display:none;background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:9px 11px;margin-bottom:10px">' +
+      '<div style="font-size:11.5px;font-weight:500;margin-bottom:6px"><i class="ti ti-folder" style="color:var(--accent-d)"></i> Case assignment <span style="color:var(--high-tx)">*</span> <span class="muted" style="font-weight:400;font-size:11px">· required — a confirmed lead must belong to a case</span></div>' +
+      '<label style="display:flex;align-items:center;gap:7px;font-size:12px;margin-bottom:5px;cursor:pointer"><input type="radio" name="c-casemode" value="new"' + (provHasCase ? "" : " checked") + '> Open a <b>new</b> case for ' + window.APP.esc(a.provider ? a.provider.name : "this provider") + '</label>' +
+      '<label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:' + (openCases.length ? "pointer" : "not-allowed") + '"><input type="radio" name="c-casemode" value="existing"' + (provHasCase ? " checked" : "") + (openCases.length ? "" : " disabled") + '> Add to an <b>existing</b> case</label>' +
+      '<select id="c-case-sel" class="input" style="margin-top:6px;font-size:12px;' + (provHasCase ? "" : "display:none") + '">' + (caseOpts || '<option value="">No open cases</option>') + '</select>' +
+      '</div>';
     box.innerHTML =
       '<div style="font-weight:500;font-size:13px;margin-bottom:9px">Decision</div>' +
       (returnedNote !== null ? '<div style="background:var(--med-bg);border:0.5px solid #e7c99a;border-radius:7px;padding:8px 10px;font-size:11.5px;color:var(--med-tx);margin-bottom:10px"><i class="ti ti-corner-up-left"></i> Returned by supervisor (Karen Boyd): ' + window.APP.esc(returnedNote) + ' — please revise and resubmit.</div>' : '') +
@@ -553,21 +618,39 @@
       '<div class="seg" data-d="d"><i class="ti ti-x"></i> Dismiss<div class="sub">false positive</div></div>' +
       '<div class="seg" data-d="e"><i class="ti ti-arrow-up-right"></i> Escalate<div class="sub">to a case</div></div></div>' +
       '<div id="c-hint" style="font-size:11.5px;color:var(--text2);margin-bottom:8px;min-height:16px"></div>' +
+      caseBlockHtml +
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px"><span style="font-size:11px;color:var(--text2)">Rationale (logged for audit &amp; model retraining)</span><button id="c-draft" class="btn" style="padding:4px 9px;font-size:11px"><i class="ti ti-sparkles"></i>Draft with AI</button></div>' +
       '<textarea id="c-rat" class="input" placeholder="Document your rationale…"></textarea>' +
       '<button id="c-submit" class="btn primary" style="margin-top:9px" disabled><i class="ti ti-send"></i>Submit decision</button>';
     var choice = null;
     var outMap = { c: "confirm", d: "dismiss", e: "escalate" };
     var hints = { c: "Confirms improper payment — " + window.DP.usd(a.exposurePost) + " moves to Submitted for recovery, and this lead opens (or joins) " + window.APP.esc(a.provider ? a.provider.name + "'s" : "the provider's") + " case.", d: "Logged as a false positive — outcome feeds model retraining. No case is opened.", e: "Escalates as coordinated behavior — opens (or joins) the provider's case for investigation." };
+    var needsCase = function () { return choice === "c" || choice === "e"; };
+    var caseValid = function () {
+      if (!needsCase()) return true;
+      var m = box.querySelector('input[name="c-casemode"]:checked');
+      if (!m) return false;
+      if (m.value === "existing") { var sel = document.getElementById("c-case-sel"); return !!(sel && sel.value); }
+      return true;
+    };
+    var refreshSubmit = function () { document.getElementById("c-submit").disabled = !(choice && caseValid()); };
     box.querySelectorAll(".seg").forEach(function (s) {
       s.addEventListener("click", function () {
         choice = s.getAttribute("data-d");
         box.querySelectorAll(".seg").forEach(function (x) { x.className = "seg"; });
         s.className = "seg on-" + choice;
         document.getElementById("c-hint").textContent = hints[choice];
-        document.getElementById("c-submit").disabled = false;
+        var cb = document.getElementById("c-case"); if (cb) cb.style.display = needsCase() ? "block" : "none";
+        refreshSubmit();
       });
     });
+    box.querySelectorAll('input[name="c-casemode"]').forEach(function (r) {
+      r.addEventListener("change", function () {
+        var sel = document.getElementById("c-case-sel"); if (sel) sel.style.display = (this.value === "existing") ? "block" : "none";
+        refreshSubmit();
+      });
+    });
+    var caseSelEl = document.getElementById("c-case-sel"); if (caseSelEl) caseSelEl.addEventListener("change", refreshSubmit);
     document.getElementById("c-draft").addEventListener("click", function () {
       if (!choice) { document.getElementById("c-hint").textContent = "Pick a decision first, then draft."; return; }
       var ta = document.getElementById("c-rat");
@@ -576,8 +659,15 @@
       var iv = setInterval(function () { i += 3; ta.value = t.slice(0, i); if (i >= t.length) { clearInterval(iv); ta.value = t; } }, 12);
     });
     document.getElementById("c-submit").addEventListener("click", function () {
-      if (!choice) return;
+      if (!choice || !caseValid()) return;
       var rationale = document.getElementById("c-rat").value;
+      if (needsCase()) {
+        var m = box.querySelector('input[name="c-casemode"]:checked');
+        if (m && m.value === "existing") {
+          var sel = document.getElementById("c-case-sel"), opt = sel.options[sel.selectedIndex];
+          window.APP.setLeadCase(id, { mode: "existing", caseKey: sel.value, caseName: opt ? opt.getAttribute("data-name") : null });
+        } else { window.APP.setLeadCase(id, { mode: "new" }); }
+      }
       window.APP.applyDecision(id, outMap[choice], rationale);
       rerender(id);
     });
