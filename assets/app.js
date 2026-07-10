@@ -377,6 +377,8 @@
       });
       var rs = document.getElementById("role-switch");
       if (rs) rs.addEventListener("click", APP.toggleRole);
+      var rd = document.getElementById("reset-demo");
+      if (rd) rd.addEventListener("click", function () { if (window.confirm("Reset the demo to its initial data? This clears all decisions, case assignments, closures, notes and the audit trail.")) APP.resetDemo(); });
       document.querySelectorAll(".modebtn").forEach(function (b) { b.addEventListener("click", function () { APP.setMode(b.getAttribute("data-mode")); }); });
       APP.setModeHeader();
       APP.setRoleHeader();
