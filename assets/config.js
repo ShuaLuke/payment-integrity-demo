@@ -1,6 +1,10 @@
-/* Runtime config. The publishable/anon key is a PUBLIC client key — safe to commit
-   (row-level security protects the data). No secrets here. If supabaseUrl is unset,
-   the app runs in local/in-memory mode. */
+/* Runtime config — the ONE file to change per environment. See SETUP.md.
+   - supabaseUrl / supabaseAnonKey: leave BLANK ("") to run in local/in-memory mode
+     (no login, no persistence). Fill in your own Supabase project to enable login +
+     cross-session persistence (run supabase/schema.sql on that project first).
+   - The anon/publishable key is a PUBLIC client key — safe to commit (RLS protects data).
+   - users: login email -> display name/role; must match the users you create in
+     Supabase Authentication. */
 window.PIVOT_CONFIG = {
   supabaseUrl: "https://ueiewicneajiyfptbkyc.supabase.co",
   supabaseAnonKey: "sb_publishable_1dNp_NoA1jBclugYpKfFtw_IZEglUZt",

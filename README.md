@@ -6,9 +6,14 @@ update the case flow. VA × IBM identity. **All data is synthetic** (see the ban
 NPI check digit, TINs use the `00-` prefix.
 
 ## Run
-No build step. Either:
-- **Just open** `index.html` in a browser (data is bundled as a JS global — needs internet for CDN fonts/d3/icons), or
-- **Serve statically** (recommended): `python3 -m http.server 8137 --directory .` then visit `http://localhost:8137`.
+No build step, no dependencies. Serve statically:
+```
+python3 -m http.server 8137     # then open http://localhost:8137
+```
+(or just open `index.html`). With no Supabase configured it runs in **local mode** — no login, in-memory state. Enable login + persistence by pointing `assets/config.js` at your own Supabase.
+
+**→ Full from-scratch setup (new machine / new accounts, local · Supabase · GitHub Pages): [`SETUP.md`](SETUP.md).**
+Everything environment-specific lives in one file: [`assets/config.js`](assets/config.js).
 
 ## Regenerate data
 ```
@@ -16,7 +21,7 @@ npm run gen:data      # -> src/data/dataset.json + assets/data.js (deterministic
 ```
 
 ## Deploy (GitHub Pages)
-Publish the contents of this folder. Everything is relative-path and static — commit and enable Pages.
+Push this folder to a repo → Settings › Pages › Deploy from branch `main` `/ (root)`. Any static host works too. See [`SETUP.md`](SETUP.md).
 
 ## Structure
 ```
