@@ -130,7 +130,9 @@
   }
 
   window.COPILOT = {
-    open: function () { if (!open) toggle(); }, ask: ask,
+    open: function () { if (!open) toggle(); },
+    close: function () { if (open) toggle(); },
+    isOpen: function () { return open; }, ask: ask,
     summarize: function (id) {
       if (!open) toggle();
       setCtxLine();

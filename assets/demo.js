@@ -5,7 +5,7 @@
   function q(sel) { return document.querySelector(sel); }
   function click(sel) { var e = q(sel); if (e) e.click(); }
   function tab(name) { click('.ctab[data-tab="' + name + '"]'); }
-  function closeCopilot() { var p = q("#cp-panel"); if (p && p.style.transform.indexOf("0") >= 0) click("#cp-x"); }
+  function closeCopilot() { if (window.COPILOT && window.COPILOT.close) window.COPILOT.close(); }
   function retro() { window.APP.setRole("analyst"); if (window.APP.isPrepay()) window.APP.setMode("retrospective"); }
 
   // Reframed to the stakeholders' flow: start on Analytics (what we measure, what an
