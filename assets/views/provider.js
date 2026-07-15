@@ -225,12 +225,14 @@
   // full claim line-item detail for an expanded lead on the case page
   function leadLinesHtml(a, cl) {
     if (!cl || !(cl.lines || []).length) return '<div style="font-size:11.5px;color:var(--text2)"><i class="ti ti-info-circle"></i> Manual / referral lead — no itemized claim on file yet. Open the lead to attach supporting records.</div>';
-    var head = '<div style="font-size:11px;color:var(--text2);margin-bottom:6px"><span class="mono">' + cl.claimNumber + '</span> · ' + cl.type + ' · DOS ' + cl.dateOfService + ' · Dx ' + ((cl.diagnosisCodes || []).join(",") || "—") + ' · billed ' + window.DP.usd(cl.billedAmount) + ' · paid ' + window.DP.usd(cl.paidAmount) + '</div>';
+    var prepay = a.mode === "prepay";
+    var lineExp = function (l) { return prepay ? (l.allowed || 0) : (l.paid || 0); };
+    var head = '<div style="font-size:11px;color:var(--text2);margin-bottom:6px"><span class="mono">' + cl.claimNumber + '</span> · ' + cl.type + ' · DOS ' + cl.dateOfService + ' · Dx ' + ((cl.diagnosisCodes || []).join(",") || "—") + ' · billed ' + window.DP.usd(cl.billedAmount) + ' · exposure ' + window.DP.usd(prepay ? cl.allowedAmount : cl.paidAmount) + ' (' + (prepay ? "pre-pay" : "post-pay") + ')</div>';
     var rows = cl.lines.map(function (l) {
       var fl = (l.violatesRuleIds || []).length > 0;
-      return '<tr' + (fl ? ' style="background:var(--high-bg)"' : '') + '><td class="mono">' + l.cpt + '</td><td>' + window.APP.esc(l.description) + '</td><td>' + ((l.modifiers || []).length ? '<span class="mono" style="background:var(--high-bg);color:var(--high-tx);padding:1px 5px;border-radius:4px">' + l.modifiers.join(",") + '</span>' : "—") + '</td><td class="right">' + l.units + '</td><td class="right">$' + l.billed + '</td><td class="right">$' + l.paid + '</td><td style="font-size:10.5px;white-space:nowrap">' + (fl ? '<span style="color:var(--high-tx)"><i class="ti ti-flag"></i> flagged</span>' : '<span style="color:var(--text3)">clean</span>') + '</td></tr>';
+      return '<tr' + (fl ? ' style="background:var(--high-bg)"' : '') + '><td class="mono">' + l.cpt + '</td><td>' + window.APP.esc(l.description) + '</td><td>' + ((l.modifiers || []).length ? '<span class="mono" style="background:var(--high-bg);color:var(--high-tx);padding:1px 5px;border-radius:4px">' + l.modifiers.join(",") + '</span>' : "—") + '</td><td class="right">' + l.units + '</td><td class="right">$' + l.billed + '</td><td class="right">$' + lineExp(l) + '</td><td style="font-size:10.5px;white-space:nowrap">' + (fl ? '<span style="color:var(--high-tx)"><i class="ti ti-flag"></i> flagged</span>' : '<span style="color:var(--text3)">clean</span>') + '</td></tr>';
     }).join("");
-    return head + '<table style="width:100%"><thead><tr><th>CPT</th><th>Description</th><th>Mod</th><th class="right">Units</th><th class="right">Billed</th><th class="right">Paid</th><th>Status</th></tr></thead><tbody>' + rows + '</tbody></table>';
+    return head + '<table style="width:100%"><thead><tr><th>CPT</th><th>Description</th><th>Mod</th><th class="right">Units</th><th class="right">Billed</th><th class="right">Exposure</th><th>Status</th></tr></thead><tbody>' + rows + '</tbody></table>';
   }
 
   // ---- TrackLight-style external profile / secondary scoring ----

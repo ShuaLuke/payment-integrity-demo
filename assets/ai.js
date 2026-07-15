@@ -10,7 +10,18 @@
         "Recommend recovery of " + exp + " in improper post-payment amounts and update of the provider risk profile.",
       dismiss: "Reviewed and dismissed. On examination of the record, the flagged pattern is clinically and contractually supported; no improper payment is identified. " +
         "Logging as a false positive so the outcome feeds model retraining and reduces similar low-confidence flags.",
-      escalate: "Escalating to a Case. The pattern combined with network signals (shared identifiers / referrals) suggests coordinated behavior warranting a provider-level case beyond single-claim recovery."
+      escalate: "Escalating to a Case. The pattern combined with network signals (shared identifiers / referrals) suggests coordinated behavior warranting a provider-level case beyond single-claim recovery.",
+      // pre-payment triage — the money has not left yet, so the wording is about
+      // releasing, holding, or stopping payment rather than recovering it.
+      pay: "Cleared for payment. Reviewed the flagged lines against the submitted documentation and " + p.name +
+        "'s billing history; the coding and medical necessity are supported. Releasing " + window.DP.usd(a.exposurePre || 0) +
+        " for payment. Logging the outcome as a false positive so the pre-pay model is retrained on this pattern.",
+      hold: "Held pending records. The flagged " + a.fwaType.toLowerCase() + " pattern cannot be adjudicated on the face of the claim. " +
+        "Requesting the supporting medical records from " + p.name + " before releasing " + window.DP.usd(a.exposurePre || 0) +
+        ". Payment remains suspended until the documentation is reviewed.",
+      deny: "Denied. " + p.name + " (NPI " + (p.npi || "—") + ") billed services that the submitted documentation does not support, " +
+        "consistent with the flagged " + a.fwaType.toLowerCase() + " pattern. Denying the claim prevents " + window.DP.usd(a.exposurePre || 0) +
+        " from being paid — no recovery action is required because the funds never leave. Provider may appeal with supporting records."
     };
     // scenario-specific overrides
     if (a.id === "20517") {

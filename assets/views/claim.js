@@ -9,6 +9,20 @@
     return window.DP.listProviders().filter(function (p) { return p.tin === prov.tin; }).length > 1;
   }
 
+  // ---------- exposure ----------
+  // "Exposure amount" is the money at issue. Which money that is depends on the
+  // exposure type: pre-pay = the allowed amount still at risk (nothing has been
+  // paid yet), post-pay = what already went out the door and is recoverable.
+  function exposureType(a) { return a.mode === "prepay" ? "Pre-pay" : "Post-pay"; }
+  function exposureOf(a) { return (a.mode === "prepay" ? a.exposurePre : a.exposurePost) || 0; }
+  // Per claim line: pre-pay lines have paid === 0, so the at-risk figure is the allowed amount.
+  function lineExposure(l, prepay) { return prepay ? (l.allowed || 0) : (l.paid || 0); }
+  function exposureTypePill(a) {
+    var pre = a.mode === "prepay";
+    return '<span class="pill ' + (pre ? "p-esc" : "p-asg") + '" title="' + (pre ? "Pre-payment — the claim is pending; this money has not been paid yet" : "Post-payment — this money has already been paid and is recoverable if confirmed") + '">' +
+      '<i class="ti ti-' + (pre ? "shield-half" : "receipt-2") + '" style="font-size:11px"></i> ' + exposureType(a) + '</span>';
+  }
+
   window.Views.claim = {
     render: function (mount, params) {
       var id = params.id || window.APP.state.allegationId;
@@ -34,6 +48,7 @@
         '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">' +
         '<span class="btn" id="c-back" style="padding:5px 9px"><i class="ti ti-arrow-left"></i> ' + window.APP.esc(window.APP.backLabel()) + '</span>' +
         '<span class="page-title">' + window.APP.esc(headText) + '</span><span id="c-status">' + window.UI.statusPill(prepay ? a.status : window.UI.leadStatus(a)) + '</span>' +
+        exposureTypePill(a) +
         '<span style="font-size:11px;color:var(--text2);display:inline-flex;align-items:center;gap:4px"><i class="ti ti-lock"></i> Locked to you</span>' +
         '<span style="flex:1"></span>' + window.EXPORT.group("c") + '<button class="btn primary" id="c-summarize" style="font-size:12px"><i class="ti ti-file-analytics"></i> Summarize for adjudication</button></div>' +
         '<div class="split" style="display:flex;gap:12px;align-items:flex-start">' +
@@ -114,7 +129,7 @@
 
   // ---------- tabs ----------
   function tabBar(active, undecided) {
-    var tabs = [["overview", "Overview"], ["evidence", "Evidence"], ["pricing", "Pricing"], ["utilization", "Utilization"], ["analysis", "Analysis"], ["network", "Network"], ["decision", "Decision"]];
+    var tabs = [["overview", "Overview"], ["evidence", "Evidence"], ["pricing", "Pricing"], ["utilization", "Utilization"], ["analysis", "Analysis"], ["network", "Network"], ["similar", "Similar cases"], ["decision", "Decision"]];
     return '<div style="display:flex;flex-wrap:wrap;gap:2px;border-bottom:0.5px solid var(--border);margin-bottom:10px">' +
       tabs.map(function (t) { return '<button class="ctab' + (t[0] === active ? " active" : "") + '" data-tab="' + t[0] + '">' + t[1] + (t[0] === "decision" && undecided ? ' <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);vertical-align:middle;margin-left:2px"></span>' : "") + '</button>'; }).join("") +
       '</div>';
@@ -167,11 +182,12 @@
     else if (name === "utilization") { panel.innerHTML = umHtml(ctx.a, ctx.cl); }
     else if (name === "analysis") { panel.innerHTML = analysisHtml(ctx.a); var rc = document.getElementById("c-openrc"); if (rc) rc.onclick = function () { window.APP.openProvider(ctx.p.id); }; }
     else if (name === "network") { panel.innerHTML = networkHtml(); renderCollusion(ctx.p, ctx.id); }
+    else if (name === "similar") { panel.innerHTML = similarHtml(ctx.a); wirePrecedents(ctx.id); }
     else if (name === "decision") {
       panel.innerHTML = decisionHtml(ctx.id, ctx.a, ctx.cl);
       if (ctx.prepay) renderPrepayDecision(ctx.id, ctx.a);
       else renderDecision(ctx.id, ctx.a, window.APP.decisionFor(ctx.id));
-      wirePrecedents(ctx.id);
+      var gs = document.getElementById("c-gosim"); if (gs) gs.onclick = function () { showTab("similar"); };
     }
   }
 
@@ -188,7 +204,7 @@
       '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">' +
       stat("Risk", '<span style="color:' + bandColor(a.riskScore) + '">' + a.riskScore + ' <span style="font-size:10px;font-weight:500">' + bandLabel(a.riskScore) + '</span></span>') +
       stat("Confidence", a.confidence + "%") +
-      stat(prepay ? "At risk" : "Exposure", window.DP.usd(prepay ? a.exposurePre : a.exposurePost)) +
+      stat("Exposure amount", window.DP.usd(exposureOf(a)) + ' <span style="font-size:10px;font-weight:500;color:var(--text2)">' + exposureType(a) + '</span>') +
       stat("Source", '<span style="font-size:12.5px">' + window.APP.esc(a.source === "Both" ? "ML/AI + Rules" : window.DP.sourceOf(a)) + '</span>' + (a.manual ? ' <span class="tag" style="background:var(--med-bg);color:var(--med-tx)">manual</span>' : '')) +
       stat("FWA type", '<span style="font-size:12.5px">' + a.fwaType + '</span>') +
       '</div>' +
@@ -270,12 +286,12 @@
     var p = a.provider || {}, cl = a.claim, ve = a.veteran, id = a.id;
     var fields = [
       { f: "tin", label: "TIN", rec: p.tin || "", type: "text" },
-      { f: "exposure", label: prepay ? "At-risk amount" : "Exposure", rec: (prepay ? a.exposurePre : a.exposurePost) || 0, type: "money" }
+      { f: "exposure", label: "Exposure amount", rec: exposureOf(a), type: "money" }
     ];
     if (cl) {
       fields.push({ f: "billed", label: "Billed", rec: cl.billedAmount || 0, type: "money" });
       fields.push({ f: "allowed", label: "Allowed", rec: cl.allowedAmount || 0, type: "money" });
-      fields.push({ f: "paid", label: "Paid", rec: cl.paidAmount || 0, type: "money" });
+      fields.push({ f: "paid", label: prepay ? "Claim exposure (at risk)" : "Claim exposure (paid)", rec: prepay ? (cl.allowedAmount || 0) : (cl.paidAmount || 0), type: "money" });
       fields.push({ f: "claimNumber", label: "Claim #", rec: cl.claimNumber || "", type: "text" });
     }
     fields.push({ f: "providerName", label: "Provider", rec: p.name || "", type: "text" });
@@ -328,18 +344,19 @@
     var ruleIx = {}; (window.DP.getRules() || []).forEach(function (r) { ruleIx[r.id] = r; });
     // Every claim line is shown — flagged AND clean — and each expands for detail.
     // (The whole claim is held while the lead is open, regardless of which lines fired.)
+    var prepay = a.mode === "prepay";
     var lines = cl ? cl.lines.map(function (l, i) {
       var flagged = (l.violatesRuleIds || []).length > 0;
       var main = '<tr class="cl-line' + (flagged ? ' flag-row' : '') + '" data-i="' + i + '" style="cursor:pointer">' +
         '<td class="mono">' + l.cpt + '</td><td>' + window.APP.esc(l.description) + '</td>' +
         '<td>' + (l.modifiers.length ? '<span class="mono" style="background:var(--high-bg);color:var(--high-tx);padding:1px 5px;border-radius:4px">' + l.modifiers.join(",") + '</span>' : '—') + '</td>' +
-        '<td class="right">' + l.units + '</td><td class="right">$' + l.billed + '</td><td class="right">$' + l.paid + '</td>' +
+        '<td class="right">' + l.units + '</td><td class="right">$' + l.billed + '</td><td class="right">$' + lineExposure(l, prepay) + '</td>' +
         '<td style="font-size:10.5px;white-space:nowrap">' + (flagged ? '<span style="color:var(--high-tx)"><i class="ti ti-flag"></i> flagged</span>' : '<span style="color:var(--text3)">clean</span>') + ' <i class="ti ti-chevron-down cl-caret" style="color:var(--text3);font-size:13px;vertical-align:middle"></i></td></tr>';
       var ruleNames = (l.violatesRuleIds || []).map(function (rid) { var r = ruleIx[rid]; return r ? r.name + " (" + r.code + ")" : rid; });
       var detail = '<tr class="cl-detail" data-i="' + i + '" style="display:none"><td colspan="7" style="background:var(--surface);padding:9px 12px">' +
         '<div style="font-size:11.5px;color:var(--text2);line-height:1.7">' +
         '<b>Line ' + (i + 1) + '</b> · CPT <span class="mono">' + l.cpt + '</span> — ' + window.APP.esc(l.description) + '<br>' +
-        'Billed ' + window.DP.usd(l.billed) + ' · Allowed ' + window.DP.usd(l.allowed || 0) + ' · Paid ' + window.DP.usd(l.paid) + ' · Units ' + l.units +
+        'Billed ' + window.DP.usd(l.billed) + ' · Allowed ' + window.DP.usd(l.allowed || 0) + ' · Exposure ' + window.DP.usd(lineExposure(l, prepay)) + ' (' + exposureType(a).toLowerCase() + ') · Units ' + l.units +
         (l.modifiers && l.modifiers.length ? ' · Modifiers ' + l.modifiers.join(", ") : '') + '<br>' +
         (flagged
           ? '<span style="color:var(--high-tx)"><i class="ti ti-flag"></i> Flagged by: ' + window.APP.esc(ruleNames.join("; ") || (a.model ? a.model.name : "the ML/AI models")) + '</span>'
@@ -356,8 +373,8 @@
       : '<div style="font-size:11.5px;color:var(--text2)">No rules fired — behavioral anomaly flagged by ' + (a.model ? window.APP.esc(a.model.name) : "the ML/AI models") + '.</div>';
     return '<div style="display:flex;flex-direction:column;gap:10px">' +
       (cl ? '<div class="card" style="padding:0;overflow:hidden"><div style="padding:9px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:0.5px solid var(--border2)"><span style="font-weight:500;font-size:13px">Claim <span class="mono" style="font-weight:400;color:var(--text2)">' + cl.claimNumber + '</span></span><span style="font-size:11px;color:var(--text2)">' + cl.type + ' · DOS ' + cl.dateOfService + ' · Dx ' + (cl.diagnosisCodes.join(",") || "—") + ' · ' + cl.claimStatus + ' / ' + cl.paymentType + '</span></div>' +
-        '<table><thead><tr><th>CPT</th><th>Description</th><th>Mod</th><th class="right">Units</th><th class="right">Billed</th><th class="right">Paid</th><th>Status</th></tr></thead><tbody>' + lines + '</tbody></table>' +
-        '<div style="padding:7px 12px;font-size:10.5px;color:var(--text3);border-top:0.5px solid var(--border2)"><i class="ti ti-info-circle"></i> All ' + cl.lines.length + ' claim lines shown — flagged and clean. Click any line to expand its detail; the whole claim is held while the lead is open.</div></div>' : '') +
+        '<table><thead><tr><th>CPT</th><th>Description</th><th>Mod</th><th class="right">Units</th><th class="right">Billed</th><th class="right">Exposure</th><th>Status</th></tr></thead><tbody>' + lines + '</tbody></table>' +
+        '<div style="padding:7px 12px;font-size:10.5px;color:var(--text3);border-top:0.5px solid var(--border2)"><i class="ti ti-info-circle"></i> Exposure is ' + (prepay ? "the allowed amount still at risk — this claim is pre-payment, nothing has been paid" : "what was already paid on each line — post-payment, recoverable if confirmed") + '. All ' + cl.lines.length + ' claim lines shown — flagged and clean. Click any line to expand its detail; the whole claim is held while the lead is open.</div></div>' : '') +
       '<div class="card"><div style="font-weight:500;font-size:13px;margin-bottom:8px">Rule engine outcomes</div><div style="display:flex;flex-direction:column;gap:7px">' + rulesHtml + '</div></div>' +
       '<div class="card"><div style="font-weight:500;font-size:13px;margin-bottom:8px"><i class="ti ti-folder-open" style="color:var(--accent-d)"></i> Evidence on file <span class="muted" style="font-weight:400;font-size:11px">· click a record to review it</span></div>' +
       '<div style="display:flex;flex-direction:column;gap:6px">' + evidenceDocs(a, cl).map(function (d) { return docRowHtml(d, "ev-doc-row"); }).join("") + '</div>' +
@@ -408,9 +425,10 @@
     return '<div style="display:flex;flex-direction:column;gap:10px">' +
       '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div style="font-weight:500;font-size:13px"><i class="ti ti-currency-dollar" style="color:var(--accent-d)"></i> CMS pricing comparison <span class="muted" style="font-weight:400;font-size:11px">· submitted charge vs CMS-allowed</span></div>' +
       '<span class="tag" style="background:var(--surface)"><i class="ti ti-plug-connected"></i> ' + window.APP.esc(d.source) + '</span></div><div style="font-size:11px;color:var(--text2);margin-top:4px">' + d.asOf + ' · ' + window.APP.esc(d.locality) + '</div></div>' +
-      '<div class="card" style="padding:0;overflow:hidden"><table><thead><tr><th>CPT</th><th>Description</th><th class="right">Submitted</th><th class="right">CMS allowed</th><th class="right">Paid</th><th class="right">Variance</th><th>Methodology</th></tr></thead><tbody>' + rows +
+      '<div class="card" style="padding:0;overflow:hidden"><table><thead><tr><th>CPT</th><th>Description</th><th class="right">Submitted</th><th class="right">CMS allowed</th><th class="right">Exposure</th><th class="right">Variance</th><th>Methodology</th></tr></thead><tbody>' + rows +
       '<tr style="font-weight:600;border-top:1px solid var(--border)"><td colspan="2">Claim total</td><td class="right">' + m(d.totals.submitted) + '</td><td class="right">' + m(d.totals.cmsAllowed) + '</td><td class="right">' + m(d.totals.paid) + '</td><td class="right" style="color:var(--high-tx)">+' + m(d.totals.variance) + '</td><td></td></tr></tbody></table></div>' +
-      (d.totals.overpayment > 0 ? '<div style="background:var(--high-bg);border:0.5px solid #f3c9c9;border-radius:7px;padding:9px 11px;font-size:11.5px;color:var(--high-tx)"><b>' + m(d.totals.overpayment) + '</b> paid above the CMS-allowed amount — recoverable per CMS reference pricing.</div>' : '') +
+      (d.totals.overpayment > 0 ? '<div style="background:var(--high-bg);border:0.5px solid #f3c9c9;border-radius:7px;padding:9px 11px;font-size:11.5px;color:var(--high-tx)"><b>' + m(d.totals.overpayment) + '</b> exposure above the CMS-allowed amount — recoverable per CMS reference pricing.</div>' : '') +
+      (a.mode === "prepay" ? '<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:7px;padding:9px 11px;font-size:11.5px;color:var(--text2)"><i class="ti ti-info-circle"></i> This claim is <b>pre-payment</b> — exposure is $0 per line because nothing has been paid yet. Compare the submitted charge against the CMS-allowed amount to price it before releasing payment.</div>' : '') +
       '<div class="card"><div style="font-weight:500;font-size:12.5px;margin-bottom:6px">Pricing rules applied</div>' + d.rulesApplied.map(function (r) { return '<div style="display:flex;gap:7px;font-size:11.5px;color:var(--text2);padding:2px 0"><i class="ti ti-check" style="color:var(--accent-d)"></i>' + window.APP.esc(r) + '</div>'; }).join("") + '</div>' +
       '</div>';
   }
@@ -510,11 +528,11 @@
     var max = Math.max(billed, allowed, paid, prepay ? allowed : 0, 1);
     var bar = function (label, val, color) { var w = Math.round(val / max * 100); return '<div style="margin-bottom:7px"><div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:2px"><span>' + label + '</span><span style="font-weight:600">' + window.DP.usd(val) + '</span></div><div style="height:9px;background:var(--border2);border-radius:5px;overflow:hidden"><div style="height:100%;width:' + w + '%;background:' + color + '"></div></div></div>'; };
     var bars = bar("Billed (this claim)", billed, "#98a4b3") + bar("Allowed", allowed, "#6b7a8d") +
-      (prepay ? bar("At risk (pending)", allowed, "var(--high)") : bar("Paid", paid, "var(--ink)"));
+      (prepay ? bar("Exposure — at risk (pre-pay)", allowed, "var(--high)") : bar("Exposure — paid (post-pay)", paid, "var(--ink)"));
     var callout = prepay
       ? '<div style="background:var(--high-bg);border:0.5px solid #f3c9c9;border-radius:7px;padding:8px 10px;margin-top:6px;font-size:11.5px;color:var(--high-tx)"><b>' + window.DP.usd(a.exposurePre || allowed) + '</b> at risk — nothing is paid yet. Denying or holding this claim keeps that money from leaving.</div>'
       : '<div style="background:var(--high-bg);border:0.5px solid #f3c9c9;border-radius:7px;padding:8px 10px;margin-top:6px;font-size:11.5px;color:var(--high-tx)"><b>' + window.DP.usd(a.exposurePost || 0) + '</b> estimated improper across this provider’s flagged pattern (not just this one claim) — recoverable if confirmed.</div>';
-    return card("Exposure breakdown", bars + callout);
+    return card("Exposure breakdown <span class=\"muted\" style=\"font-weight:400;font-size:11px\">· exposure type: " + exposureType(a) + "</span>", bars + callout);
   }
   function emMix(p) {
     var share = p.em99215ShareComputed; if (share == null) return "";
@@ -574,20 +592,53 @@
   function lgDot(color, label) { return '<span class="lg"><span class="dot" style="border-color:' + color + ';background:' + color + '26"></span>' + label + '</span>'; }
   function lgLine(color, w, label) { return '<span class="lg"><span style="width:16px;height:0;border-top:' + w + 'px solid ' + color + '"></span>' + label + '</span>'; }
 
+  // ---------- Similar cases ----------
+  // Prior adjudicated cases of the same FWA type — the precedent an analyst leans on
+  // to decide. Its own tab (SME feedback: it was buried on the Decision tab).
+  function simRowHtml(s) {
+    var conf = s.outcome === "Confirmed";
+    return '<div class="prec-row" data-prec="' + s.id + '" style="display:flex;gap:10px;align-items:center;padding:8px 0;border-top:0.5px solid var(--border2);cursor:pointer">' +
+      '<span class="pill ' + (conf ? "p-conf" : "p-dis") + '">' + s.outcome + '</span>' +
+      '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:500">' + window.APP.esc(s.provider) + ' <span class="muted" style="font-weight:400">· ' + window.APP.esc(s.specialty) + '</span></div><div style="font-size:11px;color:var(--text2)">' + window.APP.esc(s.note) + '</div></div>' +
+      '<div style="text-align:right;white-space:nowrap"><div style="font-size:12px;font-weight:500">' + (conf ? window.DP.usd(s.recovered) + " recovered" : "—") + '</div><div class="mono" style="font-size:10px;color:var(--text3)">#' + s.id + ' · ' + s.adjudicatedDate + '</div></div></div>';
+  }
+  function similarHtml(a) {
+    var sims = window.DP.getSimilarAdjudicated(a.fwaType, 8);
+    var confirmed = sims.filter(function (s) { return s.outcome === "Confirmed"; });
+    var totalExp = sims.reduce(function (s, x) { return s + (x.exposure || 0); }, 0);
+    var totalRec = confirmed.reduce(function (s, x) { return s + (x.recovered || 0); }, 0);
+    var rate = sims.length ? Math.round(confirmed.length / sims.length * 100) : 0;
+    if (!sims.length) {
+      return '<div class="card" style="text-align:center;padding:28px"><i class="ti ti-history-off" style="font-size:26px;color:var(--text3)"></i>' +
+        '<div style="font-size:12.5px;color:var(--text2);margin-top:8px">No prior adjudicated cases of type “' + window.APP.esc(a.fwaType) + '”.</div>' +
+        '<div style="font-size:11px;color:var(--text3);margin-top:3px">This lead has no precedent to lean on — document your rationale carefully.</div></div>';
+    }
+    return '<div style="display:flex;flex-direction:column;gap:10px">' +
+      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">' +
+      stat("Prior cases", sims.length + ' <span style="font-size:10px;font-weight:500;color:var(--text2)">' + window.APP.esc(a.fwaType) + '</span>') +
+      stat("Confirmed", '<span style="color:' + (rate >= 60 ? "var(--high-tx)" : "var(--text)") + '">' + confirmed.length + '/' + sims.length + ' <span style="font-size:10px;font-weight:500">' + rate + '%</span></span>') +
+      stat("Exposure reviewed", window.DP.usd(totalExp)) +
+      stat("Recovered", window.DP.usd(totalRec)) +
+      '</div>' +
+      '<div class="card" style="background:var(--accent-l);border-color:#cfe7e3"><div style="font-size:12px;color:var(--accent-d);line-height:1.6"><i class="ti ti-scale"></i> <b>' + rate + '% of prior “' + window.APP.esc(a.fwaType) + '” cases were confirmed</b>' +
+      (rate >= 60 ? ' — precedent leans toward confirming. Check whether this lead’s documentation differs from the dismissed ones below.' : ' — precedent is mixed. Read the dismissed cases below before recovering.') + '</div></div>' +
+      '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><div style="font-weight:500;font-size:13px"><i class="ti ti-history" style="color:var(--accent-d)"></i> Similar adjudicated cases</div><span class="muted" style="font-size:11px">click a case for the full adjudication</span></div>' +
+      sims.map(simRowHtml).join("") + '<div id="c-prec"></div></div>' +
+      '</div>';
+  }
+
   // ---------- Decision (mode-aware) ----------
   function decisionHtml(id, a, cl) {
-    var sims = window.DP.getSimilarAdjudicated(a.fwaType, 3);
-    var simConfirmed = sims.filter(function (s) { return s.outcome === "Confirmed"; }).length;
-    var simsHtml = sims.length ? sims.map(function (s) {
-      var conf = s.outcome === "Confirmed";
-      return '<div class="prec-row" data-prec="' + s.id + '" style="display:flex;gap:10px;align-items:center;padding:8px 0;border-top:0.5px solid var(--border2);cursor:pointer">' +
-        '<span class="pill ' + (conf ? "p-conf" : "p-dis") + '">' + s.outcome + '</span>' +
-        '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:500">' + window.APP.esc(s.provider) + ' <span class="muted" style="font-weight:400">· ' + window.APP.esc(s.specialty) + '</span></div><div style="font-size:11px;color:var(--text2)">' + window.APP.esc(s.note) + '</div></div>' +
-        '<div style="text-align:right;white-space:nowrap"><div style="font-size:12px;font-weight:500">' + (conf ? window.DP.usd(s.recovered) + " recovered" : "—") + '</div><div class="mono" style="font-size:10px;color:var(--text3)">#' + s.id + ' · ' + s.adjudicatedDate + '</div></div></div>';
-    }).join("") : '<div class="muted" style="font-size:11.5px;padding-top:6px">No prior adjudicated cases of this type.</div>';
+    var sims = window.DP.getSimilarAdjudicated(a.fwaType, 8);
+    var confirmed = sims.filter(function (s) { return s.outcome === "Confirmed"; }).length;
+    var simLink = sims.length
+      ? '<div class="card" style="display:flex;align-items:center;gap:9px;padding:9px 11px"><i class="ti ti-history" style="color:var(--accent-d)"></i>' +
+        '<div style="flex:1;font-size:12px;color:var(--text2)"><b style="color:var(--ink)">' + confirmed + ' of ' + sims.length + '</b> prior ' + window.APP.esc(a.fwaType) + ' cases were confirmed.</div>' +
+        '<span id="c-gosim" style="font-size:11.5px;color:var(--accent-d);cursor:pointer;font-weight:500;white-space:nowrap">Similar cases →</span></div>'
+      : '';
     return '<div style="display:flex;flex-direction:column;gap:10px">' +
       '<div class="card" id="c-decision"></div>' +
-      '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><div style="font-weight:500;font-size:13px">Similar adjudicated cases</div><span class="muted" style="font-size:11px">' + a.fwaType + ' · ' + simConfirmed + '/' + sims.length + ' confirmed</span></div>' + simsHtml + '<div id="c-prec"></div></div>' +
+      simLink +
       '<div class="card"><div style="font-weight:500;font-size:13px;margin-bottom:8px">Case timeline</div>' + timelineHtml(id, a, cl) + '</div>' +
       '</div>';
   }
@@ -602,13 +653,42 @@
     });
   }
 
+  // ---------- structured decision reason (the dropdown) ----------
+  // Hidden until an outcome is picked — the reason list is outcome-specific.
+  function reasonBlockHtml() {
+    return '<div id="c-reasonbox" style="display:none;margin-bottom:10px">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">' +
+      '<span style="font-size:11px;color:var(--text2)"><span id="c-reason-label">Reason</span> <span style="color:var(--high-tx)">*</span> <span style="color:var(--text3)">· coded — drives reporting &amp; the provider notice</span></span>' +
+      '<span id="c-reason-sugg" class="muted" style="font-size:10.5px"></span></div>' +
+      '<select id="c-reason" class="input" style="font-size:12px"></select></div>';
+  }
+  // Fill the dropdown for the chosen outcome and preselect the suggested reason.
+  function fillReasons(a, outcome, labelText) {
+    var box = document.getElementById("c-reasonbox"), sel = document.getElementById("c-reason");
+    if (!box || !sel) return;
+    if (!outcome) { box.style.display = "none"; return; }
+    var list = window.APP.reasonsFor(outcome), sugg = window.APP.suggestedReason(a, outcome);
+    sel.innerHTML = '<option value="">— select a reason —</option>' + list.map(function (r) {
+      return '<option value="' + r.c + '"' + (r.c === sugg ? " selected" : "") + '>' + r.c + ' · ' + window.APP.esc(r.t) + '</option>';
+    }).join("");
+    var lab = document.getElementById("c-reason-label"); if (lab) lab.textContent = labelText || "Reason";
+    var sg = document.getElementById("c-reason-sugg");
+    if (sg) sg.innerHTML = sugg ? '<i class="ti ti-sparkles" style="color:var(--accent-d)"></i> suggested from the evidence — override if needed' : "";
+    box.style.display = "block";
+  }
+  function reasonTag(outcome, code) {
+    if (!code) return "";
+    var t = window.APP.reasonText(outcome, code);
+    return '<div style="margin-top:5px"><span class="tag" style="background:var(--surface);border:0.5px solid var(--border)"><span class="mono">' + code + '</span> · ' + window.APP.esc(t || "") + '</span></div>';
+  }
+
   // prepay: Pay / Hold / Deny
   function renderPrepayDecision(id, a) {
     var box = document.getElementById("c-decision");
     var dec = window.APP.prepayDecisionFor(id);
     if (dec) {
       var m = { pay: ["Cleared to pay", "var(--low-tx)", "circle-check"], hold: ["On hold — records requested", "var(--med-tx)", "clock-hour-4"], deny: ["Denied — payment prevented", "var(--high-tx)", "ban"] }[dec.action];
-      box.innerHTML = '<div style="font-weight:500;font-size:13px;margin-bottom:9px">Pre-payment decision</div><div style="display:flex;align-items:center;gap:10px"><i class="ti ti-' + m[2] + '" style="color:' + m[1] + ';font-size:22px"></i><div><div style="font-weight:500;font-size:13px">' + m[0] + ' · ' + window.DP.usd(a.exposurePre || 0) + '</div><div style="font-size:11px;color:var(--text3);margin-top:4px">Logged to audit trail · ' + window.APP.fmtTs(dec.ts) + '</div></div></div>';
+      box.innerHTML = '<div style="font-weight:500;font-size:13px;margin-bottom:9px">Pre-payment decision</div><div style="display:flex;align-items:flex-start;gap:10px"><i class="ti ti-' + m[2] + '" style="color:' + m[1] + ';font-size:22px"></i><div><div style="font-weight:500;font-size:13px">' + m[0] + ' · ' + window.DP.usd(a.exposurePre || 0) + '</div>' + reasonTag(dec.action, dec.reason) + (dec.justification ? '<div style="font-size:11.5px;color:var(--text2);margin-top:4px">' + window.APP.esc(dec.justification) + '</div>' : '') + '<div style="font-size:11px;color:var(--text3);margin-top:4px">Logged to audit trail · ' + window.APP.fmtTs(dec.ts) + '</div></div></div>';
       return;
     }
     var rec = a.recommendedAction;
@@ -618,20 +698,39 @@
       '<div style="display:flex;gap:8px;margin-bottom:10px">' +
       ppseg("pay", "check", "Pay", "releases payment") + ppseg("hold", "clock-hour-4", "Hold", "request records") + ppseg("deny", "ban", "Deny", "stop payment") + '</div>' +
       '<div id="c-pphint" style="font-size:11.5px;color:var(--text2);margin-bottom:8px;min-height:16px"></div>' +
-      '<button id="c-ppsubmit" class="btn primary" disabled><i class="ti ti-send"></i> Submit decision</button>';
+      reasonBlockHtml() +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px"><span style="font-size:11px;color:var(--text2)">Justification (logged for audit &amp; the provider notice)</span><button id="c-ppdraft" class="btn" style="padding:4px 9px;font-size:11px"><i class="ti ti-sparkles"></i>Draft with AI</button></div>' +
+      '<textarea id="c-ppjust" class="input" placeholder="Document your justification…"></textarea>' +
+      '<button id="c-ppsubmit" class="btn primary" style="margin-top:9px" disabled><i class="ti ti-send"></i> Submit decision</button>';
     var choice = null;
     var segCls = { pay: "on-d", hold: "on-e", deny: "on-c" };
     var hints = { pay: "Releases " + window.DP.usd(a.exposurePre || 0) + " for payment — clean claim.", hold: "Holds the claim and requests supporting records before paying.", deny: "Denies the claim — " + window.DP.usd(a.exposurePre || 0) + " prevented from being paid." };
+    var reasonLabels = { pay: "Clearance reason", hold: "Hold reason", deny: "Deny reason" };
+    var ppValid = function () { var r = document.getElementById("c-reason"); return !!(choice && r && r.value); };
+    var refreshPp = function () { document.getElementById("c-ppsubmit").disabled = !ppValid(); };
     box.querySelectorAll(".seg").forEach(function (s) {
       s.addEventListener("click", function () {
         choice = s.getAttribute("data-d");
         box.querySelectorAll(".seg").forEach(function (x) { x.className = "seg"; });
         s.className = "seg " + segCls[choice];
         document.getElementById("c-pphint").textContent = hints[choice];
-        document.getElementById("c-ppsubmit").disabled = false;
+        fillReasons(a, choice, reasonLabels[choice]);
+        var rs = document.getElementById("c-reason"); if (rs) rs.onchange = refreshPp;
+        refreshPp();
       });
     });
-    document.getElementById("c-ppsubmit").addEventListener("click", function () { if (!choice) return; window.APP.prepayDecide(id, choice); rerender(id); });
+    document.getElementById("c-ppdraft").addEventListener("click", function () {
+      if (!choice) { document.getElementById("c-pphint").textContent = "Pick a decision first, then draft."; return; }
+      var ta = document.getElementById("c-ppjust");
+      var t = window.AI.draftRationale(a, choice), i = 0;
+      ta.value = "";
+      var iv = setInterval(function () { i += 3; ta.value = t.slice(0, i); if (i >= t.length) { clearInterval(iv); ta.value = t; } }, 12);
+    });
+    document.getElementById("c-ppsubmit").addEventListener("click", function () {
+      if (!ppValid()) return;
+      window.APP.prepayDecide(id, choice, document.getElementById("c-reason").value, document.getElementById("c-ppjust").value);
+      rerender(id);
+    });
   }
   function ppseg(d, icon, label, sub) { return '<div class="seg" data-d="' + d + '"><i class="ti ti-' + icon + '"></i> ' + label + '<div class="sub">' + sub + '</div></div>'; }
 
@@ -654,7 +753,7 @@
           '<button class="btn" id="sv-ret"><i class="ti ti-corner-up-left"></i> Return</button>' +
           '<button class="btn primary" id="sv-appr" style="background:var(--low);border-color:var(--low)"><i class="ti ti-check"></i> Approve</button></div></div>';
       }
-      box.innerHTML = '<div style="font-weight:500;font-size:13px;margin-bottom:9px">Decision</div><div style="display:flex;align-items:flex-start;gap:10px"><i class="ti ti-' + icon + '" style="color:' + color + ';font-size:22px"></i><div><div style="font-weight:500;font-size:13px">' + msg + '</div>' + (dec.rationale ? '<div style="font-size:11.5px;color:var(--text2);margin-top:4px">' + window.APP.esc(dec.rationale) + '</div>' : '') + '<div style="font-size:11px;color:var(--text3);margin-top:5px">Logged to audit trail · ' + window.APP.fmtTs(dec.ts) + '</div></div></div>' + svPanel;
+      box.innerHTML = '<div style="font-weight:500;font-size:13px;margin-bottom:9px">Decision</div><div style="display:flex;align-items:flex-start;gap:10px"><i class="ti ti-' + icon + '" style="color:' + color + ';font-size:22px"></i><div><div style="font-weight:500;font-size:13px">' + msg + '</div>' + reasonTag(dec.outcome, dec.reason) + (dec.rationale ? '<div style="font-size:11.5px;color:var(--text2);margin-top:4px">' + window.APP.esc(dec.rationale) + '</div>' : '') + '<div style="font-size:11px;color:var(--text3);margin-top:5px">Logged to audit trail · ' + window.APP.fmtTs(dec.ts) + '</div></div></div>' + svPanel;
       if (dec.reviewState === "pending" && window.APP.isSupervisor()) {
         document.getElementById("sv-appr").addEventListener("click", function () { window.APP.supervisorAction(id, "approve"); rerender(id); });
         document.getElementById("sv-ret").addEventListener("click", function () { window.APP.supervisorAction(id, "return", document.getElementById("sv-note").value); rerender(id); });
@@ -688,8 +787,9 @@
       '<div class="seg" data-d="e"><i class="ti ti-arrow-up-right"></i> Escalate<div class="sub">to a case</div></div></div>' +
       '<div id="c-hint" style="font-size:11.5px;color:var(--text2);margin-bottom:8px;min-height:16px"></div>' +
       caseBlockHtml +
-      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px"><span style="font-size:11px;color:var(--text2)">Rationale (logged for audit &amp; model retraining)</span><button id="c-draft" class="btn" style="padding:4px 9px;font-size:11px"><i class="ti ti-sparkles"></i>Draft with AI</button></div>' +
-      '<textarea id="c-rat" class="input" placeholder="Document your rationale…"></textarea>' +
+      reasonBlockHtml() +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px"><span style="font-size:11px;color:var(--text2)">Justification (logged for audit &amp; model retraining)</span><button id="c-draft" class="btn" style="padding:4px 9px;font-size:11px"><i class="ti ti-sparkles"></i>Draft with AI</button></div>' +
+      '<textarea id="c-rat" class="input" placeholder="Document your justification…"></textarea>' +
       '<button id="c-submit" class="btn primary" style="margin-top:9px" disabled><i class="ti ti-send"></i>Submit decision</button>';
     var choice = null;
     var outMap = { c: "confirm", d: "dismiss", e: "escalate" };
@@ -702,7 +802,9 @@
       if (m.value === "existing") { var sel = document.getElementById("c-case-sel"); return !!(sel && sel.value); }
       return true;
     };
-    var refreshSubmit = function () { document.getElementById("c-submit").disabled = !(choice && caseValid()); };
+    var reasonValid = function () { var r = document.getElementById("c-reason"); return !!(r && r.value); };
+    var refreshSubmit = function () { document.getElementById("c-submit").disabled = !(choice && caseValid() && reasonValid()); };
+    var reasonLabels = { c: "Deny reason", d: "Dismiss reason", e: "Escalation reason" };
     box.querySelectorAll(".seg").forEach(function (s) {
       s.addEventListener("click", function () {
         choice = s.getAttribute("data-d");
@@ -710,6 +812,8 @@
         s.className = "seg on-" + choice;
         document.getElementById("c-hint").textContent = hints[choice];
         var cb = document.getElementById("c-case"); if (cb) cb.style.display = needsCase() ? "block" : "none";
+        fillReasons(a, outMap[choice], reasonLabels[choice]);
+        var rs = document.getElementById("c-reason"); if (rs) rs.onchange = refreshSubmit;
         refreshSubmit();
       });
     });
@@ -728,8 +832,9 @@
       var iv = setInterval(function () { i += 3; ta.value = t.slice(0, i); if (i >= t.length) { clearInterval(iv); ta.value = t; } }, 12);
     });
     document.getElementById("c-submit").addEventListener("click", function () {
-      if (!choice || !caseValid()) return;
+      if (!choice || !caseValid() || !reasonValid()) return;
       var rationale = document.getElementById("c-rat").value;
+      var reason = document.getElementById("c-reason").value;
       if (needsCase()) {
         var m = box.querySelector('input[name="c-casemode"]:checked');
         if (m && m.value === "existing") {
@@ -737,7 +842,7 @@
           window.APP.setLeadCase(id, { mode: "existing", caseKey: sel.value, caseName: opt ? opt.getAttribute("data-name") : null });
         } else { window.APP.setLeadCase(id, { mode: "new" }); }
       }
-      window.APP.applyDecision(id, outMap[choice], rationale);
+      window.APP.applyDecision(id, outMap[choice], rationale, reason);
       rerender(id);
     });
   }
@@ -763,8 +868,8 @@
 
   // ---------- export (CSV / Excel / PDF of the case) ----------
   function wireExport(id, a, cl, p, prepay, kind) {
-    var clHead = ["CPT", "Description", "Modifiers", "Units", "Billed", "Allowed", "Paid", "Flagged"];
-    var clRows = cl ? cl.lines.map(function (l) { return [l.cpt, l.description, (l.modifiers || []).join(" "), l.units, l.billed, l.allowed, l.paid, (l.violatesRuleIds || []).length ? "Yes" : "No"]; }) : [];
+    var clHead = ["CPT", "Description", "Modifiers", "Units", "Billed", "Allowed", "Exposure (" + exposureType(a).toLowerCase() + ")", "Flagged"];
+    var clRows = cl ? cl.lines.map(function (l) { return [l.cpt, l.description, (l.modifiers || []).join(" "), l.units, l.billed, l.allowed, lineExposure(l, prepay), (l.violatesRuleIds || []).length ? "Yes" : "No"]; }) : [];
     window.EXPORT.wire("c", {
       csv: function () { window.EXPORT.csv("claim-" + id, clHead, clRows); },
       xls: function () { window.EXPORT.xls("claim-" + id, "Claim " + id, clHead, clRows); },

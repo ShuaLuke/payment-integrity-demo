@@ -52,15 +52,15 @@
 
     // Analyst submits a decision. Confirm/Escalate route to the supervisor queue;
     // Dismiss is analyst-final. Recovery/investigation only fire on supervisor approval.
-    applyDecision: function (id, outcome, rationale) {
+    applyDecision: function (id, outcome, rationale, reason) {
       var a = window.DP.raw.allegations.find(function (x) { return x.id === id; });
       if (!a) return;
       var final = outcome === "dismiss";
       var status = final ? "Dismissed" : "Pending review";
       var reviewState = final ? "final" : "pending";
       a.status = status; a.assignee = a.assignee || "Dana Whitmore";
-      APP.state.decisions[id] = { outcome: outcome, rationale: rationale, ts: new Date(), status: status, reviewState: reviewState };
-      APP.auditLog("DECISION_" + outcome.toUpperCase(), "Lead #" + id + " · " + (final ? "Dismissed (false positive)" : outcome) + (rationale ? " · rationale recorded" : ""));
+      APP.state.decisions[id] = { outcome: outcome, rationale: rationale, reason: reason || null, ts: new Date(), status: status, reviewState: reviewState };
+      APP.auditLog("DECISION_" + outcome.toUpperCase(), "Lead #" + id + " · " + (final ? "Dismissed (false positive)" : outcome) + (reason ? " · reason " + APP.reasonLabel(outcome, reason) : "") + (rationale ? " · justification recorded" : ""));
       if (!final) {
         APP.auditLog("SUBMITTED_FOR_REVIEW", "Lead #" + id + " · " + outcome + " → supervisor (Karen Boyd)");
         // the analyst chose (Decision tab) to open a new case or add to an existing one
@@ -105,6 +105,91 @@
     },
 
     decisionFor: function (id) { return APP.state.decisions[id] || null; },
+
+    // ---- structured decision reasons ----
+    // Every decision carries a coded reason (the dropdown) AND a free-text
+    // justification. The reason is what reports and appeals key off; the
+    // justification is the analyst's narrative. Codes mirror VA denial-reason
+    // families rather than free text so outcomes stay countable.
+    REASONS: {
+      confirm: [
+        { c: "DOC-01", t: "Documentation does not support the level billed" },
+        { c: "DOC-02", t: "No documentation of the service in the medical record" },
+        { c: "MED-01", t: "Service not medically necessary for the documented diagnosis" },
+        { c: "COD-01", t: "Unbundled component of a comprehensive procedure" },
+        { c: "COD-02", t: "Modifier applied without supporting documentation" },
+        { c: "COD-03", t: "Procedure/modifier pairing invalid per NCCI edits" },
+        { c: "DUP-01", t: "Duplicate of a previously adjudicated claim" },
+        { c: "FRQ-01", t: "Frequency exceeds clinically supported limits" },
+        { c: "AUT-01", t: "No authorization on file for the billed service" },
+        { c: "PRC-01", t: "Billed above the CMS/VA fee-schedule allowance" }
+      ],
+      dismiss: [
+        { c: "FP-01", t: "Documentation supports the service as billed" },
+        { c: "FP-02", t: "Medical necessity established on review of the record" },
+        { c: "FP-03", t: "Modifier use is correct and documented" },
+        { c: "FP-04", t: "Peer comparison not applicable — atypical panel/case mix" },
+        { c: "FP-05", t: "Data or coding error in the flag itself" },
+        { c: "FP-06", t: "Prior authorization on file — flag fired in error" }
+      ],
+      escalate: [
+        { c: "ESC-01", t: "Coordinated behavior across linked providers" },
+        { c: "ESC-02", t: "Pattern exceeds the scope of a single claim" },
+        { c: "ESC-03", t: "Suspected phantom billing / services not rendered" },
+        { c: "ESC-04", t: "Potential kickback or self-referral arrangement" },
+        { c: "ESC-05", t: "Beneficiary identity concern" },
+        { c: "ESC-06", t: "Recommend referral to VA-OIG" }
+      ],
+      pay: [
+        { c: "PAY-01", t: "Claim is clean — documentation and coding support payment" },
+        { c: "PAY-02", t: "Flag reviewed and cleared — no improper billing found" },
+        { c: "PAY-03", t: "Records received and support the billed service" }
+      ],
+      hold: [
+        { c: "HLD-01", t: "Awaiting medical records from the provider" },
+        { c: "HLD-02", t: "Awaiting authorization documentation" },
+        { c: "HLD-03", t: "Pending clinical review" },
+        { c: "HLD-04", t: "Pending provider response to a coding inquiry" }
+      ],
+      deny: [
+        { c: "DOC-01", t: "Documentation does not support the level billed" },
+        { c: "DOC-02", t: "No documentation of the service in the medical record" },
+        { c: "MED-01", t: "Service not medically necessary for the documented diagnosis" },
+        { c: "COD-01", t: "Unbundled component of a comprehensive procedure" },
+        { c: "COD-03", t: "Procedure/modifier pairing invalid per NCCI edits" },
+        { c: "DUP-01", t: "Duplicate of a previously adjudicated claim" },
+        { c: "AUT-01", t: "No authorization on file for the billed service" },
+        { c: "PRC-01", t: "Billed above the CMS/VA fee-schedule allowance" }
+      ]
+    },
+    reasonsFor: function (outcome) { return APP.REASONS[outcome] || []; },
+    reasonText: function (outcome, code) {
+      var r = APP.reasonsFor(outcome).find(function (x) { return x.c === code; });
+      return r ? r.t : null;
+    },
+    reasonLabel: function (outcome, code) {
+      var t = APP.reasonText(outcome, code);
+      return t ? code + " · " + t : (code || "");
+    },
+    // The reason the model's evidence most supports — preselected, analyst can override.
+    suggestedReason: function (a, outcome) {
+      var byFwa = {
+        "Upcoding": { confirm: "DOC-01", deny: "DOC-01" },
+        "Unbundling": { confirm: "COD-01", deny: "COD-01" },
+        "Modifier misuse": { confirm: "COD-02", deny: "COD-03" },
+        "Duplicate claim": { confirm: "DUP-01", deny: "DUP-01" },
+        "Duplicate billing": { confirm: "DUP-01", deny: "DUP-01" },
+        "Frequency / over-utilization": { confirm: "FRQ-01", dismiss: "FP-02" },
+        "Phantom billing": { confirm: "DOC-02", escalate: "ESC-03", deny: "DOC-02" },
+        "Kickback / self-referral": { escalate: "ESC-04" },
+        "Authorization mismatch": { confirm: "AUT-01", deny: "AUT-01" },
+        "Residential length-of-stay abuse": { confirm: "MED-01", deny: "MED-01" }
+      };
+      var hit = (byFwa[a.fwaType] || {})[outcome];
+      if (hit) return hit;
+      var first = APP.reasonsFor(outcome)[0];
+      return first ? first.c : null;
+    },
 
     ANALYSTS: ["Dana Whitmore", "Maria Delgado", "Devon Carter", "Priya Nair"],
     // Per-analyst profile for supervisor workload management: FWA-type strengths
@@ -282,14 +367,14 @@
     },
     prepayDecisionFor: function (id) { return APP.state.prepayDecisions[id] || null; },
     // Analyst triages a pending claim before it is paid.
-    prepayDecide: function (id, action) {
+    prepayDecide: function (id, action, reason, justification) {
       var a = window.DP.raw.allegations.find(function (x) { return x.id === id; });
       if (!a) return;
       var claim = a.claimId ? window.DP.getClaim(a.claimId) : null;
       a.status = { pay: "Cleared to pay", hold: "On hold", deny: "Denied" }[action];
       if (claim) claim.claimStatus = { pay: "Approved for payment", hold: "On hold — records requested", deny: "Denied" }[action];
-      APP.state.prepayDecisions[id] = { action: action, ts: new Date(), atRisk: a.exposurePre || 0 };
-      APP.auditLog("PREPAY_" + action.toUpperCase(), "Pending claim #" + id + " · " + { pay: "cleared to pay", hold: "held for records", deny: "denied — payment prevented" }[action] + " · " + window.DP.usd(a.exposurePre || 0));
+      APP.state.prepayDecisions[id] = { action: action, reason: reason || null, justification: justification || "", ts: new Date(), atRisk: a.exposurePre || 0 };
+      APP.auditLog("PREPAY_" + action.toUpperCase(), "Pending claim #" + id + " · " + { pay: "cleared to pay", hold: "held for records", deny: "denied — payment prevented" }[action] + " · " + window.DP.usd(a.exposurePre || 0) + (reason ? " · reason " + APP.reasonLabel(action, reason) : "") + (justification ? " · justification recorded" : ""));
     },
     prepayStats: function () {
       var rows = window.DP.listAllegations({ mode: "prepay" }), dec = APP.state.prepayDecisions;

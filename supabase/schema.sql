@@ -16,11 +16,13 @@ create table if not exists public.case_state (
   review_state     text,          -- pending | approved | returned | final | null
   return_note      text,
   case_link        text,          -- explicit case assignment: new:<leadId> or an existing caseKey
+  decision_reason  text,          -- coded reason from the decision dropdown (e.g. COD-01)
   updated_by       text,
   updated_at       timestamptz default now()
 );
--- additive migration for existing installs:
+-- additive migrations for existing installs:
 alter table public.case_state add column if not exists case_link text;
+alter table public.case_state add column if not exists decision_reason text;
 
 -- Per-case closure state (keyed by the case's primary provider id)
 create table if not exists public.case_closure (
