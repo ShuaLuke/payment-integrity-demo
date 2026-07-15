@@ -256,6 +256,33 @@
       return on;
     },
 
+    // ---- per-lead history ----
+    // Every action taken on one lead, newest first: the audit entries that name it
+    // plus its notes. Audit details are written as "… #<id> · …", so match the id
+    // on a boundary — "#2048" must not match lead 20481.
+    historyFor: function (id) {
+      var re = new RegExp("#" + String(id) + "(\\D|$)");
+      var rows = (APP.state.audit || [])
+        // notes come in via getComments with their full text; the truncated
+        // NOTE_ADDED audit line would just duplicate them.
+        .filter(function (e) { return e.action !== "NOTE_ADDED" && re.test(e.detail || ""); })
+        .map(function (e) { return { ts: e.ts, kind: "audit", action: e.action, text: e.detail, user: e.user }; });
+      APP.getComments(id).forEach(function (c) {
+        rows.push({ ts: c.ts, kind: "note", action: "NOTE_ADDED", text: c.text, user: c.user, role: c.role });
+      });
+      // the lead's own origin — it exists before anything is logged against it
+      var a = window.DP.getAllegation(id);
+      if (a && a.createdDate) {
+        rows.push({
+          ts: new Date(a.createdDate + "T08:00:00"), kind: "origin", action: "LEAD_CREATED",
+          text: "Lead #" + id + " created · " + (window.DP.sourceOf(a) || a.source) + (a.fwaType ? " · " + a.fwaType : ""),
+          user: a.createdBy || (a.manual ? "Analyst" : "PIVOT detection")
+        });
+      }
+      return rows.sort(function (x, y) { return y.ts - x.ts; });
+    },
+    lastActionFor: function (id) { return APP.historyFor(id)[0] || null; },
+
     // ---- case notes / annotations (analyst "color commentary" on a lead/case) ----
     // Keyed by lead id; every note is written to the audit trail.
     getComments: function (id) { return APP.state.comments[id] || []; },

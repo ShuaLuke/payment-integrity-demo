@@ -70,6 +70,7 @@
         '</div>' +
         // ---- main column: tabs ----
         '<div style="flex:1;min-width:0">' +
+        milestoneHtml(a, dec, prepay) +
         tabBar(curTab, undecided) +
         '<div id="c-tabpanel"></div>' +
         notesCardHtml(id) +
@@ -105,6 +106,8 @@
       });
       var sumBtn = document.getElementById("c-summarize");
       if (sumBtn) sumBtn.addEventListener("click", function () { if (window.COPILOT) window.COPILOT.summarize(id); });
+      var msHist = document.getElementById("c-ms-hist");
+      if (msHist) msHist.addEventListener("click", function () { showTab("history"); });
       wireExport(id, a, cl, p, prepay, kind);
       mount.querySelectorAll(".ctab").forEach(function (b) { b.addEventListener("click", function () { showTab(b.getAttribute("data-tab")); }); });
 
@@ -127,9 +130,53 @@
     }
   };
 
+  // ---------- milestone bar ----------
+  // Where this lead sits in its lifecycle, plus what happened last. A lead that
+  // is confirmed/escalated ends at "Pending Case"; a dismissed one is terminal at
+  // the decision; a returned one is sent back to the analyst.
+  function milestoneModel(a, dec, prepay) {
+    if (prepay) {
+      var pd = window.APP.prepayDecisionFor(a.id);
+      var out = pd ? { pay: "Cleared to pay", hold: "On hold", deny: "Denied" }[pd.action] : "Payment outcome";
+      return { steps: ["Flagged", "Assigned", "Under review", "Triage decision", out], cur: pd ? 5 : (a.assignee ? 2 : 1), note: null };
+    }
+    var steps = ["Flagged", "Assigned", "Under review", "Decision", "Supervisor review", "Pending Case"];
+    if (!dec) return { steps: steps, cur: a.assignee ? 2 : 1, note: null };
+    // returned: the analyst owns it again, so Decision is the live step
+    if (dec.reviewState === "returned") return { steps: steps, cur: 4, note: "Returned by the supervisor — revise and resubmit." };
+    if (dec.outcome === "dismiss") return { steps: ["Flagged", "Assigned", "Under review", "Decision", "Dismissed"], cur: 5, note: "Dismissed as a false positive — analyst-final, no supervisor review." };
+    // pending: the decision is made and the supervisor is the live step
+    if (dec.reviewState === "pending") return { steps: steps, cur: 5, note: "Awaiting supervisor review (Karen Boyd)." };
+    return { steps: steps, cur: 6, note: dec.outcome === "escalate" ? "Escalated into a case." : "Confirmed — recovery submitted; the lead now feeds its case." };
+  }
+  function milestoneHtml(a, dec, prepay) {
+    var m = milestoneModel(a, dec, prepay);
+    var last = window.APP.lastActionFor(a.id);
+    var dots = m.steps.map(function (label, i) {
+      var done = i < m.cur - 1, cur = i === m.cur - 1;
+      var bg = done ? "var(--accent)" : cur ? "#fff" : "var(--border2)";
+      var bd = done ? "var(--accent)" : cur ? "var(--accent)" : "var(--border)";
+      var inner = done ? '<i class="ti ti-check" style="color:#fff;font-size:10px"></i>' : cur ? '<span style="width:6px;height:6px;border-radius:50%;background:var(--accent);display:block"></span>' : '';
+      return '<div style="display:flex;align-items:center;flex:' + (i === m.steps.length - 1 ? "none" : "1") + ';min-width:0">' +
+        '<div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:none">' +
+        '<div style="width:16px;height:16px;border-radius:50%;background:' + bg + ';border:1.5px solid ' + bd + ';display:flex;align-items:center;justify-content:center">' + inner + '</div>' +
+        '<span style="font-size:10px;white-space:nowrap;color:' + (done || cur ? "var(--ink)" : "var(--text3)") + ';font-weight:' + (cur ? "600" : "400") + '">' + window.APP.esc(label) + '</span></div>' +
+        (i === m.steps.length - 1 ? '' : '<div style="flex:1;height:1.5px;background:' + (done ? "var(--accent)" : "var(--border2)") + ';margin:0 6px;margin-bottom:15px"></div>') +
+        '</div>';
+    }).join("");
+    var lastHtml = last
+      ? '<i class="ti ti-' + ((HIST_ICON[last.action] || ["point"])[0]) + '" style="color:var(--accent-d)"></i> <span style="color:var(--text2)">Last action:</span> <span style="font-weight:500">' + window.APP.esc(histLabel(last.action)) + '</span> <span style="color:var(--text2)">· ' + window.APP.esc(last.user || "—") + ' · ' + window.APP.fmtTs(last.ts) + '</span> <span id="c-ms-hist" style="color:var(--accent-d);cursor:pointer;margin-left:4px">View history →</span>'
+      : '<span style="color:var(--text2)">No activity recorded yet.</span>';
+    return '<div class="card" style="padding:10px 14px 8px;margin-bottom:12px">' +
+      '<div style="display:flex;align-items:flex-start;padding:0 2px 4px">' + dots + '</div>' +
+      '<div style="border-top:0.5px solid var(--border2);margin-top:6px;padding-top:6px;font-size:11.5px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">' + lastHtml + '</div>' +
+      (m.note ? '<div style="font-size:11px;color:var(--text2);padding-top:4px"><i class="ti ti-info-circle"></i> ' + window.APP.esc(m.note) + '</div>' : '') +
+      '</div>';
+  }
+
   // ---------- tabs ----------
   function tabBar(active, undecided) {
-    var tabs = [["overview", "Overview"], ["evidence", "Evidence"], ["pricing", "Pricing"], ["utilization", "Utilization"], ["analysis", "Analysis"], ["network", "Network"], ["similar", "Similar cases"], ["decision", "Decision"]];
+    var tabs = [["overview", "Overview"], ["evidence", "Evidence"], ["pricing", "Pricing"], ["utilization", "Utilization"], ["analysis", "Analysis"], ["network", "Network"], ["similar", "Similar cases"], ["history", "History"], ["decision", "Decision"]];
     return '<div style="display:flex;flex-wrap:wrap;gap:2px;border-bottom:0.5px solid var(--border);margin-bottom:10px">' +
       tabs.map(function (t) { return '<button class="ctab' + (t[0] === active ? " active" : "") + '" data-tab="' + t[0] + '">' + t[1] + (t[0] === "decision" && undecided ? ' <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);vertical-align:middle;margin-left:2px"></span>' : "") + '</button>'; }).join("") +
       '</div>';
@@ -183,6 +230,7 @@
     else if (name === "analysis") { panel.innerHTML = analysisHtml(ctx.a); var rc = document.getElementById("c-openrc"); if (rc) rc.onclick = function () { window.APP.openProvider(ctx.p.id); }; }
     else if (name === "network") { panel.innerHTML = networkHtml(); renderCollusion(ctx.p, ctx.id); }
     else if (name === "similar") { panel.innerHTML = similarHtml(ctx.a); wirePrecedents(ctx.id); }
+    else if (name === "history") { panel.innerHTML = historyHtml(ctx.id); }
     else if (name === "decision") {
       panel.innerHTML = decisionHtml(ctx.id, ctx.a, ctx.cl);
       if (ctx.prepay) renderPrepayDecision(ctx.id, ctx.a);
@@ -591,6 +639,52 @@
   }
   function lgDot(color, label) { return '<span class="lg"><span class="dot" style="border-color:' + color + ';background:' + color + '26"></span>' + label + '</span>'; }
   function lgLine(color, w, label) { return '<span class="lg"><span style="width:16px;height:0;border-top:' + w + 'px solid ' + color + '"></span>' + label + '</span>'; }
+
+  // ---------- History ----------
+  // Every action on this lead, newest first — the "who did what, when" record an
+  // investigator needs when a case is handed over or challenged on appeal.
+  var HIST_ICON = {
+    LEAD_CREATED: ["flag", "var(--text2)"], CASE_ASSIGNED: ["user-plus", "var(--accent-d)"],
+    DECISION_CONFIRM: ["gavel", "var(--high)"], DECISION_DISMISS: ["circle-x", "var(--text2)"], DECISION_ESCALATE: ["arrow-up-right", "var(--med)"],
+    PREPAY_PAY: ["check", "var(--low)"], PREPAY_HOLD: ["clock-hour-4", "var(--med)"], PREPAY_DENY: ["ban", "var(--high)"],
+    SUBMITTED_FOR_REVIEW: ["send", "var(--accent-d)"], SUPERVISOR_APPROVED: ["circle-check", "var(--low)"], SUPERVISOR_RETURNED: ["corner-up-left", "var(--med)"],
+    RECORDS_REQUESTED: ["mail-forward", "var(--accent-d)"], RECORDS_RECEIVED: ["mail-check", "var(--low)"],
+    MEDICAL_RECORD_VIEWED: ["eye", "var(--text3)"], EVIDENCE_VIEWED: ["eye", "var(--text3)"], PRECEDENT_VIEWED: ["history", "var(--text3)"], NETWORK_VIEWED: ["share-3", "var(--text3)"],
+    DOCUMENT_UPLOADED: ["paperclip", "var(--accent-d)"], NOTE_ADDED: ["message", "var(--accent-d)"],
+    RECORD_EDITED: ["edit", "var(--med)"], RECORD_REVERTED: ["arrow-back-up", "var(--text2)"],
+    CASE_OPENED: ["folder-plus", "var(--med)"], CASE_UPDATED: ["folder", "var(--accent-d)"], CASE_LINK: ["link", "var(--accent-d)"],
+    RECOVERY_SUBMITTED: ["currency-dollar", "var(--high)"], CASE_CLOSED: ["archive", "var(--text2)"]
+  };
+  function histLabel(action) {
+    return String(action || "").toLowerCase().replace(/_/g, " ").replace(/^./, function (c) { return c.toUpperCase(); });
+  }
+  function historyHtml(id) {
+    var rows = window.APP.historyFor(id);
+    var counts = {};
+    rows.forEach(function (r) { var k = r.action === "NOTE_ADDED" ? "notes" : /VIEWED/.test(r.action) ? "views" : "actions"; counts[k] = (counts[k] || 0) + 1; });
+    var feed = rows.map(function (r) {
+      var ic = HIST_ICON[r.action] || ["point", "var(--text3)"];
+      var initials = String(r.user || "?").split(" ").map(function (w) { return w[0]; }).join("").slice(0, 2).toUpperCase();
+      return '<div style="display:flex;gap:10px;padding:9px 0;border-top:0.5px solid var(--border2)">' +
+        '<div style="width:24px;height:24px;flex:none;border-radius:50%;background:var(--surface);border:0.5px solid var(--border);display:flex;align-items:center;justify-content:center"><i class="ti ti-' + ic[0] + '" style="color:' + ic[1] + ';font-size:13px"></i></div>' +
+        '<div style="flex:1;min-width:0">' +
+        '<div style="font-size:11px;color:var(--text2)"><span style="font-weight:600;color:var(--ink)">' + histLabel(r.action) + '</span>' +
+        (r.kind === "note" ? ' <span class="tag" style="background:var(--accent-l);color:var(--accent-d)">note</span>' : '') + '</div>' +
+        '<div style="font-size:12.5px;color:var(--text);margin-top:2px;line-height:1.5">' + window.APP.esc(r.text) + '</div>' +
+        '<div style="font-size:10.5px;color:var(--text3);margin-top:3px">' + window.APP.esc(r.user || "—") + (r.role ? " · " + window.APP.esc(r.role) : "") + ' · ' + window.APP.fmtTs(r.ts) + '</div>' +
+        '</div><div class="avatar" style="width:22px;height:22px;flex:none;font-size:9px">' + initials + '</div></div>';
+    }).join("");
+    return '<div style="display:flex;flex-direction:column;gap:10px">' +
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">' +
+      stat("Actions", (counts.actions || 0) + ' <span style="font-size:10px;font-weight:500;color:var(--text2)">on this lead</span>') +
+      stat("Notes", counts.notes || 0) +
+      stat("Record views", counts.views || 0) +
+      '</div>' +
+      '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">' +
+      '<div style="font-weight:500;font-size:13px"><i class="ti ti-timeline-event" style="color:var(--accent-d)"></i> History <span class="muted" style="font-weight:400;font-size:11px">· every action on this lead, newest first — the full chain of custody</span></div>' +
+      '<span class="muted" style="font-size:11px">' + rows.length + ' event' + (rows.length === 1 ? '' : 's') + '</span></div>' +
+      (feed || '<div class="muted" style="font-size:12px;padding:8px 0">No activity recorded yet.</div>') + '</div></div>';
+  }
 
   // ---------- Similar cases ----------
   // Prior adjudicated cases of the same FWA type — the precedent an analyst leans on
