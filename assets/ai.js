@@ -37,6 +37,101 @@
     return C[outcome] || "";
   }
 
+  // A formal, attachable justification memo for a decision. This is the artifact
+  // that travels with the case — to a supervisor, a provider notice, or an appeal —
+  // so it states the finding, the evidence behind it, and the basis for the call.
+  function justificationMemo(a, o) {
+    o = o || {};
+    var p = a.provider || {}, cl = a.claim, prepay = a.mode === "prepay";
+    var exp = window.DP.usd((prepay ? a.exposurePre : a.exposurePost) || 0);
+    var L = [];
+    var head = {
+      confirm: "IMPROPER PAYMENT CONFIRMED", dismiss: "FLAG DISMISSED — NO IMPROPER PAYMENT",
+      escalate: "ESCALATED FOR INVESTIGATION", pay: "CLEARED FOR PAYMENT",
+      hold: "PAYMENT HELD PENDING RECORDS", deny: "PAYMENT DENIED"
+    }[o.outcome] || "DECISION";
+
+    L.push("JUSTIFICATION FOR DECISION — " + head);
+    L.push("");
+    L.push((prepay ? "Pending claim" : "Lead") + " #" + a.id + "   ·   " + a.fwaType);
+    L.push("Provider:   " + (p.name || "—") + "  ·  NPI " + (p.npi || "—") + "  ·  TIN " + (p.tin || "—"));
+    if (cl) L.push("Claim:      " + cl.claimNumber + "  ·  DOS " + cl.dateOfService + "  ·  " + cl.type);
+    L.push("Exposure:   " + exp + "  (" + (prepay ? "pre-pay — not yet disbursed" : "post-pay — recoverable") + ")");
+    if (o.reason) L.push("Reason:     " + o.reason + " · " + (o.reasonText || ""));
+    L.push("");
+
+    L.push("1. FINDING");
+    L.push("   " + wrap((a.xai && a.xai.summary) || (p.name + " was flagged for " + a.fwaType.toLowerCase() + ".")));
+    L.push("");
+
+    L.push("2. EVIDENCE RELIED ON");
+    var bullet = function (s) { L.push("   · " + wrap(s, 88).replace(/\n   /g, "\n     ")); };
+    (a.rules || []).forEach(function (r) { bullet("Rule fired: " + r.name + " (" + r.code + ") — " + r.source); });
+    if (a.model) bullet("ML/AI model: " + a.model.name + " (" + a.model.type + ")");
+    (a.xai && a.xai.factors || []).forEach(function (f) {
+      bullet(f.label + ": " + f.value + (f.benchmark ? " vs " + f.benchmark : ""));
+    });
+    // coding crosswalk — the code/modifier pairing detail
+    if (cl && window.DP.getCptCrosswalk) {
+      var x = window.DP.getCptCrosswalk(cl.id);
+      if (x) (x.lines || []).forEach(function (l) {
+        if (l.verdict === "pass") return;
+        var tag = "Coding: " + l.cpt + (l.modifiers.length ? "-" + l.modifiers.join(",") : "") + " — ";
+        if (l.ptp) bullet(tag + l.ptp.note);
+        if (l.mue && l.mue.exceeded) bullet(tag + l.mue.note);
+        (l.modChecks || []).forEach(function (c) { if (!c.valid) bullet(tag + c.note); });
+      });
+    }
+    // pricing variance
+    if (cl && window.DP.getCmsPricing) {
+      var pr = window.DP.getCmsPricing(cl.id);
+      if (pr && pr.totals.overpayment > 0) bullet("Pricing: " + window.DP.usd(pr.totals.overpayment) + " above the CMS-allowed amount (" + pr.source + ").");
+    }
+    if (!(a.rules || []).length && !a.model) bullet("Analyst-sourced lead — see attached records.");
+    L.push("");
+
+    // network
+    var ring = window.Collusion && p.id ? window.Collusion.analyze(p.id) : null;
+    if (ring && ring.isRing) {
+      var others = Math.max(0, (ring.providerCount || 1) - 1);
+      L.push("3. NETWORK");
+      L.push("   " + wrap("Provider is linked to " + others + " other provider" + (others === 1 ? "" : "s") +
+        (ring.sharedTin ? " through a shared billing TIN (" + (ring.tin || p.tin) + ")" : "") +
+        ". Coordinated billing behavior is indicated; the exposure above reflects this provider only."));
+      L.push("");
+    }
+
+    var sims = window.DP.getSimilarAdjudicated ? window.DP.getSimilarAdjudicated(a.fwaType, 8) : [];
+    if (sims.length) {
+      var conf = sims.filter(function (s) { return s.outcome === "Confirmed"; });
+      L.push((ring && ring.isRing ? "4" : "3") + ". PRECEDENT");
+      L.push("   " + conf.length + " of " + sims.length + " prior " + a.fwaType.toLowerCase() + " cases were confirmed" +
+        (conf.length ? ", recovering " + window.DP.usd(conf.reduce(function (s, x) { return s + (x.recovered || 0); }, 0)) + "." : "."));
+      sims.slice(0, 3).forEach(function (s) { L.push("   · #" + s.id + " " + s.provider + " — " + s.outcome + " (" + s.adjudicatedDate + ")"); });
+      L.push("");
+    }
+
+    L.push("BASIS FOR DECISION");
+    L.push("   " + wrap(o.justification && o.justification.trim() ? o.justification.trim() : draftRationale(a, o.outcome) || "See finding and evidence above."));
+    L.push("");
+    L.push("PREPARED BY");
+    L.push("   " + (o.user || "Dana Whitmore") + "  ·  " + window.APP.fmtTs(new Date()) + "  ·  drafted by the PIVOT Investigative Assistant and adopted by the reviewer.");
+    L.push("");
+    L.push("Synthetic data — for demonstration only. Not a real Veteran, provider, or claim.");
+    return L.join("\n");
+  }
+  // soft-wrap a paragraph at ~92 chars so the memo reads like a document
+  function wrap(s, w) {
+    w = w || 92;
+    var words = String(s || "").split(/\s+/), out = [], line = "";
+    words.forEach(function (word) {
+      if ((line + " " + word).trim().length > w) { out.push(line.trim()); line = word; }
+      else line += " " + word;
+    });
+    if (line.trim()) out.push(line.trim());
+    return out.join("\n   ");
+  }
+
   // Structured "Summarize this case for adjudication" brief: talks through the
   // anomaly, the evidence, the network signal, precedent, and a recommended action.
   function adjudicationSummary(a) {
@@ -139,5 +234,5 @@
     return iv;
   }
 
-  window.AI = { draftRationale: draftRationale, adjudicationSummary: adjudicationSummary, copilot: copilot, stream: stream };
+  window.AI = { draftRationale: draftRationale, justificationMemo: justificationMemo, adjudicationSummary: adjudicationSummary, copilot: copilot, stream: stream };
 })();

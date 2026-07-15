@@ -368,6 +368,120 @@
       };
     },
 
+    // ---- CPT crosswalk: is THIS code payable billed with THIS modifier? ----
+    // Three reference checks per claim line, the way a coder reads a claim:
+    //   PTP  — NCCI procedure-to-procedure edits. A column-2 code billed with its
+    //          column-1 code on the same day is bundled and not separately payable.
+    //          Modifier indicator 1 means a 59/X{EPSU} modifier may override it *if*
+    //          a distinct service is documented; 0 means no override is permitted.
+    //   MUE  — medically unlikely edits: the max units of a code per day.
+    //   MOD  — is each modifier even valid on this code?
+    // Reference tables are static (no RNG) so the hero scenarios stay byte-stable.
+    CPT_XWALK: {
+      // column-1 code : { column-2 codes bundled into it : NCCI modifier indicator }
+      ptp: {
+        "43239": { "43235": 1 },              // EGD w/ biopsy includes the diagnostic EGD
+        "20610": { "99213": 1, "99214": 1 },  // E/M bundled into the injection unless separately identifiable
+        "90935": { "99213": 1 },
+        "97110": { "97140": 1 },
+        "99283": { "93000": 0 }               // indicator 0 — no override permitted
+      },
+      // max units per code per day
+      mue: { "99211": 1, "99212": 1, "99213": 1, "99214": 1, "99215": 1, "43239": 1, "43235": 1, "90935": 1, "93000": 1, "71046": 2, "97110": 4, "70551": 1, "20610": 2, "99283": 1, "E1390": 1, "D0120": 1, "D1110": 1, "H0018": 30 },
+      mod: {
+        "25": { name: "Significant, separately identifiable E/M service", appliesTo: "em", note: "Valid only on an E/M code billed alongside a procedure the same day." },
+        "59": { name: "Distinct procedural service", appliesTo: "proc", note: "Valid only on a procedure code, and only to override an NCCI PTP edit when a distinct session/site is documented." },
+        "XU": { name: "Unusual non-overlapping service", appliesTo: "proc", note: "NCCI-specific subset of modifier 59." },
+        "XS": { name: "Separate structure", appliesTo: "proc", note: "NCCI-specific subset of modifier 59." },
+        "26": { name: "Professional component", appliesTo: "pctc", note: "Valid only on codes with a professional/technical split." },
+        "TC": { name: "Technical component", appliesTo: "pctc", note: "Valid only on codes with a professional/technical split." },
+        "50": { name: "Bilateral procedure", appliesTo: "bilat", note: "Valid only on bilateral-eligible procedures." },
+        "76": { name: "Repeat procedure by the same physician", appliesTo: "proc", note: "Valid on a repeated procedure the same day." },
+        "91": { name: "Repeat clinical diagnostic laboratory test", appliesTo: "lab", note: "Valid only on clinical lab codes." }
+      },
+      pctc: ["70551", "71046", "93000"],
+      bilat: ["20610", "71046"]
+    },
+    getCptCrosswalk: function (claimId) {
+      var cl = claims[claimId]; if (!cl) return null;
+      var X = this.CPT_XWALK, lines = cl.lines || [];
+      var isEm = function (c) { return /^99/.test(c); };
+      var codes = lines.map(function (l) { return l.cpt; });
+      var overrideMods = ["59", "XU", "XS", "XE", "XP"];
+
+      var rows = lines.map(function (l) {
+        var mods = l.modifiers || [], checks = [], verdict = "pass";
+        var worse = function (v) { var rank = { pass: 0, review: 1, fail: 2 }; if (rank[v] > rank[verdict]) verdict = v; };
+
+        // --- PTP: is this line a column-2 code of another line on the same claim?
+        var ptp = null;
+        Object.keys(X.ptp).forEach(function (c1) {
+          if (codes.indexOf(c1) < 0 || c1 === l.cpt) return;
+          var ind = X.ptp[c1][l.cpt];
+          if (ind === undefined) return;
+          var ovr = mods.filter(function (m) { return overrideMods.indexOf(m) >= 0; });
+          ptp = { column1: c1, column2: l.cpt, indicator: ind, overrides: ovr };
+          if (ind === 0) {
+            ptp.status = "fail";
+            ptp.note = "Bundled into " + c1 + ". Modifier indicator 0 — no modifier may override this edit; the code is not separately payable.";
+            worse("fail");
+          } else if (!ovr.length) {
+            ptp.status = "fail";
+            ptp.note = "Bundled into " + c1 + " and billed without an override modifier — not separately payable in the same session.";
+            worse("fail");
+          } else {
+            ptp.status = "review";
+            ptp.note = "Bundled into " + c1 + ", overridden with modifier " + ovr.join("/") + ". Payable only if the record documents a distinct procedural service — verify before paying.";
+            worse("review");
+          }
+        });
+
+        // --- MUE
+        var limit = X.mue[l.cpt], mue = null;
+        if (limit !== undefined) {
+          mue = { limit: limit, billed: l.units, exceeded: l.units > limit };
+          if (mue.exceeded) { worse("fail"); mue.note = "Billed " + l.units + " units against an MUE of " + limit + " per day."; }
+        }
+
+        // --- modifier validity
+        mods.forEach(function (m) {
+          var def = X.mod[m];
+          if (!def) { checks.push({ mod: m, name: "Unrecognized modifier", valid: false, note: "Not a recognized modifier for this code set." }); worse("fail"); return; }
+          var ok = true, note = def.note;
+          if (def.appliesTo === "em") ok = isEm(l.cpt);
+          else if (def.appliesTo === "proc") ok = !isEm(l.cpt);
+          else if (def.appliesTo === "pctc") ok = X.pctc.indexOf(l.cpt) >= 0;
+          else if (def.appliesTo === "bilat") ok = X.bilat.indexOf(l.cpt) >= 0;
+          else if (def.appliesTo === "lab") ok = false;
+          if (!ok) { note = "Modifier " + m + " is not valid on " + l.cpt + ". " + def.note; worse("fail"); }
+          // a 59-family modifier with no PTP edit to override is an unsupported override
+          else if (overrideMods.indexOf(m) >= 0 && !ptp) {
+            ok = false; worse("review");
+            note = "Modifier " + m + " applied but no NCCI PTP edit exists for " + l.cpt + " on this claim — the override is unnecessary and may mask an unbundling pattern.";
+          }
+          checks.push({ mod: m, name: def.name, valid: ok, note: note });
+        });
+
+        return {
+          cpt: l.cpt, description: l.description, modifiers: mods, units: l.units,
+          ptp: ptp, mue: mue, modChecks: checks, verdict: verdict,
+          flagged: (l.violatesRuleIds || []).length > 0
+        };
+      });
+
+      var fails = rows.filter(function (r) { return r.verdict === "fail"; }).length;
+      var reviews = rows.filter(function (r) { return r.verdict === "review"; }).length;
+      return {
+        source: "CMS NCCI edits + AMA CPT reference", asOf: "NCCI v31.1 · effective 2025-01-01",
+        lines: rows, fails: fails, reviews: reviews,
+        clean: rows.length - fails - reviews,
+        determination: fails ? "Coding edits failed — one or more lines are not separately payable as billed"
+          : reviews ? "Overrides present — payable only if the record documents a distinct service"
+            : "All lines pass NCCI PTP, MUE and modifier validity checks",
+        editsApplied: ["NCCI procedure-to-procedure (PTP) edits", "Medically unlikely edits (MUE) — units per day", "Modifier-to-code validity", "Modifier 59 / X{EPSU} override review"]
+      };
+    },
+
     // Utilization management (Milliman MCG): clinical criteria, level of care, LOS.
     getUtilizationMgmt: function (claimId) {
       var cl = claims[claimId]; if (!cl) return null;

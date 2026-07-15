@@ -176,7 +176,7 @@
 
   // ---------- tabs ----------
   function tabBar(active, undecided) {
-    var tabs = [["overview", "Overview"], ["evidence", "Evidence"], ["pricing", "Pricing"], ["utilization", "Utilization"], ["analysis", "Analysis"], ["network", "Network"], ["similar", "Similar cases"], ["history", "History"], ["decision", "Decision"]];
+    var tabs = [["overview", "Overview"], ["evidence", "Evidence"], ["coding", "Coding"], ["pricing", "Pricing"], ["utilization", "Utilization"], ["analysis", "Analysis"], ["network", "Network"], ["similar", "Similar cases"], ["history", "History"], ["decision", "Decision"]];
     return '<div style="display:flex;flex-wrap:wrap;gap:2px;border-bottom:0.5px solid var(--border);margin-bottom:10px">' +
       tabs.map(function (t) { return '<button class="ctab' + (t[0] === active ? " active" : "") + '" data-tab="' + t[0] + '">' + t[1] + (t[0] === "decision" && undecided ? ' <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);vertical-align:middle;margin-left:2px"></span>' : "") + '</button>'; }).join("") +
       '</div>';
@@ -224,7 +224,8 @@
     var panel = document.getElementById("c-tabpanel"); if (!panel || !ctx) return;
     document.querySelectorAll(".ctab").forEach(function (b) { b.classList.toggle("active", b.getAttribute("data-tab") === name); });
     if (name === "overview") { panel.innerHTML = overviewHtml(ctx.a, ctx.prepay); var ovd = document.getElementById("c-ov-decide"); if (ovd) ovd.onclick = function () { showTab("decision"); }; wireWorkingRecord(ctx.id); wirePeerStats(ctx.a); }
-    else if (name === "evidence") { panel.innerHTML = evidenceHtml(ctx.a, ctx.cl); wireEvidenceUploads(ctx.id); wireEvidenceDocs(ctx.id, ctx.a, ctx.cl); wireClaimLines(panel); }
+    else if (name === "evidence") { panel.innerHTML = evidenceHtml(ctx.a, ctx.cl); wireEvidenceUploads(ctx.id); wireEvidenceDocs(ctx.id, ctx.a, ctx.cl); wireClaimLines(panel); wireArtifacts(panel); }
+    else if (name === "coding") { panel.innerHTML = xwalkHtml(ctx.a, ctx.cl); }
     else if (name === "pricing") { panel.innerHTML = pricingHtml(ctx.a, ctx.cl); }
     else if (name === "utilization") { panel.innerHTML = umHtml(ctx.a, ctx.cl); }
     else if (name === "analysis") { panel.innerHTML = analysisHtml(ctx.a); var rc = document.getElementById("c-openrc"); if (rc) rc.onclick = function () { window.APP.openProvider(ctx.p.id); }; }
@@ -481,6 +482,73 @@
       '</div>';
   }
 
+  // ---------- CPT crosswalk (Coding) ----------
+  // "This procedure code billed with this modifier" — per-line NCCI PTP, MUE and
+  // modifier-validity checks, so the reviewer can see WHY a pairing is improper.
+  function xwalkHtml(a, cl) {
+    if (!cl) return noClaimCard("the CPT crosswalk");
+    var d = window.DP.getCptCrosswalk(cl.id); if (!d) return noClaimCard("the CPT crosswalk");
+    var V = {
+      pass: ["circle-check", "var(--low-tx)", "var(--low-bg)", "Passes"],
+      review: ["alert-triangle", "var(--med-tx)", "var(--med-bg)", "Review"],
+      fail: ["circle-x", "var(--high-tx)", "var(--high-bg)", "Fails"]
+    };
+    var rows = d.lines.map(function (l) {
+      var v = V[l.verdict];
+      var codeChip = '<span class="mono" style="font-size:12px;font-weight:600">' + l.cpt + '</span>' +
+        (l.modifiers.length ? l.modifiers.map(function (m) {
+          var chk = l.modChecks.find(function (c) { return c.mod === m; }) || {};
+          var bad = chk.valid === false;
+          return ' <span class="mono" style="font-size:11px;padding:1px 5px;border-radius:4px;background:' + (bad ? "var(--high-bg)" : "var(--surface)") + ';color:' + (bad ? "var(--high-tx)" : "var(--text2)") + ';border:0.5px solid ' + (bad ? "#f3c9c9" : "var(--border)") + '">-' + m + '</span>';
+        }).join("") : ' <span class="muted" style="font-size:10.5px">no modifier</span>');
+
+      var detail = [];
+      if (l.ptp) {
+        var pv = V[l.ptp.status];
+        detail.push('<div style="display:flex;gap:7px;align-items:flex-start"><i class="ti ti-' + pv[0] + '" style="color:' + pv[1] + ';margin-top:1px;font-size:13px"></i><div>' +
+          '<span style="font-weight:500">NCCI PTP edit</span> <span class="mono" style="font-size:10.5px;color:var(--text2)">' + l.ptp.column1 + ' → ' + l.ptp.column2 + ' · indicator ' + l.ptp.indicator + '</span>' +
+          '<div style="color:var(--text2)">' + window.APP.esc(l.ptp.note) + '</div></div></div>');
+      }
+      if (l.mue) {
+        var mv = l.mue.exceeded ? V.fail : V.pass;
+        detail.push('<div style="display:flex;gap:7px;align-items:flex-start"><i class="ti ti-' + mv[0] + '" style="color:' + mv[1] + ';margin-top:1px;font-size:13px"></i><div>' +
+          '<span style="font-weight:500">MUE</span> <span class="mono" style="font-size:10.5px;color:var(--text2)">' + l.mue.billed + ' of ' + l.mue.limit + ' units/day</span>' +
+          '<div style="color:var(--text2)">' + window.APP.esc(l.mue.note || "Units billed are within the medically-unlikely-edit limit.") + '</div></div></div>');
+      }
+      l.modChecks.forEach(function (c) {
+        var cv = c.valid ? V.pass : V.fail;
+        detail.push('<div style="display:flex;gap:7px;align-items:flex-start"><i class="ti ti-' + cv[0] + '" style="color:' + cv[1] + ';margin-top:1px;font-size:13px"></i><div>' +
+          '<span style="font-weight:500">Modifier ' + c.mod + '</span> <span style="color:var(--text2)">— ' + window.APP.esc(c.name) + '</span>' +
+          '<div style="color:var(--text2)">' + window.APP.esc(c.note) + '</div></div></div>');
+      });
+      if (!detail.length) detail.push('<div style="color:var(--text2)"><i class="ti ti-circle-check" style="color:var(--low-tx)"></i> No coding edits apply to this line.</div>');
+
+      return '<div style="border-top:0.5px solid var(--border2);padding:10px 0">' +
+        '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">' +
+        '<div style="flex:1;min-width:0">' + codeChip + ' <span style="font-size:12px;color:var(--text2)">' + window.APP.esc(l.description) + '</span></div>' +
+        '<span class="tag" style="background:' + v[2] + ';color:' + v[1] + '"><i class="ti ti-' + v[0] + '"></i> ' + v[3] + '</span></div>' +
+        '<div style="font-size:11.5px;line-height:1.6;margin-top:6px;display:flex;flex-direction:column;gap:5px;padding-left:2px">' + detail.join("") + '</div>' +
+        '</div>';
+    }).join("");
+
+    var tone = d.fails ? V.fail : d.reviews ? V.review : V.pass;
+    return '<div style="display:flex;flex-direction:column;gap:10px">' +
+      '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">' +
+      '<div style="font-weight:500;font-size:13px"><i class="ti ti-arrows-left-right" style="color:var(--accent-d)"></i> CPT crosswalk <span class="muted" style="font-weight:400;font-size:11px">· is this code payable billed with this modifier?</span></div>' +
+      '<span class="tag" style="background:var(--surface)"><i class="ti ti-plug-connected"></i> ' + window.APP.esc(d.source) + '</span></div>' +
+      '<div style="font-size:11px;color:var(--text2);margin-top:4px">' + window.APP.esc(d.asOf) + '</div></div>' +
+      '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">' +
+      stat("Lines failing", '<span style="color:' + (d.fails ? "var(--high-tx)" : "var(--text)") + '">' + d.fails + '</span>') +
+      stat("Needing review", '<span style="color:' + (d.reviews ? "var(--med-tx)" : "var(--text)") + '">' + d.reviews + '</span>') +
+      stat("Clean", d.clean) + '</div>' +
+      '<div style="background:' + tone[2] + ';border:0.5px solid ' + (d.fails ? "#f3c9c9" : d.reviews ? "#e7c99a" : "#bfe0cd") + ';border-radius:7px;padding:9px 11px;font-size:11.5px;color:' + tone[1] + '">' +
+      '<i class="ti ti-' + tone[0] + '"></i> <b>' + window.APP.esc(d.determination) + '</b></div>' +
+      '<div class="card" style="padding:2px 12px 10px"><div style="font-weight:500;font-size:13px;padding:9px 0 2px">Line-by-line</div>' + rows + '</div>' +
+      '<div class="card"><div style="font-weight:500;font-size:12.5px;margin-bottom:6px">Edits applied</div>' +
+      d.editsApplied.map(function (r) { return '<div style="display:flex;gap:7px;font-size:11.5px;color:var(--text2);padding:2px 0"><i class="ti ti-check" style="color:var(--accent-d)"></i>' + window.APP.esc(r) + '</div>'; }).join("") + '</div>' +
+      '</div>';
+  }
+
   // ---------- Utilization management (Milliman MCG) ----------
   function umKv(k, v) { return '<div class="card" style="padding:7px 9px;box-shadow:none;background:var(--surface)"><div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.03em">' + k + '</div><div style="font-size:12px;font-weight:500;margin-top:2px">' + window.APP.esc(v) + '</div></div>'; }
   function losRow(label, val, rec, act, color) { var max = Math.max(rec, act, 1); var w = Math.round(val / max * 100); return '<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:2px"><span>' + label + '</span><span style="font-weight:600">' + val + ' days</span></div><div style="height:9px;background:var(--border2);border-radius:5px;overflow:hidden"><div style="height:100%;width:' + w + '%;background:' + color + '"></div></div></div>'; }
@@ -502,15 +570,39 @@
       '</div>';
   }
   function fmtSize(b) { return b >= 1048576 ? (b / 1048576).toFixed(1) + " MB" : b >= 1024 ? Math.round(b / 1024) + " KB" : b + " B"; }
+  // Uploaded files and generated artifacts share this list. An artifact carries its
+  // body, so it expands in place; an upload is a name only.
   function uploadsListHtml(id) {
     var ups = window.APP.getUploads(id);
-    if (!ups.length) return '<div class="muted" style="font-size:11.5px;padding:4px 0">No documents attached yet. Use “Attach document” to add supporting records — every upload is logged to the audit trail.</div>';
-    return ups.map(function (u) {
+    var arts = window.APP.getArtifacts(id);
+    if (!ups.length && !arts.length) return '<div class="muted" style="font-size:11.5px;padding:4px 0">No documents attached yet. Use “Attach document” to add supporting records, or generate an AI justification on the Decision tab — every attachment is logged to the audit trail.</div>';
+    var artRows = arts.map(function (u, i) {
+      return '<div style="border-top:0.5px solid var(--border2)">' +
+        '<div class="art-row" data-art="' + i + '" style="display:flex;align-items:center;gap:9px;padding:7px 0;cursor:pointer"><i class="ti ti-file-text" style="color:var(--accent-d);font-size:17px"></i>' +
+        '<div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:500">' + window.APP.esc(u.name) + '</div>' +
+        '<div class="muted" style="font-size:10.5px">' + window.APP.esc(u.by || "") + " · " + window.APP.fmtTs(u.ts) + '</div></div>' +
+        '<span class="tag" style="background:var(--accent-l);color:var(--accent-d)"><i class="ti ti-sparkles"></i> AI-drafted</span>' +
+        '<i class="ti ti-chevron-down art-caret" style="color:var(--text3);font-size:14px"></i></div>' +
+        '<pre class="mono art-body" data-art="' + i + '" style="display:none;margin:0 0 8px;padding:9px 11px;background:var(--surface);border:0.5px solid var(--border);border-radius:6px;font-size:10.5px;line-height:1.55;max-height:240px;overflow:auto;white-space:pre-wrap">' + window.APP.esc(u.body || "") + '</pre></div>';
+    }).join("");
+    var upRows = ups.map(function (u) {
       return '<div style="display:flex;align-items:center;gap:9px;padding:7px 0;border-top:0.5px solid var(--border2)"><i class="ti ti-file-description" style="color:var(--accent-d);font-size:17px"></i>' +
         '<div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:500">' + window.APP.esc(u.name) + '</div>' +
         '<div class="muted" style="font-size:10.5px">' + (u.size ? fmtSize(u.size) + " · " : "") + window.APP.esc(u.by || "") + " · " + window.APP.fmtTs(u.ts) + '</div></div>' +
         '<span class="tag" style="background:var(--low-bg);color:var(--low-tx)">attached</span></div>';
     }).join("");
+    return artRows + upRows;
+  }
+  function wireArtifacts(root) {
+    (root || document).querySelectorAll(".art-row").forEach(function (row) {
+      row.addEventListener("click", function () {
+        var i = row.getAttribute("data-art");
+        var body = (root || document).querySelector('.art-body[data-art="' + i + '"]'); if (!body) return;
+        var open = body.style.display !== "none";
+        body.style.display = open ? "none" : "block";
+        var c = row.querySelector(".art-caret"); if (c) c.style.transform = open ? "" : "rotate(180deg)";
+      });
+    });
   }
   function wireEvidenceDocs(id, a, cl) {
     var rows = document.querySelectorAll(".ev-doc-row");
@@ -548,7 +640,9 @@
     input.addEventListener("change", function () {
       var f = input.files && input.files[0]; if (!f) return;
       window.APP.addUpload(id, f.name, f.size); input.value = "";
-      document.getElementById("c-uploads-list").innerHTML = uploadsListHtml(id);
+      var list = document.getElementById("c-uploads-list");
+      list.innerHTML = uploadsListHtml(id);
+      wireArtifacts(list);
     });
   }
   function defaultRecordsRequest(a) {
@@ -651,12 +745,16 @@
     RECORDS_REQUESTED: ["mail-forward", "var(--accent-d)"], RECORDS_RECEIVED: ["mail-check", "var(--low)"],
     MEDICAL_RECORD_VIEWED: ["eye", "var(--text3)"], EVIDENCE_VIEWED: ["eye", "var(--text3)"], PRECEDENT_VIEWED: ["history", "var(--text3)"], NETWORK_VIEWED: ["share-3", "var(--text3)"],
     DOCUMENT_UPLOADED: ["paperclip", "var(--accent-d)"], NOTE_ADDED: ["message", "var(--accent-d)"],
+    AI_JUSTIFICATION_DRAFTED: ["sparkles", "var(--accent-d)"], AI_JUSTIFICATION_ATTACHED: ["file-text", "var(--accent-d)"],
     RECORD_EDITED: ["edit", "var(--med)"], RECORD_REVERTED: ["arrow-back-up", "var(--text2)"],
     CASE_OPENED: ["folder-plus", "var(--med)"], CASE_UPDATED: ["folder", "var(--accent-d)"], CASE_LINK: ["link", "var(--accent-d)"],
     RECOVERY_SUBMITTED: ["currency-dollar", "var(--high)"], CASE_CLOSED: ["archive", "var(--text2)"]
   };
   function histLabel(action) {
-    return String(action || "").toLowerCase().replace(/_/g, " ").replace(/^./, function (c) { return c.toUpperCase(); });
+    return String(action || "").toLowerCase().replace(/_/g, " ")
+      .replace(/^./, function (c) { return c.toUpperCase(); })
+      // sentence-casing would otherwise render these acronyms as "Ai", "Cms", "Cpt"
+      .replace(/\bai\b/gi, "AI").replace(/\bcms\b/gi, "CMS").replace(/\bcpt\b/gi, "CPT");
   }
   function historyHtml(id) {
     var rows = window.APP.historyFor(id);
@@ -770,6 +868,58 @@
     if (sg) sg.innerHTML = sugg ? '<i class="ti ti-sparkles" style="color:var(--accent-d)"></i> suggested from the evidence — override if needed' : "";
     box.style.display = "block";
   }
+  // ---------- AI justification memo (generate → review → attach) ----------
+  // The analyst never attaches something they haven't read: generate shows the memo,
+  // attaching is a second, deliberate click.
+  function aiJustBlockHtml() {
+    return '<div id="c-aijust" style="margin-bottom:10px">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">' +
+      '<span style="font-size:11px;color:var(--text2)"><i class="ti ti-file-text" style="color:var(--accent-d)"></i> AI justification <span style="color:var(--text3)">· a formal memo for the case file, the provider notice or an appeal</span></span>' +
+      '<button id="c-aigen" class="btn" style="padding:4px 9px;font-size:11px" disabled><i class="ti ti-sparkles"></i> Generate justification</button></div>' +
+      '<div id="c-aijust-out"></div></div>';
+  }
+  function aiJustPreviewHtml(memo) {
+    return '<div style="border:0.5px solid var(--border);border-radius:8px;overflow:hidden;margin-top:7px">' +
+      '<div style="background:var(--surface);padding:7px 10px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;border-bottom:0.5px solid var(--border)">' +
+      '<span style="font-size:11.5px;font-weight:500"><i class="ti ti-file-text" style="color:var(--accent-d)"></i> Justification memo <span class="muted" style="font-weight:400">· review before attaching</span></span>' +
+      '<span style="display:flex;gap:6px"><button class="btn" id="c-ai-insert" style="padding:3px 8px;font-size:11px"><i class="ti ti-arrow-down"></i> Use as my justification</button>' +
+      '<button class="btn primary" id="c-ai-attach" style="padding:3px 8px;font-size:11px"><i class="ti ti-paperclip"></i> Attach to lead</button></span></div>' +
+      '<pre class="mono" id="c-ai-memo" style="margin:0;padding:10px 12px;font-size:10.5px;line-height:1.55;max-height:220px;overflow:auto;white-space:pre-wrap;background:#fff;color:var(--text)">' + window.APP.esc(memo) + '</pre></div>';
+  }
+  // Wire the generate/attach flow. getCtx() supplies the live outcome+reason at click
+  // time, because both change as the analyst edits the form.
+  function wireAiJust(id, a, getCtx, justFieldId) {
+    var gen = document.getElementById("c-aigen"); if (!gen) return;
+    gen.addEventListener("click", function () {
+      var c = getCtx(); if (!c.outcome) return;
+      var memo = window.AI.justificationMemo(a, {
+        outcome: c.outcome, reason: c.reason, reasonText: window.APP.reasonText(c.outcome, c.reason),
+        justification: (document.getElementById(justFieldId) || {}).value || "",
+        user: (window.APP.ROLES[window.APP.state.role] || {}).name
+      });
+      var out = document.getElementById("c-aijust-out");
+      out.innerHTML = aiJustPreviewHtml("");
+      window.APP.auditLog("AI_JUSTIFICATION_DRAFTED", "Lead #" + id + " · " + c.outcome + (c.reason ? " · " + c.reason : ""));
+      // stream it in so the generation reads as live
+      var pre = document.getElementById("c-ai-memo"), i = 0;
+      var iv = setInterval(function () {
+        i += 14; pre.textContent = memo.slice(0, i);
+        if (i >= memo.length) { clearInterval(iv); pre.textContent = memo; }
+      }, 12);
+      document.getElementById("c-ai-insert").addEventListener("click", function () {
+        clearInterval(iv); pre.textContent = memo;
+        var f = document.getElementById(justFieldId); if (f) { f.value = memo; f.dispatchEvent(new Event("input")); }
+      });
+      document.getElementById("c-ai-attach").addEventListener("click", function () {
+        clearInterval(iv); pre.textContent = memo;
+        var name = "AI-justification_Lead-" + id + "_" + c.outcome + ".txt";
+        window.APP.addArtifact(id, { name: name, kind: "ai-justification", body: memo });
+        out.innerHTML = '<div style="background:var(--low-bg);border:0.5px solid #bfe0c9;border-radius:7px;padding:8px 10px;margin-top:7px;font-size:11.5px;color:var(--low-tx)">' +
+          '<i class="ti ti-paperclip"></i> Attached to the lead as <b>' + window.APP.esc(name) + '</b> — it now appears under Evidence › Attached documents and in the History tab.</div>';
+      });
+    });
+  }
+
   function reasonTag(outcome, code) {
     if (!code) return "";
     var t = window.APP.reasonText(outcome, code);
@@ -795,13 +945,18 @@
       reasonBlockHtml() +
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px"><span style="font-size:11px;color:var(--text2)">Justification (logged for audit &amp; the provider notice)</span><button id="c-ppdraft" class="btn" style="padding:4px 9px;font-size:11px"><i class="ti ti-sparkles"></i>Draft with AI</button></div>' +
       '<textarea id="c-ppjust" class="input" placeholder="Document your justification…"></textarea>' +
+      aiJustBlockHtml() +
       '<button id="c-ppsubmit" class="btn primary" style="margin-top:9px" disabled><i class="ti ti-send"></i> Submit decision</button>';
     var choice = null;
     var segCls = { pay: "on-d", hold: "on-e", deny: "on-c" };
     var hints = { pay: "Releases " + window.DP.usd(a.exposurePre || 0) + " for payment — clean claim.", hold: "Holds the claim and requests supporting records before paying.", deny: "Denies the claim — " + window.DP.usd(a.exposurePre || 0) + " prevented from being paid." };
     var reasonLabels = { pay: "Clearance reason", hold: "Hold reason", deny: "Deny reason" };
     var ppValid = function () { var r = document.getElementById("c-reason"); return !!(choice && r && r.value); };
-    var refreshPp = function () { document.getElementById("c-ppsubmit").disabled = !ppValid(); };
+    var refreshPp = function () {
+      document.getElementById("c-ppsubmit").disabled = !ppValid();
+      var g = document.getElementById("c-aigen"); if (g) g.disabled = !ppValid();
+    };
+    wireAiJust(id, a, function () { return { outcome: choice, reason: (document.getElementById("c-reason") || {}).value }; }, "c-ppjust");
     box.querySelectorAll(".seg").forEach(function (s) {
       s.addEventListener("click", function () {
         choice = s.getAttribute("data-d");
@@ -884,6 +1039,7 @@
       reasonBlockHtml() +
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px"><span style="font-size:11px;color:var(--text2)">Justification (logged for audit &amp; model retraining)</span><button id="c-draft" class="btn" style="padding:4px 9px;font-size:11px"><i class="ti ti-sparkles"></i>Draft with AI</button></div>' +
       '<textarea id="c-rat" class="input" placeholder="Document your justification…"></textarea>' +
+      aiJustBlockHtml() +
       '<button id="c-submit" class="btn primary" style="margin-top:9px" disabled><i class="ti ti-send"></i>Submit decision</button>';
     var choice = null;
     var outMap = { c: "confirm", d: "dismiss", e: "escalate" };
@@ -897,8 +1053,12 @@
       return true;
     };
     var reasonValid = function () { var r = document.getElementById("c-reason"); return !!(r && r.value); };
-    var refreshSubmit = function () { document.getElementById("c-submit").disabled = !(choice && caseValid() && reasonValid()); };
+    var refreshSubmit = function () {
+      document.getElementById("c-submit").disabled = !(choice && caseValid() && reasonValid());
+      var g = document.getElementById("c-aigen"); if (g) g.disabled = !(choice && reasonValid());
+    };
     var reasonLabels = { c: "Deny reason", d: "Dismiss reason", e: "Escalation reason" };
+    wireAiJust(id, a, function () { return { outcome: outMap[choice], reason: (document.getElementById("c-reason") || {}).value }; }, "c-rat");
     box.querySelectorAll(".seg").forEach(function (s) {
       s.addEventListener("click", function () {
         choice = s.getAttribute("data-d");

@@ -2,7 +2,7 @@
 (function () {
   var mount;
   var APP = {
-    state: { view: "queue", allegationId: null, filters: {}, decisions: {}, audit: [], investigations: [], role: "analyst", watchlist: {}, businessWatchlist: {}, mode: "retrospective", prepayDecisions: {}, comments: {}, workingRecord: {}, uploads: {}, recordsRequestText: {} },
+    state: { view: "queue", allegationId: null, filters: {}, decisions: {}, audit: [], investigations: [], role: "analyst", watchlist: {}, businessWatchlist: {}, mode: "retrospective", prepayDecisions: {}, comments: {}, workingRecord: {}, uploads: {}, artifacts: {}, recordsRequestText: {} },
 
     ROLES: { analyst: { name: "Dana Whitmore", title: "Analyst", initials: "DW" }, supervisor: { name: "Karen Boyd", title: "Supervisor", initials: "KB" } },
     isSupervisor: function () { return APP.state.role === "supervisor"; },
@@ -301,6 +301,21 @@
       (APP.state.uploads[id] = APP.state.uploads[id] || []).push(u);
       APP.auditLog("DOCUMENT_UPLOADED", "Lead #" + id + " · attached “" + u.name + "”" + (size ? " (" + Math.max(1, Math.round(size / 1024)) + " KB)" : ""));
       return u;
+    },
+
+    // ---- generated artifacts (AI justification memos attached to a lead) ----
+    // Unlike uploads (name + size only), an artifact carries its body, so it can be
+    // reopened, printed into the case export, and shown on appeal.
+    getArtifacts: function (id) { return APP.state.artifacts[id] || []; },
+    addArtifact: function (id, art) {
+      art = art || {};
+      var a = {
+        name: art.name || "Justification.txt", kind: art.kind || "ai-justification",
+        body: art.body || "", ts: new Date(), by: (APP.ROLES[APP.state.role] || {}).name || "Dana Whitmore"
+      };
+      (APP.state.artifacts[id] = APP.state.artifacts[id] || []).push(a);
+      APP.auditLog("AI_JUSTIFICATION_ATTACHED", "Lead #" + id + " · attached “" + a.name + "” · AI-drafted, adopted by " + a.by);
+      return a;
     },
 
     // ---- case working record (investigator's editable overlay on the claim of record) ----
