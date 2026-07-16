@@ -1014,26 +1014,44 @@
       return;
     }
     var returnedNote = (dec && dec.reviewState === "returned") ? (dec.returnNote || "(no note)") : null;
-    // case-assignment options (required when confirming/escalating): open a new case
-    // or add this lead to an existing one.
+    // Where the lead lands (required when confirming/escalating). The engine ranks
+    // the candidate cases and says WHY each is a candidate, so the analyst chooses
+    // between explanations rather than reading a flat list of provider names.
     var openCases = window.DP.listCases({ mode: "retrospective" }).filter(function (c) { return !c.closed; });
-    var provCase = window.DP.getCase(a.providerId, "retrospective");
-    var provHasCase = !!(provCase && !provCase.closed && provCase.leadCount > 0);
-    var caseOpts = openCases.map(function (c) { return '<option value="' + c.caseKey + '" data-name="' + window.APP.esc(c.name) + '"' + (provHasCase && c.caseKey === provCase.caseKey ? " selected" : "") + '>' + window.APP.esc(c.name) + ' · CASE-' + c.providerId + ' (' + c.leadCount + ' lead' + (c.leadCount === 1 ? '' : 's') + (c.multiProvider ? ', ' + c.providerCount + ' providers' : '') + ')</option>'; }).join("");
+    var sugg = window.APP.suggestCases(a);
+    var best = sugg[0] || null;
+    var others = openCases.filter(function (c) { return !sugg.some(function (s) { return s.c.caseKey === c.caseKey; }); });
+    var suggRows = sugg.map(function (s, i) {
+      return '<label class="c-sugg" style="display:flex;gap:8px;align-items:flex-start;padding:7px 8px;border:0.5px solid ' + (i === 0 ? "#cfe7e3" : "var(--border)") + ';border-radius:7px;margin-bottom:5px;cursor:pointer;background:' + (i === 0 ? "var(--accent-l)" : "#fff") + '">' +
+        '<input type="radio" name="c-casemode" value="existing" data-key="' + s.c.caseKey + '" data-name="' + window.APP.esc(s.c.name) + '" data-link="' + s.linkType + '" style="margin-top:2px"' + (i === 0 ? " checked" : "") + '>' +
+        '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:500">' + window.APP.esc(s.c.name) +
+        ' <span class="muted" style="font-weight:400">· CASE-' + s.c.providerId + ' · ' + s.c.leadCount + ' lead' + (s.c.leadCount === 1 ? '' : 's') + ' · ' + window.DP.usd(s.c.exposure || 0) + '</span>' +
+        (i === 0 ? ' <span class="tag" style="background:var(--accent);color:#fff">suggested</span>' : '') + '</div>' +
+        '<div style="font-size:11px;color:var(--text2);margin-top:1px">' + window.APP.esc(s.why) + '</div>' +
+        '<div style="margin-top:3px"><span class="tag" style="background:#fff;border:0.5px solid var(--border)"><i class="ti ti-link"></i> ' + window.APP.esc(window.APP.leadLinkLabel(s.linkType)) + '</span></div>' +
+        '</div></label>';
+    }).join("");
     var caseBlockHtml =
       '<div id="c-case" style="display:none;background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:9px 11px;margin-bottom:10px">' +
-      '<div style="font-size:11.5px;font-weight:500;margin-bottom:6px"><i class="ti ti-folder" style="color:var(--accent-d)"></i> Case assignment <span style="color:var(--high-tx)">*</span> <span class="muted" style="font-weight:400;font-size:11px">· required — a confirmed lead must belong to a case</span></div>' +
-      '<label style="display:flex;align-items:center;gap:7px;font-size:12px;margin-bottom:5px;cursor:pointer"><input type="radio" name="c-casemode" value="new"' + (provHasCase ? "" : " checked") + '> Open a <b>new</b> case for ' + window.APP.esc(a.provider ? a.provider.name : "this provider") + '</label>' +
-      '<label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:' + (openCases.length ? "pointer" : "not-allowed") + '"><input type="radio" name="c-casemode" value="existing"' + (provHasCase ? " checked" : "") + (openCases.length ? "" : " disabled") + '> Add to an <b>existing</b> case</label>' +
-      '<select id="c-case-sel" class="input" style="margin-top:6px;font-size:12px;' + (provHasCase ? "" : "display:none") + '">' + (caseOpts || '<option value="">No open cases</option>') + '</select>' +
+      '<div style="font-size:11.5px;font-weight:500;margin-bottom:2px"><i class="ti ti-folder" style="color:var(--accent-d)"></i> Convert to a case <span style="color:var(--high-tx)">*</span></div>' +
+      '<div class="muted" style="font-size:11px;margin-bottom:7px">This lead does not get paid — it has to land somewhere. Add it to an existing case or open a new one.</div>' +
+      suggRows +
+      '<label style="display:flex;gap:8px;align-items:flex-start;padding:7px 8px;border:0.5px solid var(--border);border-radius:7px;cursor:pointer;background:#fff">' +
+      '<input type="radio" name="c-casemode" value="new" style="margin-top:2px"' + (best ? "" : " checked") + '>' +
+      '<div><div style="font-size:12px;font-weight:500">Open a new case for ' + window.APP.esc(a.provider ? a.provider.name : "this provider") + '</div>' +
+      '<div style="font-size:11px;color:var(--text2);margin-top:1px">' + (best ? "Use this if the lead is unrelated to the cases above." : "No open case is a candidate for this lead.") + '</div></div></label>' +
+      (others.length ? '<div style="margin-top:7px"><label style="display:flex;gap:8px;align-items:center;cursor:pointer;font-size:12px">' +
+        '<input type="radio" name="c-casemode" value="other"> Add to another open case</label>' +
+        '<select id="c-case-sel" class="input" style="margin-top:5px;font-size:12px;display:none">' +
+        others.map(function (c) { return '<option value="' + c.caseKey + '" data-name="' + window.APP.esc(c.name) + '">' + window.APP.esc(c.name) + ' · CASE-' + c.providerId + ' (' + c.leadCount + ' lead' + (c.leadCount === 1 ? '' : 's') + (c.multiProvider ? ', ' + c.providerCount + ' providers' : '') + ')</option>'; }).join("") + '</select></div>' : '') +
       '</div>';
     box.innerHTML =
       '<div style="font-weight:500;font-size:13px;margin-bottom:9px">Decision</div>' +
       (returnedNote !== null ? '<div style="background:var(--med-bg);border:0.5px solid #e7c99a;border-radius:7px;padding:8px 10px;font-size:11.5px;color:var(--med-tx);margin-bottom:10px"><i class="ti ti-corner-up-left"></i> Returned by supervisor (Karen Boyd): ' + window.APP.esc(returnedNote) + ' — please revise and resubmit.</div>' : '') +
       '<div style="display:flex;gap:8px;margin-bottom:10px">' +
-      '<div class="seg" data-d="c"><i class="ti ti-check"></i> Confirm<div class="sub">recommend recovery</div></div>' +
-      '<div class="seg" data-d="d"><i class="ti ti-x"></i> Dismiss<div class="sub">false positive</div></div>' +
-      '<div class="seg" data-d="e"><i class="ti ti-arrow-up-right"></i> Escalate<div class="sub">to a case</div></div></div>' +
+      '<div class="seg" data-d="c"><i class="ti ti-check"></i> Confirm<div class="sub">improper — convert to a case</div></div>' +
+      '<div class="seg" data-d="d"><i class="ti ti-x"></i> Dismiss<div class="sub">clean — payment stands</div></div>' +
+      '<div class="seg" data-d="e"><i class="ti ti-arrow-up-right"></i> Escalate<div class="sub">coordinated — convert to a case</div></div></div>' +
       '<div id="c-hint" style="font-size:11.5px;color:var(--text2);margin-bottom:8px;min-height:16px"></div>' +
       caseBlockHtml +
       reasonBlockHtml() +
@@ -1043,13 +1061,17 @@
       '<button id="c-submit" class="btn primary" style="margin-top:9px" disabled><i class="ti ti-send"></i>Submit decision</button>';
     var choice = null;
     var outMap = { c: "confirm", d: "dismiss", e: "escalate" };
-    var hints = { c: "Confirms improper payment — " + window.DP.usd(a.exposurePost) + " moves to Submitted for recovery. Assign it to a case below.", d: "Logged as a false positive — outcome feeds model retraining. No case is opened.", e: "Escalates as coordinated behavior for investigation. Assign it to a case below." };
+    var hints = {
+      c: "Confirms improper payment — " + window.DP.usd(a.exposurePost) + " moves to Submitted for recovery. The lead converts to a case below.",
+      d: "The claim is clean — payment stands and nothing is recovered. Logged as a false positive so the outcome feeds model retraining; no case is opened.",
+      e: "Escalates as coordinated behavior for investigation. The lead converts to a case below."
+    };
     var needsCase = function () { return choice === "c" || choice === "e"; };
     var caseValid = function () {
       if (!needsCase()) return true;
       var m = box.querySelector('input[name="c-casemode"]:checked');
       if (!m) return false;
-      if (m.value === "existing") { var sel = document.getElementById("c-case-sel"); return !!(sel && sel.value); }
+      if (m.value === "other") { var sel = document.getElementById("c-case-sel"); return !!(sel && sel.value); }
       return true;
     };
     var reasonValid = function () { var r = document.getElementById("c-reason"); return !!(r && r.value); };
@@ -1073,7 +1095,7 @@
     });
     box.querySelectorAll('input[name="c-casemode"]').forEach(function (r) {
       r.addEventListener("change", function () {
-        var sel = document.getElementById("c-case-sel"); if (sel) sel.style.display = (this.value === "existing") ? "block" : "none";
+        var sel = document.getElementById("c-case-sel"); if (sel) sel.style.display = (this.value === "other") ? "block" : "none";
         refreshSubmit();
       });
     });
@@ -1092,9 +1114,13 @@
       if (needsCase()) {
         var m = box.querySelector('input[name="c-casemode"]:checked');
         if (m && m.value === "existing") {
+          // a ranked suggestion — it carries its own case key and link type
+          window.APP.setLeadCase(id, { mode: "existing", caseKey: m.getAttribute("data-key"), caseName: m.getAttribute("data-name"), linkType: m.getAttribute("data-link") });
+        } else if (m && m.value === "other") {
           var sel = document.getElementById("c-case-sel"), opt = sel.options[sel.selectedIndex];
-          window.APP.setLeadCase(id, { mode: "existing", caseKey: sel.value, caseName: opt ? opt.getAttribute("data-name") : null });
-        } else { window.APP.setLeadCase(id, { mode: "new" }); }
+          var target = window.DP.listCases({ mode: "retrospective" }).find(function (c) { return c.caseKey === sel.value; });
+          window.APP.setLeadCase(id, { mode: "existing", caseKey: sel.value, caseName: opt ? opt.getAttribute("data-name") : null, linkType: window.APP.suggestLinkType(a, target) });
+        } else { window.APP.setLeadCase(id, { mode: "new", linkType: "same-provider" }); }
       }
       window.APP.applyDecision(id, outMap[choice], rationale, reason);
       rerender(id);

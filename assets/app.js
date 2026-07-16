@@ -245,6 +245,37 @@
     },
     linkTypeFor: function (leadId) { return (APP.state.caseLinkTypes || {})[leadId] || null; },
 
+    // Which existing case should this lead join? Ranked, each with the reason it is
+    // a candidate, so the analyst is choosing between explanations rather than
+    // reading a flat dropdown of provider names.
+    suggestCases: function (lead) {
+      if (!lead) return [];
+      var lp = window.DP.getProvider(lead.providerId) || {};
+      var open = window.DP.listCases({ mode: "retrospective" }).filter(function (c) { return !c.closed; });
+      return open.map(function (c) {
+        var type = APP.suggestLinkType(lead, c), why = null, rank = 9;
+        if (type === "same-provider") {
+          rank = 1;
+          // A multi-provider case is named for its primary provider, so "same
+          // provider" would read as a mistake when the lead is on one of the others.
+          why = c.multiProvider
+            ? "This case already covers " + (lp.name || "this provider") + " — " + c.providerCount + " providers sharing " +
+              (lp.tin ? "TIN " + lp.tin : "a business registration") + "."
+            : "This is " + (lp.name || "this provider") + "'s case — the lead bills under it.";
+        }
+        else if (type === "same-entity") {
+          var shared = (c.providers || []).find(function (p) { return (p.tin && lp.tin && p.tin === lp.tin) || (p.registrationId && lp.registrationId && p.registrationId === lp.registrationId); }) || {};
+          rank = 2;
+          why = shared.tin === lp.tin
+            ? "Shares billing TIN " + lp.tin + " with " + (shared.name || "this case's provider") + "."
+            : "Shares business registration " + (lp.registrationId || "") + " with " + (shared.name || "this case's provider") + ".";
+        }
+        else if (type === "same-scheme") { rank = 3; why = "Same scheme — this case already covers " + lead.fwaType.toLowerCase() + "."; }
+        else return null;
+        return { c: c, linkType: type, why: why, rank: rank };
+      }).filter(Boolean).sort(function (x, y) { return (x.rank - y.rank) || (y.c.exposure - x.c.exposure); });
+    },
+
     // Analyst's Decision-tab choice: start a NEW case or add the lead to an existing
     // one. Stored as a per-lead case link that DP.listCases groups by.
     setLeadCase: function (id, choice) {
