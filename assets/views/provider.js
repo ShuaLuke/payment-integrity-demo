@@ -15,6 +15,12 @@
       var allegs = window.DP.listAllegationsByProvider(id);
       var caseInfo = window.DP.getCase(id, "retrospective") || { caseLeads: [], openLeads: [], leadCount: 0, openCount: 0 };
       var hasCase = caseInfo.leadCount > 0;
+      // Case-level state (narrative, related-case links, close/refer) belongs to the
+      // whole case, so it is keyed by the case's canonical primary provider — NOT the
+      // page you happen to be on. A multi-provider case (ring / chain) has a provider
+      // page for each member; keying by the viewed id would fragment the narrative and
+      // desync the closed state across those pages.
+      var casePid = caseInfo.providerId || id;
       var claims = window.DP.listClaimsByProvider(id);
       var card = window.DP.getReportCard(id) || { groups: [], attributes: {} };
       var groups = card.groups;
@@ -93,9 +99,9 @@
         secondaryPanel(id) +
 
         // case story + relationships + disposition
-        (hasCase ? caseNarrativeCard(id, caseInfo) : '') +
-        (hasCase ? relatedCasesCard(id) : '') +
-        (hasCase ? caseAuthorityCard(id, caseInfo) : '') +
+        (hasCase ? caseNarrativeCard(casePid, caseInfo) : '') +
+        (hasCase ? relatedCasesCard(casePid) : '') +
+        (hasCase ? caseAuthorityCard(casePid, caseInfo) : '') +
 
         // flagged claims — adjudicate from provider
         '<div class="card" style="padding:0;overflow:hidden"><div style="padding:11px 13px 6px;font-weight:500;font-size:13px">' + (hasCase ? 'Leads — case (' + caseInfo.leadCount + ' confirmed · ' + caseInfo.openCount + ' open feeding in)' : 'Leads (' + allegs.length + ' open · no case yet)') + ' <span class="muted" style="font-weight:400;font-size:11px">· confirm a lead to add it to the case' + (hasCase ? '; select open leads to link them to this case now' : '') + '</span></div>' +
@@ -154,7 +160,7 @@
       });
       mount.querySelectorAll(".pv-review").forEach(function (el) { el.addEventListener("click", function (e) { e.stopPropagation(); window.APP.openAllegation(el.getAttribute("data-id")); }); });
       wireRadar(mount, id);
-      if (hasCase) { wireCaseNarrative(id, caseInfo); wireRelatedCases(id); wireCaseAuthority(id, caseInfo); wireBulkLink(mount, id, caseInfo); }
+      if (hasCase) { wireCaseNarrative(casePid, caseInfo, id); wireRelatedCases(casePid, id); wireCaseAuthority(casePid, caseInfo, id); wireBulkLink(mount, casePid, caseInfo, id); }
 
       // ---- report-card export ----
       var gHead = ["Group", "Score", "Peer norm", "Outlier"];
@@ -282,7 +288,9 @@
       (n ? '<button class="btn" id="pv-narr-cancel" style="font-size:11px">Cancel</button>' : '') + '</div></div>' +
       '</div>';
   }
-  function wireCaseNarrative(pid, caseInfo) {
+  // pid = the case's canonical primary provider (state key); viewId = the provider
+  // page actually being viewed (re-render target, so a save keeps you in place).
+  function wireCaseNarrative(pid, caseInfo, viewId) {
     var box = document.getElementById("pv-narr-edit-box"); if (!box) return;
     var ed = document.getElementById("pv-narr-edit");
     if (ed) ed.addEventListener("click", function () { box.style.display = "block"; ed.style.display = "none"; });
@@ -290,7 +298,7 @@
     if (cancel) cancel.addEventListener("click", function () { box.style.display = "none"; if (ed) ed.style.display = ""; });
     document.getElementById("pv-narr-save").addEventListener("click", function () {
       window.APP.setCaseNarrative(pid, document.getElementById("pv-narr-text").value);
-      rerender(pid);
+      rerender(viewId);
     });
     document.getElementById("pv-narr-draft").addEventListener("click", function () {
       var ta = document.getElementById("pv-narr-text");
@@ -326,14 +334,14 @@
         '<button class="btn" id="pv-rel-add" style="font-size:11px;flex:none"><i class="ti ti-plus"></i> Link</button></div>' : '') +
       '</div>';
   }
-  function wireRelatedCases(pid) {
+  function wireRelatedCases(pid, viewId) {
     var add = document.getElementById("pv-rel-add");
     if (add) add.addEventListener("click", function () {
       window.APP.addCaseRelation(pid, document.getElementById("pv-rel-case").value, document.getElementById("pv-rel-type").value);
-      rerender(pid);
+      rerender(viewId);
     });
     document.querySelectorAll(".pv-relrm").forEach(function (el) {
-      el.addEventListener("click", function () { window.APP.removeCaseRelation(pid, el.getAttribute("data-pid"), el.getAttribute("data-type")); rerender(pid); });
+      el.addEventListener("click", function () { window.APP.removeCaseRelation(pid, el.getAttribute("data-pid"), el.getAttribute("data-type")); rerender(viewId); });
     });
     document.querySelectorAll(".pv-relopen").forEach(function (el) {
       el.addEventListener("click", function () { window.APP.openProvider(el.getAttribute("data-pid")); });
@@ -343,7 +351,7 @@
   // ---------- bulk link leads → this case ----------
   // "See 10 leads from the same provider — add to the same case." Linking sets each
   // lead's destination; the lead actually joins the case when it is confirmed.
-  function wireBulkLink(mount, pid, caseInfo) {
+  function wireBulkLink(mount, pid, caseInfo, viewId) {
     var bar = document.getElementById("pv-bulkbar"); if (!bar) return;
     var boxes = function () { return [].slice.call(mount.querySelectorAll(".pv-bulkchk")); };
     var picked = function () { return boxes().filter(function (b) { return b.checked; }); };
@@ -372,7 +380,7 @@
         window.APP.setLeadCase(lid, { mode: "existing", caseKey: caseInfo.caseKey, caseName: caseInfo.name, linkType: type || window.APP.suggestLinkType(lead, caseInfo) });
       });
       window.APP.auditLog("CASE_LEADS_LINKED", "Case " + pid + " (" + caseInfo.name + ") · " + ids.length + " lead" + (ids.length === 1 ? "" : "s") + " linked as “" + window.APP.leadLinkLabel(type) + "” · " + ids.map(function (i) { return "#" + i; }).join(", "));
-      rerender(pid);
+      rerender(viewId);
     });
     refresh();
   }
@@ -430,16 +438,16 @@
       '<div class="muted" style="font-size:10.5px;margin-top:5px">A closed case keeps its narrative and reason on the record.</div></div>' +
       '</div>';
   }
-  function wireCaseAuthority(pid, caseInfo) {
+  function wireCaseAuthority(pid, caseInfo, viewId) {
     var ro = document.getElementById("pv-reopen");
-    if (ro) ro.addEventListener("click", function () { window.APP.reopenCase(pid); rerender(pid); });
+    if (ro) ro.addEventListener("click", function () { window.APP.reopenCase(pid); rerender(viewId); });
     var cb = document.getElementById("pv-close-btn"), closeBox = document.getElementById("pv-close-box");
     var rb = document.getElementById("pv-refer-btn"), referBox = document.getElementById("pv-refer-box");
     if (rb) rb.addEventListener("click", function () { referBox.style.display = referBox.style.display === "none" ? "block" : "none"; });
     var rg = document.getElementById("pv-refer-go");
     if (rg) rg.addEventListener("click", function () {
       window.APP.referCase(pid, document.getElementById("pv-refer-target").value, document.getElementById("pv-refer-note").value);
-      rerender(pid);
+      rerender(viewId);
     });
     if (!cb) return;
     cb.addEventListener("click", function () { closeBox.style.display = closeBox.style.display === "none" ? "block" : "none"; });
@@ -454,7 +462,7 @@
     });
     go.addEventListener("click", function () {
       window.APP.closeCase(pid, document.getElementById("pv-close-reason").value, narr.value);
-      rerender(pid);
+      rerender(viewId);
     });
     refresh();
     // deep-linked from the Cases list "Review & close" button

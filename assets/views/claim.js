@@ -1079,7 +1079,7 @@
       document.getElementById("c-submit").disabled = !(choice && caseValid() && reasonValid());
       var g = document.getElementById("c-aigen"); if (g) g.disabled = !(choice && reasonValid());
     };
-    var reasonLabels = { c: "Deny reason", d: "Dismiss reason", e: "Escalation reason" };
+    var reasonLabels = { c: "Confirmation reason", d: "Dismiss reason", e: "Escalation reason" };
     wireAiJust(id, a, function () { return { outcome: outMap[choice], reason: (document.getElementById("c-reason") || {}).value }; }, "c-rat");
     box.querySelectorAll(".seg").forEach(function (s) {
       s.addEventListener("click", function () {
