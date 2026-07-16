@@ -42,7 +42,7 @@
     if (!SB.ready) return;
     var c = (window.APP.state.closedCases || {})[pid];
     if (!c) { client.from("case_closure").delete().eq("provider_id", pid).then(function (r) { if (r.error) console.warn("reopenCase:", r.error.message); }); return; }
-    client.from("case_closure").upsert({ provider_id: pid, reason: c.reason || null, closed_by: c.by || window.APP.ROLES[window.APP.state.role].name, updated_at: new Date().toISOString() }).then(function (r) { if (r.error) console.warn("closeCase:", r.error.message); });
+    client.from("case_closure").upsert({ provider_id: pid, reason: c.reason || null, reason_text: c.reasonText || null, narrative: c.narrative || null, closed_by: c.by || window.APP.ROLES[window.APP.state.role].name, updated_at: new Date().toISOString() }).then(function (r) { if (r.error) console.warn("closeCase:", r.error.message); });
   }
   function saveAudit(action, detail) {
     if (!SB.ready) return;
@@ -62,7 +62,7 @@
         if (row.decision_outcome) window.APP.state.decisions[row.claim_id] = { outcome: row.decision_outcome, rationale: row.rationale, reason: row.decision_reason || null, reviewState: row.review_state, returnNote: row.return_note, status: row.status, ts: new Date(row.updated_at) };
         if (row.case_link) (window.APP.state.caseLinks = window.APP.state.caseLinks || {})[row.claim_id] = row.case_link;
       });
-      cc.forEach(function (row) { (window.APP.state.closedCases = window.APP.state.closedCases || {})[row.provider_id] = { reason: row.reason, by: row.closed_by, ts: new Date(row.updated_at) }; });
+      cc.forEach(function (row) { (window.APP.state.closedCases = window.APP.state.closedCases || {})[row.provider_id] = { reason: row.reason, reasonText: row.reason_text || window.APP.closeReasonText(row.reason), narrative: row.narrative || "", by: row.closed_by, ts: new Date(row.updated_at) }; });
       window.APP.state.audit = al.map(function (e) { return { ts: new Date(e.ts), action: e.action, detail: e.detail, user: e.user_name }; });
     });
   }

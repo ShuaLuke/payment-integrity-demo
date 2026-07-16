@@ -37,6 +37,49 @@
     return C[outcome] || "";
   }
 
+  // The case narrative: the story that spans a case's leads. A lead's justification
+  // explains one claim; this explains why these leads are one case.
+  function caseNarrative(c) {
+    if (!c) return "";
+    var leads = (c.caseLeads || []).concat(c.openLeads || []);
+    var types = c.fwaTypes || [];
+    var L = [];
+    var who = c.multiProvider
+      ? c.providerCount + " providers billing under a shared identifier (" + (c.provider && c.provider.tin ? "TIN " + c.provider.tin : "common registration") + "), led by " + c.name
+      : c.name + " (NPI " + ((c.provider || {}).npi || "—") + ")";
+
+    L.push("This case covers " + who + ". It consolidates " + c.leadCount + " confirmed lead" + (c.leadCount === 1 ? "" : "s") +
+      (c.openCount ? " with a further " + c.openCount + " still under review" : "") +
+      ", carrying " + window.DP.usd(c.exposure || 0) + " in confirmed exposure.");
+
+    if (types.length === 1) {
+      L.push("Every lead shows the same pattern — " + types[0].toLowerCase() + " — which is what binds them into a single case rather than isolated claim errors.");
+    } else if (types.length > 1) {
+      L.push("The leads span " + types.length + " distinct patterns (" + types.join(", ").toLowerCase() + "), indicating systemic billing behavior rather than a single coding error.");
+    }
+
+    if (c.multiProvider) {
+      L.push("The providers are linked through a shared billing identifier and are treated as one case because the exposure and the conduct cross entity boundaries — recovering against one provider alone would leave the scheme intact.");
+    }
+
+    // the strongest lead anchors the narrative
+    var top = leads.slice().sort(function (x, y) { return (y.riskScore || 0) - (x.riskScore || 0); })[0];
+    if (top && top.xai && top.xai.summary) {
+      L.push("The strongest evidence sits on lead #" + top.id + " (risk " + top.riskScore + "/100): " + top.xai.summary);
+    }
+
+    var refs = (window.APP.caseRelations ? window.APP.caseRelations(c.providerId) : []) || [];
+    if (refs.length) {
+      L.push("This case is linked to " + refs.length + " other case" + (refs.length === 1 ? "" : "s") + " (" +
+        refs.map(function (r) { return window.APP.caseLinkLabel(r.type).toLowerCase() + " " + r.otherPid; }).join("; ") + ").");
+    }
+
+    L.push(c.escalated
+      ? "The case is under investigation; recommend continued development before a recovery or referral decision."
+      : "Recommend recovery of the confirmed exposure and a targeted review of this provider's remaining claims.");
+    return L.join(" ");
+  }
+
   // A formal, attachable justification memo for a decision. This is the artifact
   // that travels with the case — to a supervisor, a provider notice, or an appeal —
   // so it states the finding, the evidence behind it, and the basis for the call.
@@ -234,5 +277,5 @@
     return iv;
   }
 
-  window.AI = { draftRationale: draftRationale, justificationMemo: justificationMemo, adjudicationSummary: adjudicationSummary, copilot: copilot, stream: stream };
+  window.AI = { draftRationale: draftRationale, justificationMemo: justificationMemo, caseNarrative: caseNarrative, adjudicationSummary: adjudicationSummary, copilot: copilot, stream: stream };
 })();

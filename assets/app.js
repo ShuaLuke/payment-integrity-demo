@@ -2,7 +2,8 @@
 (function () {
   var mount;
   var APP = {
-    state: { view: "queue", allegationId: null, filters: {}, decisions: {}, audit: [], investigations: [], role: "analyst", watchlist: {}, businessWatchlist: {}, mode: "retrospective", prepayDecisions: {}, comments: {}, workingRecord: {}, uploads: {}, artifacts: {}, recordsRequestText: {} },
+    state: { view: "queue", allegationId: null, filters: {}, decisions: {}, audit: [], investigations: [], role: "analyst", watchlist: {}, businessWatchlist: {}, mode: "retrospective", prepayDecisions: {}, comments: {}, workingRecord: {}, uploads: {}, artifacts: {}, recordsRequestText: {},
+      caseLinks: {}, caseLinkTypes: {}, caseRelations: [], caseNarratives: {}, closedCases: {}, referrals: {} },
 
     ROLES: { analyst: { name: "Dana Whitmore", title: "Analyst", initials: "DW" }, supervisor: { name: "Karen Boyd", title: "Supervisor", initials: "KB" } },
     isSupervisor: function () { return APP.state.role === "supervisor"; },
@@ -213,25 +214,144 @@
       if (name && a.status === "New") a.status = "Assigned";
       APP.auditLog("CASE_ASSIGNED", "Lead #" + id + " · " + (name ? "→ " + name : "unassigned"));
     },
+    // ---- typed relationships ----
+    // A link records WHY a lead belongs to a case, not just that it does. The reason
+    // is what a reviewer challenges on appeal ("why is this provider in that ring?"),
+    // so it is stored alongside the link rather than inferred later.
+    LEAD_LINK_TYPES: [
+      { c: "same-provider", l: "Same provider", d: "The lead bills under the same provider as the case." },
+      { c: "same-entity", l: "Same billing entity", d: "A different provider sharing the case's billing TIN or registration." },
+      { c: "same-scheme", l: "Same scheme / pattern", d: "The same billing pattern as the case, potentially across providers." },
+      { c: "manual", l: "Analyst judgment", d: "Linked on the analyst's assessment — see the justification." }
+    ],
+    CASE_LINK_TYPES: [
+      { c: "related", l: "Related to", d: "Shares subject matter, providers or scheme with the other case." },
+      { c: "duplicate", l: "Duplicate of", d: "Covers the same conduct as the other case." },
+      { c: "supersedes", l: "Supersedes", d: "Replaces the other case, which should be closed." }
+    ],
+    leadLinkLabel: function (c) { var t = APP.LEAD_LINK_TYPES.find(function (x) { return x.c === c; }); return t ? t.l : c; },
+    caseLinkLabel: function (c) { var t = APP.CASE_LINK_TYPES.find(function (x) { return x.c === c; }); return t ? t.l : c; },
+    // Derive the link type from the evidence rather than making the analyst classify it.
+    suggestLinkType: function (lead, caseObj) {
+      if (!lead || !caseObj) return "manual";
+      if ((caseObj.providerIds || []).indexOf(lead.providerId) >= 0) return "same-provider";
+      var lp = window.DP.getProvider(lead.providerId) || {};
+      var shares = (caseObj.providers || []).some(function (p) {
+        return (p.tin && lp.tin && p.tin === lp.tin) || (p.registrationId && lp.registrationId && p.registrationId === lp.registrationId);
+      });
+      if (shares) return "same-entity";
+      if ((caseObj.fwaTypes || []).indexOf(lead.fwaType) >= 0) return "same-scheme";
+      return "manual";
+    },
+    linkTypeFor: function (leadId) { return (APP.state.caseLinkTypes || {})[leadId] || null; },
+
     // Analyst's Decision-tab choice: start a NEW case or add the lead to an existing
     // one. Stored as a per-lead case link that DP.listCases groups by.
     setLeadCase: function (id, choice) {
       choice = choice || {};
       var key = (choice.mode === "existing" && choice.caseKey) ? choice.caseKey : "new:" + id;
       (APP.state.caseLinks = APP.state.caseLinks || {})[id] = key;
-      APP.auditLog("CASE_LINK", "Lead #" + id + " · " + (choice.mode === "existing" ? "added to existing case" + (choice.caseName ? " (" + choice.caseName + ")" : "") : "flagged to open a new case"));
+      if (choice.linkType) (APP.state.caseLinkTypes = APP.state.caseLinkTypes || {})[id] = choice.linkType;
+      APP.auditLog("CASE_LINK", "Lead #" + id + " · " + (choice.mode === "existing" ? "added to existing case" + (choice.caseName ? " (" + choice.caseName + ")" : "") : "flagged to open a new case") +
+        (choice.linkType ? " · link type: " + APP.leadLinkLabel(choice.linkType) : ""));
     },
 
-    // ---- case closure (a case can be Closed once its work is done) ----
-    isCaseClosed: function (pid) { return !!(APP.state.closedCases && APP.state.closedCases[pid]); },
-    closeCase: function (pid, reason) {
-      (APP.state.closedCases = APP.state.closedCases || {})[pid] = { reason: reason || "Resolved", ts: new Date(), by: (APP.ROLES[APP.state.role] || {}).name };
+    // ---- case ↔ case links ----
+    // Keyed by providerId (the case's stable id — caseKey is derived and flips as
+    // soon as a lead is re-linked, so it would orphan these).
+    caseRelations: function (pid) {
+      return (APP.state.caseRelations || []).filter(function (r) { return r.from === pid || r.to === pid; })
+        .map(function (r) {
+          // present the relation from the perspective of the case being viewed
+          var out = r.from === pid;
+          return { otherPid: out ? r.to : r.from, type: r.type, outbound: out, note: r.note, ts: r.ts, by: r.by };
+        });
+    },
+    addCaseRelation: function (fromPid, toPid, type, note) {
+      if (!fromPid || !toPid || fromPid === toPid) return null;
+      var rels = (APP.state.caseRelations = APP.state.caseRelations || []);
+      if (rels.some(function (r) { return r.from === fromPid && r.to === toPid && r.type === type; })) return null;
+      var r = { from: fromPid, to: toPid, type: type, note: note || "", ts: new Date(), by: (APP.ROLES[APP.state.role] || {}).name };
+      rels.push(r);
+      var a = window.DP.getProvider(fromPid) || {}, b = window.DP.getProvider(toPid) || {};
+      APP.auditLog("CASE_LINKED", "Case " + fromPid + " (" + (a.name || "—") + ") " + APP.caseLinkLabel(type).toLowerCase() + " case " + toPid + " (" + (b.name || "—") + ")" + (note ? " · " + note : ""));
+      return r;
+    },
+    removeCaseRelation: function (fromPid, otherPid, type) {
+      var rels = (APP.state.caseRelations || []);
+      var i = rels.findIndex(function (r) { return r.type === type && ((r.from === fromPid && r.to === otherPid) || (r.from === otherPid && r.to === fromPid)); });
+      if (i < 0) return;
+      rels.splice(i, 1);
+      APP.auditLog("CASE_UNLINKED", "Case " + fromPid + " · removed “" + APP.caseLinkLabel(type) + "” link to case " + otherPid);
+    },
+
+    // ---- case narrative (the story across a case's leads) ----
+    // Keyed by providerId — the case's stable identity. caseKey is derived and
+    // changes the moment a lead is re-linked, which would orphan the narrative.
+    getCaseNarrative: function (pid) { return (APP.state.caseNarratives || {})[pid] || null; },
+    setCaseNarrative: function (pid, text) {
+      text = (text || "").trim();
+      var store = (APP.state.caseNarratives = APP.state.caseNarratives || {});
+      if (!text) { delete store[pid]; return null; }
+      var first = !store[pid];
+      var n = { text: text, ts: new Date(), by: (APP.ROLES[APP.state.role] || {}).name || "Dana Whitmore" };
+      store[pid] = n;
       var p = window.DP.getProvider(pid);
-      APP.auditLog("CASE_CLOSED", "Case " + pid + (p ? " (" + p.name + ")" : "") + (reason ? " · " + reason : ""));
+      APP.auditLog(first ? "CASE_NARRATIVE_ADDED" : "CASE_NARRATIVE_UPDATED", "Case " + pid + (p ? " (" + p.name + ")" : "") + " · narrative " + (first ? "written" : "revised") + " by " + n.by);
+      return n;
+    },
+
+    // ---- case closure & referral (supervisor authority) ----
+    // Analysts work leads and may add them to cases, but closing a case or referring
+    // it out is the supervisor's call. Guarded here, not just hidden in the views —
+    // the UI gate is the affordance, this is the rule.
+    CLOSE_REASONS: [
+      { c: "CL-01", t: "Recovery completed — funds recouped" },
+      { c: "CL-02", t: "Confirmed improper payment — referred for recoupment" },
+      { c: "CL-03", t: "Referred to VA-OIG / law enforcement" },
+      { c: "CL-04", t: "Provider education issued — no recovery pursued" },
+      { c: "CL-05", t: "Unsubstantiated — no improper payment found" },
+      { c: "CL-06", t: "Below the recovery threshold — not cost-effective to pursue" },
+      { c: "CL-07", t: "Duplicate of another case" },
+      { c: "CL-08", t: "Provider no longer active / unable to pursue" }
+    ],
+    closeReasonText: function (code) { var r = APP.CLOSE_REASONS.find(function (x) { return x.c === code; }); return r ? r.t : null; },
+    REFERRAL_TARGETS: [
+      { c: "oig", l: "VA Office of Inspector General" },
+      { c: "doj", l: "Department of Justice / law enforcement" },
+      { c: "recoupment", l: "Recoupment / debt management" },
+      { c: "program-integrity", l: "Program Integrity review board" }
+    ],
+    referralLabel: function (c) { var t = APP.REFERRAL_TARGETS.find(function (x) { return x.c === c; }); return t ? t.l : c; },
+    canCloseCase: function () { return APP.isSupervisor(); },
+    canReferCase: function () { return APP.isSupervisor(); },
+
+    isCaseClosed: function (pid) { return !!(APP.state.closedCases && APP.state.closedCases[pid]); },
+    closeCase: function (pid, reason, narrative) {
+      if (!APP.canCloseCase()) { APP.auditLog("CASE_CLOSE_DENIED", "Case " + pid + " · close attempted without supervisor authority"); return null; }
+      var c = {
+        reason: reason || "CL-01", reasonText: APP.closeReasonText(reason) || "Resolved",
+        narrative: (narrative || "").trim(), ts: new Date(), by: (APP.ROLES[APP.state.role] || {}).name
+      };
+      (APP.state.closedCases = APP.state.closedCases || {})[pid] = c;
+      var p = window.DP.getProvider(pid);
+      APP.auditLog("CASE_CLOSED", "Case " + pid + (p ? " (" + p.name + ")" : "") + " · " + c.reason + " · " + c.reasonText + " · closed by " + c.by + (c.narrative ? " · closing narrative recorded" : ""));
+      return c;
     },
     reopenCase: function (pid) {
+      if (!APP.canCloseCase()) { APP.auditLog("CASE_REOPEN_DENIED", "Case " + pid + " · reopen attempted without supervisor authority"); return null; }
       if (APP.state.closedCases) delete APP.state.closedCases[pid];
-      APP.auditLog("CASE_REOPENED", "Case " + pid + " reopened");
+      APP.auditLog("CASE_REOPENED", "Case " + pid + " reopened by " + (APP.ROLES[APP.state.role] || {}).name);
+    },
+    // Referral out of PIVOT — the terminal path beyond recovery. Supervisor-only.
+    referralFor: function (pid) { return (APP.state.referrals || {})[pid] || null; },
+    referCase: function (pid, target, note) {
+      if (!APP.canReferCase()) { APP.auditLog("CASE_REFER_DENIED", "Case " + pid + " · referral attempted without supervisor authority"); return null; }
+      var r = { target: target, label: APP.referralLabel(target), note: (note || "").trim(), ts: new Date(), by: (APP.ROLES[APP.state.role] || {}).name };
+      (APP.state.referrals = APP.state.referrals || {})[pid] = r;
+      var p = window.DP.getProvider(pid);
+      APP.auditLog("CASE_REFERRED", "Case " + pid + (p ? " (" + p.name + ")" : "") + " · referred to " + r.label + " by " + r.by + (r.note ? " · " + r.note : ""));
+      return r;
     },
     openTeam: function (sel) { APP.state.teamSel = sel; APP.nav("team"); },
     openBusiness: function (id) { (APP.state.hist = APP.state.hist || []).push(APP.snapshot()); APP.state.businessId = id; APP.nav("business", { id: id }); },

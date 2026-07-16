@@ -27,10 +27,15 @@ alter table public.case_state add column if not exists decision_reason text;
 -- Per-case closure state (keyed by the case's primary provider id)
 create table if not exists public.case_closure (
   provider_id text primary key,
-  reason      text,
+  reason      text,          -- coded close reason (e.g. CL-01)
+  reason_text text,          -- the reason's label at time of closing
+  narrative   text,          -- the supervisor's closing narrative
   closed_by   text,
   updated_at  timestamptz default now()
 );
+-- additive migrations for existing installs:
+alter table public.case_closure add column if not exists reason_text text;
+alter table public.case_closure add column if not exists narrative text;
 
 -- Immutable audit trail
 create table if not exists public.audit_log (

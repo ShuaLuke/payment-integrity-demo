@@ -3,6 +3,8 @@
    adjudicate-from-provider (provider → its flagged claims). */
 (function () {
   window.Views = window.Views || {};
+  // Leads that are done and cannot feed a case (mirrors DP's CLOSED_STATUS).
+  var CLOSED_LEAD = { "Dismissed": 1, "Cleared to pay": 1, "Denied": 1 };
   var selGroup = null; // currently drilled-into radar spoke
 
   window.Views.provider = {
@@ -30,6 +32,20 @@
       var repeatOffender = allegs.length >= 2 || chain;
       var watched = window.APP.isProviderWatched(id);
       var outlierCount = groups.filter(function (g) { return g.outlier; }).length;
+      // Once a case exists, list the CASE's leads. A multi-provider case (shared TIN
+      // or business registration) pulls in leads from its other providers, and
+      // listing only this provider's leads would hide them.
+      var caseRows = hasCase ? caseInfo.caseLeads.concat(caseInfo.openLeads) : allegs;
+      // Name each lead's provider whenever the rows actually span more than one.
+      // caseInfo.multiProvider only counts CONFIRMED leads, so a chain case whose
+      // other providers are still feeding in would otherwise render their leads as
+      // if they were this provider's.
+      var spansProviders = caseRows.map(function (a) { return a.providerId; })
+        .filter(function (v, i, arr) { return arr.indexOf(v) === i; }).length > 1;
+      // Open leads that can be linked into this case in bulk ("10 leads from the
+      // same provider → add them to the same case").
+      var bulkable = caseRows.filter(function (a) { return !window.DP.isCaseLead(a) && !CLOSED_LEAD[a.status]; });
+      var colspan = 7 + (hasCase && bulkable.length ? 1 : 0) + (spansProviders ? 1 : 0);
 
       mount.innerHTML =
         '<div class="page">' +
@@ -76,15 +92,38 @@
         // TrackLight-style external profile / secondary scoring
         secondaryPanel(id) +
 
+        // case story + relationships + disposition
+        (hasCase ? caseNarrativeCard(id, caseInfo) : '') +
+        (hasCase ? relatedCasesCard(id) : '') +
+        (hasCase ? caseAuthorityCard(id, caseInfo) : '') +
+
         // flagged claims — adjudicate from provider
-        '<div class="card" style="padding:0;overflow:hidden"><div style="padding:11px 13px 6px;font-weight:500;font-size:13px">' + (hasCase ? 'Leads — case (' + caseInfo.leadCount + ' confirmed · ' + caseInfo.openCount + ' open feeding in)' : 'Leads (' + allegs.length + ' open · no case yet)') + ' <span class="muted" style="font-weight:400;font-size:11px">· confirm a lead to add it to the case</span></div>' +
-        '<table><thead><tr><th style="width:22px"></th><th>Risk</th><th>FWA type</th><th>Status</th><th class="right">Exposure</th><th></th></tr></thead><tbody>' +
-        (allegs.length ? allegs.slice().sort(function (a, b) { return b.riskScore - a.riskScore; }).map(function (a, i) {
+        '<div class="card" style="padding:0;overflow:hidden"><div style="padding:11px 13px 6px;font-weight:500;font-size:13px">' + (hasCase ? 'Leads — case (' + caseInfo.leadCount + ' confirmed · ' + caseInfo.openCount + ' open feeding in)' : 'Leads (' + allegs.length + ' open · no case yet)') + ' <span class="muted" style="font-weight:400;font-size:11px">· confirm a lead to add it to the case' + (hasCase ? '; select open leads to link them to this case now' : '') + '</span></div>' +
+        (hasCase && bulkable.length ? '<div id="pv-bulkbar" style="display:none;padding:8px 13px;background:var(--accent-l);border-top:0.5px solid #cfe7e3;border-bottom:0.5px solid #cfe7e3;align-items:center;gap:8px;flex-wrap:wrap">' +
+          '<span style="font-size:11.5px;font-weight:500" id="pv-bulkcount">0 selected</span>' +
+          '<span style="font-size:11px;color:var(--text2)">link as</span>' +
+          '<select id="pv-bulktype" class="input" style="font-size:11.5px;width:auto;flex:none">' +
+          window.APP.LEAD_LINK_TYPES.map(function (t) { return '<option value="' + t.c + '" title="' + window.APP.esc(t.d) + '">' + t.l + '</option>'; }).join("") + '</select>' +
+          '<button class="btn primary" id="pv-bulkgo" style="font-size:11px"><i class="ti ti-link"></i> Link to this case</button>' +
+          '<span class="muted" style="font-size:10.5px">they join the case as each is confirmed</span></div>' : '') +
+        '<table><thead><tr>' + (hasCase && bulkable.length ? '<th style="width:26px"><input type="checkbox" id="pv-bulkall" title="Select all open leads"></th>' : '') + '<th style="width:22px"></th><th>Risk</th><th>FWA type</th>' + (spansProviders ? '<th>Provider</th>' : '') + '<th>Status</th><th>Link</th><th class="right">Exposure</th><th></th></tr></thead><tbody>' +
+        (caseRows.length ? caseRows.slice().sort(function (a, b) { return b.riskScore - a.riskScore; }).map(function (a, i) {
           var cl = a.claimId ? window.DP.getClaim(a.claimId) : null;
-          var main = '<tr class="pv-lead" data-i="' + i + '" data-id="' + a.id + '" style="cursor:pointer"><td style="width:22px"><i class="ti ti-chevron-down pv-lcaret" style="color:var(--text3);font-size:13px"></i></td><td>' + window.UI.riskChip(a.riskScore) + '</td><td><span class="tag fwa">' + a.fwaType + '</span> <span class="mono" style="font-size:10.5px;color:var(--text3)">#' + a.id + '</span></td><td>' + window.UI.statusPill(window.UI.leadStatus(a)) + '</td><td class="right" style="font-weight:500">' + window.DP.usd(a.exposurePost || 0) + '</td><td class="right"><span class="pv-review" data-id="' + a.id + '" style="font-size:11px;color:var(--accent-d);cursor:pointer">Review <i class="ti ti-chevron-right"></i></span></td></tr>';
-          var detail = '<tr class="pv-ldetail" data-i="' + i + '" style="display:none"><td colspan="6" style="background:var(--surface);padding:10px 13px">' + leadLinesHtml(a, cl) + '</td></tr>';
+          var linked = window.DP.isCaseLead(a);
+          var selectable = hasCase && !linked && !CLOSED_LEAD[a.status];
+          var lt = window.APP.linkTypeFor(a.id) || (linked || (window.APP.state.caseLinks || {})[a.id] ? window.APP.suggestLinkType(a, caseInfo) : null);
+          var linkCell = lt
+            ? '<span class="tag" style="background:var(--accent-l);color:var(--accent-d)" title="' + window.APP.esc((window.APP.LEAD_LINK_TYPES.find(function (t) { return t.c === lt; }) || {}).d || "") + '"><i class="ti ti-link"></i> ' + window.APP.esc(window.APP.leadLinkLabel(lt)) + '</span>'
+            : '<span class="muted" style="font-size:10.5px">—</span>';
+          var lp = window.DP.getProvider(a.providerId) || {};
+          var main = '<tr class="pv-lead" data-i="' + i + '" data-id="' + a.id + '" style="cursor:pointer">' +
+            (hasCase && bulkable.length ? '<td style="width:26px">' + (selectable ? '<input type="checkbox" class="pv-bulkchk" data-id="' + a.id + '">' : '') + '</td>' : '') +
+            '<td style="width:22px"><i class="ti ti-chevron-down pv-lcaret" style="color:var(--text3);font-size:13px"></i></td><td>' + window.UI.riskChip(a.riskScore) + '</td><td><span class="tag fwa">' + a.fwaType + '</span> <span class="mono" style="font-size:10.5px;color:var(--text3)">#' + a.id + '</span></td>' +
+            (spansProviders ? '<td style="font-size:11.5px' + (a.providerId === id ? ';font-weight:500' : ';color:var(--text2)') + '">' + window.APP.esc(lp.name || a.providerId) + '</td>' : '') +
+            '<td>' + window.UI.statusPill(window.UI.leadStatus(a)) + '</td><td>' + linkCell + '</td><td class="right" style="font-weight:500">' + window.DP.usd(a.exposurePost || 0) + '</td><td class="right"><span class="pv-review" data-id="' + a.id + '" style="font-size:11px;color:var(--accent-d);cursor:pointer">Review <i class="ti ti-chevron-right"></i></span></td></tr>';
+          var detail = '<tr class="pv-ldetail" data-i="' + i + '" style="display:none"><td colspan="' + colspan + '" style="background:var(--surface);padding:10px 13px">' + leadLinesHtml(a, cl) + '</td></tr>';
           return main + detail;
-        }).join("") : '<tr><td colspan="6" class="muted" style="padding:12px">No leads.</td></tr>') +
+        }).join("") : '<tr><td colspan="' + colspan + '" class="muted" style="padding:12px">No leads.</td></tr>') +
         '</tbody></table></div>' +
 
         // historical claims
@@ -115,6 +154,7 @@
       });
       mount.querySelectorAll(".pv-review").forEach(function (el) { el.addEventListener("click", function (e) { e.stopPropagation(); window.APP.openAllegation(el.getAttribute("data-id")); }); });
       wireRadar(mount, id);
+      if (hasCase) { wireCaseNarrative(id, caseInfo); wireRelatedCases(id); wireCaseAuthority(id, caseInfo); wireBulkLink(mount, id, caseInfo); }
 
       // ---- report-card export ----
       var gHead = ["Group", "Score", "Peer norm", "Outlier"];
@@ -221,6 +261,209 @@
   }
 
   function kpi(l, v) { return '<div class="kpi"><div class="l">' + l + '</div><div class="v">' + v + '</div></div>'; }
+
+  // ---------- case narrative ----------
+  // The story spanning a case's leads. A lead's justification explains one claim;
+  // this explains why these leads are one case.
+  function caseNarrativeCard(pid, caseInfo) {
+    var n = window.APP.getCaseNarrative(pid);
+    return '<div class="card" id="pv-narr">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:7px">' +
+      '<div style="font-weight:500;font-size:13px"><i class="ti ti-notes" style="color:var(--accent-d)"></i> Case narrative <span class="muted" style="font-weight:400;font-size:11px">· why these ' + (caseInfo.leadCount + caseInfo.openCount) + ' leads are one case — travels with the case to review, referral and appeal</span></div>' +
+      (n ? '<span class="muted" style="font-size:10.5px">' + window.APP.esc(n.by) + ' · ' + window.APP.fmtTs(n.ts) + '</span>' : '') + '</div>' +
+      (n ? '<div id="pv-narr-view" style="font-size:12.5px;line-height:1.6;color:var(--text);background:var(--surface);border:0.5px solid var(--border);border-radius:7px;padding:9px 11px">' + window.APP.esc(n.text) + '</div>' +
+        '<div style="margin-top:7px"><button class="btn" id="pv-narr-edit" style="font-size:11px"><i class="ti ti-edit"></i> Revise narrative</button></div>'
+        : '<div class="muted" style="font-size:11.5px;padding:2px 0 7px">No narrative yet — write the case story, or draft it from the leads and edit.</div>') +
+      '<div id="pv-narr-edit-box" style="display:' + (n ? "none" : "block") + ';margin-top:' + (n ? "7px" : "0") + '">' +
+      '<textarea id="pv-narr-text" class="input" style="min-height:88px;font-size:12.5px;line-height:1.6" placeholder="Describe the case across its leads…">' + window.APP.esc(n ? n.text : "") + '</textarea>' +
+      '<div style="display:flex;gap:6px;margin-top:7px;flex-wrap:wrap">' +
+      '<button class="btn primary" id="pv-narr-save" style="font-size:11px"><i class="ti ti-check"></i> Save narrative</button>' +
+      '<button class="btn" id="pv-narr-draft" style="font-size:11px"><i class="ti ti-sparkles"></i> Draft with AI</button>' +
+      (n ? '<button class="btn" id="pv-narr-cancel" style="font-size:11px">Cancel</button>' : '') + '</div></div>' +
+      '</div>';
+  }
+  function wireCaseNarrative(pid, caseInfo) {
+    var box = document.getElementById("pv-narr-edit-box"); if (!box) return;
+    var ed = document.getElementById("pv-narr-edit");
+    if (ed) ed.addEventListener("click", function () { box.style.display = "block"; ed.style.display = "none"; });
+    var cancel = document.getElementById("pv-narr-cancel");
+    if (cancel) cancel.addEventListener("click", function () { box.style.display = "none"; if (ed) ed.style.display = ""; });
+    document.getElementById("pv-narr-save").addEventListener("click", function () {
+      window.APP.setCaseNarrative(pid, document.getElementById("pv-narr-text").value);
+      rerender(pid);
+    });
+    document.getElementById("pv-narr-draft").addEventListener("click", function () {
+      var ta = document.getElementById("pv-narr-text");
+      var t = window.AI.caseNarrative(caseInfo), i = 0;
+      ta.value = "";
+      var iv = setInterval(function () { i += 4; ta.value = t.slice(0, i); if (i >= t.length) { clearInterval(iv); ta.value = t; } }, 12);
+    });
+  }
+
+  // ---------- related cases (typed case ↔ case links) ----------
+  function relatedCasesCard(pid) {
+    var rels = window.APP.caseRelations(pid);
+    var others = window.DP.listCases({ mode: "retrospective" }).filter(function (c) { return c.providerId !== pid; });
+    var rows = rels.map(function (r) {
+      var op = window.DP.getProvider(r.otherPid) || {};
+      // "supersedes" reads backwards from the other side — say so plainly
+      var verb = r.outbound ? window.APP.caseLinkLabel(r.type)
+        : (r.type === "supersedes" ? "Superseded by" : r.type === "duplicate" ? "Duplicate of" : "Related to");
+      return '<div style="display:flex;gap:9px;align-items:center;padding:7px 0;border-top:0.5px solid var(--border2)">' +
+        '<span class="tag" style="background:var(--accent-l);color:var(--accent-d)"><i class="ti ti-link"></i> ' + window.APP.esc(verb) + '</span>' +
+        '<div style="flex:1;min-width:0"><div class="pv-relopen" data-pid="' + r.otherPid + '" style="font-size:12.5px;font-weight:500;color:var(--accent-d);cursor:pointer">' + window.APP.esc(op.name || r.otherPid) + ' <i class="ti ti-external-link" style="font-size:10px"></i></div>' +
+        '<div class="muted" style="font-size:10.5px">CASE-' + r.otherPid + (r.note ? ' · ' + window.APP.esc(r.note) : '') + ' · ' + window.APP.esc(r.by || "") + '</div></div>' +
+        '<span class="pv-relrm" data-pid="' + r.otherPid + '" data-type="' + r.type + '" style="color:var(--text3);cursor:pointer;font-size:13px" title="Remove link"><i class="ti ti-x"></i></span></div>';
+    }).join("");
+    return '<div class="card" id="pv-rel">' +
+      '<div style="font-weight:500;font-size:13px;margin-bottom:2px"><i class="ti ti-link" style="color:var(--accent-d)"></i> Related cases <span class="muted" style="font-weight:400;font-size:11px">· typed links to other cases</span></div>' +
+      (rows || '<div class="muted" style="font-size:11.5px;padding:5px 0">No linked cases.</div>') +
+      (others.length ? '<div style="display:flex;gap:6px;margin-top:9px;flex-wrap:wrap;align-items:center">' +
+        '<select id="pv-rel-type" class="input" style="font-size:11.5px;width:auto;flex:none">' +
+        window.APP.CASE_LINK_TYPES.map(function (t) { return '<option value="' + t.c + '" title="' + window.APP.esc(t.d) + '">' + t.l + '</option>'; }).join("") + '</select>' +
+        '<select id="pv-rel-case" class="input" style="font-size:11.5px;flex:1;min-width:180px">' +
+        others.map(function (c) { return '<option value="' + c.providerId + '">' + window.APP.esc(c.name) + ' · CASE-' + c.providerId + ' (' + c.leadCount + ' lead' + (c.leadCount === 1 ? '' : 's') + ')</option>'; }).join("") + '</select>' +
+        '<button class="btn" id="pv-rel-add" style="font-size:11px;flex:none"><i class="ti ti-plus"></i> Link</button></div>' : '') +
+      '</div>';
+  }
+  function wireRelatedCases(pid) {
+    var add = document.getElementById("pv-rel-add");
+    if (add) add.addEventListener("click", function () {
+      window.APP.addCaseRelation(pid, document.getElementById("pv-rel-case").value, document.getElementById("pv-rel-type").value);
+      rerender(pid);
+    });
+    document.querySelectorAll(".pv-relrm").forEach(function (el) {
+      el.addEventListener("click", function () { window.APP.removeCaseRelation(pid, el.getAttribute("data-pid"), el.getAttribute("data-type")); rerender(pid); });
+    });
+    document.querySelectorAll(".pv-relopen").forEach(function (el) {
+      el.addEventListener("click", function () { window.APP.openProvider(el.getAttribute("data-pid")); });
+    });
+  }
+
+  // ---------- bulk link leads → this case ----------
+  // "See 10 leads from the same provider — add to the same case." Linking sets each
+  // lead's destination; the lead actually joins the case when it is confirmed.
+  function wireBulkLink(mount, pid, caseInfo) {
+    var bar = document.getElementById("pv-bulkbar"); if (!bar) return;
+    var boxes = function () { return [].slice.call(mount.querySelectorAll(".pv-bulkchk")); };
+    var picked = function () { return boxes().filter(function (b) { return b.checked; }); };
+    var refresh = function () {
+      var n = picked().length;
+      bar.style.display = n ? "flex" : "none";
+      document.getElementById("pv-bulkcount").textContent = n + " lead" + (n === 1 ? "" : "s") + " selected";
+    };
+    boxes().forEach(function (b) {
+      // the row itself expands on click — don't let the checkbox trigger that
+      b.addEventListener("click", function (e) { e.stopPropagation(); refresh(); });
+    });
+    var all = document.getElementById("pv-bulkall");
+    if (all) all.addEventListener("click", function (e) {
+      e.stopPropagation();
+      boxes().forEach(function (b) { b.checked = all.checked; });
+      refresh();
+    });
+    var go = document.getElementById("pv-bulkgo");
+    if (go) go.addEventListener("click", function () {
+      var type = document.getElementById("pv-bulktype").value;
+      var ids = picked().map(function (b) { return b.getAttribute("data-id"); });
+      if (!ids.length) return;
+      ids.forEach(function (lid) {
+        var lead = window.DP.getAllegation(lid);
+        window.APP.setLeadCase(lid, { mode: "existing", caseKey: caseInfo.caseKey, caseName: caseInfo.name, linkType: type || window.APP.suggestLinkType(lead, caseInfo) });
+      });
+      window.APP.auditLog("CASE_LEADS_LINKED", "Case " + pid + " (" + caseInfo.name + ") · " + ids.length + " lead" + (ids.length === 1 ? "" : "s") + " linked as “" + window.APP.leadLinkLabel(type) + "” · " + ids.map(function (i) { return "#" + i; }).join(", "));
+      rerender(pid);
+    });
+    refresh();
+  }
+
+  // ---------- case authority: close & refer (supervisor only) ----------
+  // Analysts work leads and add them to cases; closing a case or referring it out
+  // is the supervisor's call.
+  function caseAuthorityCard(pid, caseInfo) {
+    var closed = window.APP.isCaseClosed(pid), ref = window.APP.referralFor(pid);
+    var c = closed ? window.APP.state.closedCases[pid] : null;
+    var sup = window.APP.isSupervisor();
+    var refBox = ref
+      ? '<div style="background:var(--med-bg);border:0.5px solid #e7c99a;border-radius:7px;padding:8px 10px;font-size:11.5px;color:var(--med-tx)"><i class="ti ti-send"></i> <b>Referred to ' + window.APP.esc(ref.label) + '</b> by ' + window.APP.esc(ref.by) + ' · ' + window.APP.fmtTs(ref.ts) + (ref.note ? '<div style="margin-top:3px">' + window.APP.esc(ref.note) + '</div>' : '') + '</div>'
+      : '';
+    if (closed) {
+      return '<div class="card" id="pv-auth">' +
+        '<div style="font-weight:500;font-size:13px;margin-bottom:7px"><i class="ti ti-archive" style="color:var(--text2)"></i> Case closed</div>' +
+        refBox + (refBox ? '<div style="height:7px"></div>' : '') +
+        '<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:7px;padding:9px 11px">' +
+        '<div style="font-size:12px;font-weight:500">' + window.APP.esc(c.reason || "") + ' · ' + window.APP.esc(c.reasonText || "") + '</div>' +
+        (c.narrative ? '<div style="font-size:12px;color:var(--text2);margin-top:5px;line-height:1.6">' + window.APP.esc(c.narrative) + '</div>' : '') +
+        '<div class="muted" style="font-size:10.5px;margin-top:5px">Closed by ' + window.APP.esc(c.by || "") + ' · ' + window.APP.fmtTs(c.ts) + '</div></div>' +
+        (sup ? '<div style="margin-top:8px"><button class="btn" id="pv-reopen" style="font-size:11px"><i class="ti ti-rotate"></i> Reopen case</button></div>'
+          : '<div class="muted" style="font-size:11px;margin-top:7px"><i class="ti ti-lock"></i> Only a supervisor can reopen a closed case.</div>') +
+        '</div>';
+    }
+    if (!sup) {
+      return '<div class="card" id="pv-auth">' +
+        '<div style="font-weight:500;font-size:13px;margin-bottom:6px"><i class="ti ti-user-shield" style="color:var(--text2)"></i> Case disposition</div>' +
+        refBox + (refBox ? '<div style="height:7px"></div>' : '') +
+        '<div class="muted" style="font-size:11.5px;line-height:1.6"><i class="ti ti-lock"></i> Closing this case or referring it out is a supervisor action. You can keep working its leads, add leads to it, and write the case narrative — then hand it to Karen Boyd for disposition.</div></div>';
+    }
+    return '<div class="card" id="pv-auth" style="border-color:#cfe7e3">' +
+      '<div style="font-weight:500;font-size:13px;margin-bottom:7px"><i class="ti ti-user-shield" style="color:var(--accent-d)"></i> Case disposition <span class="muted" style="font-weight:400;font-size:11px">· supervisor</span></div>' +
+      refBox + (refBox ? '<div style="height:8px"></div>' : '') +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+      '<button class="btn" id="pv-refer-btn" style="font-size:11px"><i class="ti ti-send"></i> ' + (ref ? "Re-refer" : "Refer out") + '</button>' +
+      '<button class="btn primary" id="pv-close-btn" style="font-size:11px"><i class="ti ti-checkbox"></i> Close case</button></div>' +
+      // refer
+      '<div id="pv-refer-box" style="display:none;margin-top:9px;background:var(--surface);border:0.5px solid var(--border);border-radius:7px;padding:9px 11px">' +
+      '<div style="font-size:11px;color:var(--text2);margin-bottom:5px">Refer to</div>' +
+      '<select id="pv-refer-target" class="input" style="font-size:12px">' + window.APP.REFERRAL_TARGETS.map(function (t) { return '<option value="' + t.c + '">' + t.l + '</option>'; }).join("") + '</select>' +
+      '<textarea id="pv-refer-note" class="input" style="margin-top:6px;min-height:44px;font-size:12px" placeholder="Referral note (what you are asking them to do)…"></textarea>' +
+      '<button class="btn primary" id="pv-refer-go" style="margin-top:6px;font-size:11px"><i class="ti ti-send"></i> Send referral</button></div>' +
+      // close
+      '<div id="pv-close-box" style="display:none;margin-top:9px;background:var(--surface);border:0.5px solid var(--border);border-radius:7px;padding:9px 11px">' +
+      '<div style="font-size:11px;color:var(--text2);margin-bottom:5px">Close reason <span style="color:var(--high-tx)">*</span></div>' +
+      '<select id="pv-close-reason" class="input" style="font-size:12px">' +
+      window.APP.CLOSE_REASONS.map(function (r) { return '<option value="' + r.c + '">' + r.c + ' · ' + window.APP.esc(r.t) + '</option>'; }).join("") + '</select>' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin:7px 0 4px">' +
+      '<span style="font-size:11px;color:var(--text2)">Closing narrative <span style="color:var(--high-tx)">*</span></span>' +
+      '<button class="btn" id="pv-close-draft" style="padding:3px 8px;font-size:11px"><i class="ti ti-sparkles"></i> Draft with AI</button></div>' +
+      '<textarea id="pv-close-narr" class="input" style="min-height:64px;font-size:12px" placeholder="How this case was resolved…"></textarea>' +
+      '<button class="btn primary" id="pv-close-go" style="margin-top:7px;font-size:11px" disabled><i class="ti ti-checkbox"></i> Close case</button>' +
+      '<div class="muted" style="font-size:10.5px;margin-top:5px">A closed case keeps its narrative and reason on the record.</div></div>' +
+      '</div>';
+  }
+  function wireCaseAuthority(pid, caseInfo) {
+    var ro = document.getElementById("pv-reopen");
+    if (ro) ro.addEventListener("click", function () { window.APP.reopenCase(pid); rerender(pid); });
+    var cb = document.getElementById("pv-close-btn"), closeBox = document.getElementById("pv-close-box");
+    var rb = document.getElementById("pv-refer-btn"), referBox = document.getElementById("pv-refer-box");
+    if (rb) rb.addEventListener("click", function () { referBox.style.display = referBox.style.display === "none" ? "block" : "none"; });
+    var rg = document.getElementById("pv-refer-go");
+    if (rg) rg.addEventListener("click", function () {
+      window.APP.referCase(pid, document.getElementById("pv-refer-target").value, document.getElementById("pv-refer-note").value);
+      rerender(pid);
+    });
+    if (!cb) return;
+    cb.addEventListener("click", function () { closeBox.style.display = closeBox.style.display === "none" ? "block" : "none"; });
+    var narr = document.getElementById("pv-close-narr"), go = document.getElementById("pv-close-go");
+    var refresh = function () { go.disabled = !narr.value.trim(); };
+    narr.addEventListener("input", refresh);
+    document.getElementById("pv-close-draft").addEventListener("click", function () {
+      var reason = document.getElementById("pv-close-reason");
+      var t = "Closing as " + (window.APP.closeReasonText(reason.value) || "").toLowerCase() + ". " + window.AI.caseNarrative(caseInfo), i = 0;
+      narr.value = "";
+      var iv = setInterval(function () { i += 4; narr.value = t.slice(0, i); refresh(); if (i >= t.length) { clearInterval(iv); narr.value = t; refresh(); } }, 12);
+    });
+    go.addEventListener("click", function () {
+      window.APP.closeCase(pid, document.getElementById("pv-close-reason").value, narr.value);
+      rerender(pid);
+    });
+    refresh();
+    // deep-linked from the Cases list "Review & close" button
+    if (window.APP.state.caseCloseIntent === pid) {
+      window.APP.state.caseCloseIntent = null;
+      closeBox.style.display = "block";
+      document.getElementById("pv-auth").scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }
 
   // full claim line-item detail for an expanded lead on the case page
   function leadLinesHtml(a, cl) {
