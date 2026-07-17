@@ -672,7 +672,9 @@
       insights: [{ v: "analytics", l: "Overview" }, { v: "network", l: "Network" }, { v: "businesses", l: "Businesses" }, { v: "heatmap", l: "Heatmap" }],
       library: [{ v: "rules", l: "Rules" }, { v: "audit", l: "Audit" }]
     },
-    VIEW_AREA: { home: "home", queue: "casework", claim: "casework", investigations: "casework", approvals: "casework", team: "casework", provider: "insights", analytics: "insights", network: "insights", businesses: "insights", business: "insights", heatmap: "insights", rules: "library", audit: "library" },
+    // portal maps to its own area (no nav item / no subnav) — it is a takeover
+    // screen simulating the provider's world, not part of the analyst IA.
+    VIEW_AREA: { home: "home", queue: "casework", claim: "casework", investigations: "casework", approvals: "casework", team: "casework", provider: "insights", analytics: "insights", network: "insights", businesses: "insights", business: "insights", heatmap: "insights", rules: "library", audit: "library", portal: "portal" },
     subsFor: function (area) { return (APP.SUBS[area] || []).filter(function (s) { return !s.role || s.role === APP.state.role; }); },
     areaOf: function (view) { return APP.VIEW_AREA[view] || "casework"; },
     openArea: function (area) {
