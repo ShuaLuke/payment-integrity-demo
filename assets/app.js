@@ -3,7 +3,7 @@
   var mount;
   var APP = {
     state: { view: "queue", allegationId: null, filters: {}, decisions: {}, audit: [], investigations: [], role: "analyst", watchlist: {}, businessWatchlist: {}, mode: "retrospective", prepayDecisions: {}, comments: {}, workingRecord: {}, uploads: {}, artifacts: {}, recordsRequestText: {}, recordsRequests: {},
-      caseLinks: {}, caseLinkTypes: {}, caseRelations: [], caseNarratives: {}, closedCases: {}, referrals: {} },
+      caseLinks: {}, caseLinkTypes: {}, caseRelations: [], caseNarratives: {}, caseReviews: {}, closedCases: {}, referrals: {} },
 
     ROLES: { analyst: { name: "Dana Whitmore", title: "Analyst", initials: "DW" }, supervisor: { name: "Karen Boyd", title: "Supervisor", initials: "KB" } },
     isSupervisor: function () { return APP.state.role === "supervisor"; },
@@ -104,10 +104,13 @@
     },
     updateSupBadge: function () {
       var n = APP.pendingReviews().length;
+      var cr = APP.pendingCaseReviews ? APP.pendingCaseReviews().length : 0;
       var b = document.getElementById("sup-badge");
-      if (b) { b.textContent = n; b.style.display = (n && APP.isSupervisor()) ? "inline-block" : "none"; }
+      if (b) { b.textContent = n + cr; b.style.display = ((n + cr) && APP.isSupervisor()) ? "inline-block" : "none"; }
       var sb = document.getElementById("sub-appr-badge");
       if (sb) sb.innerHTML = n ? '<span class="tag" style="background:#c77d11;color:#fff">' + n + '</span>' : "";
+      var cb = document.getElementById("sub-casereview-badge");
+      if (cb) cb.innerHTML = cr ? '<span class="tag" style="background:#c77d11;color:#fff">' + cr + '</span>' : "";
     },
 
     decisionFor: function (id) { return APP.state.decisions[id] || null; },
@@ -335,6 +338,46 @@
       var p = window.DP.getProvider(pid);
       APP.auditLog(first ? "CASE_NARRATIVE_ADDED" : "CASE_NARRATIVE_UPDATED", "Case " + pid + (p ? " (" + p.name + ")" : "") + " · narrative " + (first ? "written" : "revised") + " by " + n.by);
       return n;
+    },
+
+    // ---- case-level review (the whole case as a unit) ----
+    // Distinct from the per-lead approvals: once an analyst has built a case
+    // (confirmed leads + a narrative), they submit the CASE for supervisor sign-off.
+    // The supervisor reviews narrative + all constituent leads + total exposure and
+    // approves or returns it. Keyed by providerId (the case's stable id).
+    caseReviewFor: function (pid) { return (APP.state.caseReviews || {})[pid] || null; },
+    // Analyst (or supervisor) hands the case up. Requires a narrative — you can't ask
+    // for sign-off on a case whose story isn't written.
+    submitCaseForReview: function (pid) {
+      if (!APP.getCaseNarrative(pid)) return { error: "narrative-required" };
+      var c = window.DP.getCase(pid, "retrospective") || {};
+      var r = { status: "pending", submittedBy: (APP.ROLES[APP.state.role] || {}).name, submittedAt: new Date(), reviewedBy: null, reviewedAt: null, note: "" };
+      (APP.state.caseReviews = APP.state.caseReviews || {})[pid] = r;
+      var p = window.DP.getProvider(pid);
+      APP.auditLog("CASE_SUBMITTED_FOR_REVIEW", "Case " + pid + (p ? " (" + p.name + ")" : "") + " · " + (c.leadCount || 0) + " leads · " + window.DP.usd(c.exposure || 0) + " · submitted for supervisor review by " + r.submittedBy);
+      APP.updateSupBadge();
+      return r;
+    },
+    canReviewCase: function () { return APP.isSupervisor(); },
+    // Supervisor approves or returns the case. Supervisor-only — guarded here.
+    caseReviewAction: function (pid, action, note) {
+      if (!APP.canReviewCase()) { APP.auditLog("CASE_REVIEW_DENIED", "Case " + pid + " · case review attempted without supervisor authority"); return null; }
+      var r = APP.caseReviewFor(pid); if (!r) return null;
+      r.reviewedBy = (APP.ROLES[APP.state.role] || {}).name; r.reviewedAt = new Date(); r.note = note || "";
+      r.status = action === "approve" ? "approved" : "returned";
+      var p = window.DP.getProvider(pid);
+      if (action === "approve") APP.auditLog("CASE_APPROVED", "Case " + pid + (p ? " (" + p.name + ")" : "") + " · approved by " + r.reviewedBy + " — ready for disposition");
+      else APP.auditLog("CASE_RETURNED_TO_ANALYST", "Case " + pid + (p ? " (" + p.name + ")" : "") + " · returned by " + r.reviewedBy + (note ? " · " + note : ""));
+      APP.updateSupBadge();
+      return r;
+    },
+    // Cases sitting in the supervisor's court (the case queue).
+    pendingCaseReviews: function () {
+      var store = APP.state.caseReviews || {};
+      return Object.keys(store).filter(function (pid) { return store[pid].status === "pending"; })
+        .map(function (pid) { return { pid: pid, review: store[pid], caseInfo: window.DP.getCase(pid, "retrospective") }; })
+        .filter(function (x) { return x.caseInfo; })
+        .sort(function (a, b) { return (b.caseInfo.exposure || 0) - (a.caseInfo.exposure || 0); });
     },
 
     // ---- case closure & referral (supervisor authority) ----
@@ -606,6 +649,20 @@
         });
       });
     },
+    // One case sitting in the supervisor's court out of the box, so the Case reviews
+    // queue isn't empty when a supervisor opens it cold.
+    seedCaseReviews: function () {
+      var pid = "PR204"; // Big Bend — 2 confirmed leads seeded into a case
+      var c = window.DP.getCase(pid, "retrospective");
+      if (!c || !c.leadCount) return;
+      if (!APP.getCaseNarrative(pid)) {
+        APP.state.caseNarratives[pid] = {
+          text: "This case consolidates " + c.leadCount + " confirmed leads against " + (c.name || pid) + " carrying " + window.DP.usd(c.exposure || 0) + " in confirmed exposure. The leads share a single billing pattern rather than being isolated claim errors; documentation requested on the highest-risk lead did not support the services billed. Recommend recovery of the confirmed exposure and a targeted review of this provider's remaining claims.",
+          ts: new Date(), by: "Dana Whitmore"
+        };
+      }
+      APP.state.caseReviews[pid] = { status: "pending", submittedBy: "Dana Whitmore", submittedAt: new Date(), reviewedBy: null, reviewedAt: null, note: "" };
+    },
     // A few manual-origin leads so the "not everything is data-driven" story shows out of the box.
     seedManualLeads: function () {
       [
@@ -668,13 +725,13 @@
     // ---- information architecture: 4 areas, each with sub-views ----
     SUBS: {
       home: [],
-      casework: [{ v: "queue", l: "Leads", role: "analyst" }, { v: "approvals", l: "Approvals", role: "supervisor" }, { v: "team", l: "Team", role: "supervisor" }, { v: "investigations", l: "Cases" }],
+      casework: [{ v: "queue", l: "Leads", role: "analyst" }, { v: "approvals", l: "Approvals", role: "supervisor" }, { v: "casereviews", l: "Case reviews", role: "supervisor" }, { v: "team", l: "Team", role: "supervisor" }, { v: "investigations", l: "Cases" }],
       insights: [{ v: "analytics", l: "Overview" }, { v: "network", l: "Network" }, { v: "businesses", l: "Businesses" }, { v: "heatmap", l: "Heatmap" }],
       library: [{ v: "rules", l: "Rules" }, { v: "audit", l: "Audit" }]
     },
     // portal maps to its own area (no nav item / no subnav) — it is a takeover
     // screen simulating the provider's world, not part of the analyst IA.
-    VIEW_AREA: { home: "home", queue: "casework", claim: "casework", investigations: "casework", approvals: "casework", team: "casework", provider: "insights", analytics: "insights", network: "insights", businesses: "insights", business: "insights", heatmap: "insights", rules: "library", audit: "library", portal: "portal" },
+    VIEW_AREA: { home: "home", queue: "casework", claim: "casework", investigations: "casework", approvals: "casework", casereviews: "casework", team: "casework", provider: "insights", analytics: "insights", network: "insights", businesses: "insights", business: "insights", heatmap: "insights", rules: "library", audit: "library", portal: "portal" },
     subsFor: function (area) { return (APP.SUBS[area] || []).filter(function (s) { return !s.role || s.role === APP.state.role; }); },
     areaOf: function (view) { return APP.VIEW_AREA[view] || "casework"; },
     openArea: function (area) {
@@ -691,7 +748,7 @@
       if (s.view === "claim") return "Lead #" + s.allegationId;
       if (s.view === "provider") { var p = window.DP.getProvider(s.providerId); return p ? p.name : "Provider"; }
       if (s.view === "business") { var b = window.DP.getBusiness(s.businessId); return b ? b.name : "Business"; }
-      var map = { queue: "Leads", home: "Home", investigations: "Cases", approvals: "Approvals", analytics: "Analytics", network: "Network", businesses: "Businesses", heatmap: "Heatmap", rules: "Rules", audit: "Audit" };
+      var map = { queue: "Leads", home: "Home", investigations: "Cases", approvals: "Approvals", casereviews: "Case reviews", analytics: "Analytics", network: "Network", businesses: "Businesses", heatmap: "Heatmap", rules: "Rules", audit: "Audit" };
       return map[s.view] || "Back";
     },
     backLabel: function () { return APP.state.hist && APP.state.hist.length ? APP.labelForSnap(APP.state.hist[APP.state.hist.length - 1]) : "Leads"; },
@@ -722,7 +779,7 @@
       el.innerHTML = '<div style="max-width:var(--page-max);margin:0 auto;padding:0 24px;display:flex;align-items:center;gap:2px">' + wsLabel +
         subs.map(function (s) {
           var active = s.v === view || (view === "claim" && s.v === "queue") || (view === "provider" && s.v === "analytics") || (view === "business" && s.v === "businesses");
-          return '<button class="subtab' + (active ? " active" : "") + '" data-view="' + s.v + '">' + s.l + (s.v === "approvals" ? ' <span id="sub-appr-badge"></span>' : "") + '</button>';
+          return '<button class="subtab' + (active ? " active" : "") + '" data-view="' + s.v + '">' + s.l + (s.v === "approvals" ? ' <span id="sub-appr-badge"></span>' : s.v === "casereviews" ? ' <span id="sub-casereview-badge"></span>' : "") + '</button>';
         }).join("") + '</div>';
       el.querySelectorAll(".subtab").forEach(function (b) { b.addEventListener("click", function () { APP.nav(b.getAttribute("data-view")); }); });
       APP.updateSupBadge();
@@ -747,6 +804,7 @@
       APP.auditLog("SESSION_START", APP.ROLES[APP.state.role].name + " signed in · " + (window.SB && window.SB.enabled ? "authenticated" : "PIV authenticated"));
       APP.seedManualLeads();
       APP.seedCases();
+      APP.seedCaseReviews();
       APP.seedComments();
       APP.nav("home");
       APP.ready = true;

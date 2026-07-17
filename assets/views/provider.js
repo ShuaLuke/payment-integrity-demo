@@ -108,6 +108,7 @@
         // case story + relationships + disposition
         (hasCase ? caseNarrativeCard(casePid, caseInfo) : '') +
         (hasCase ? relatedCasesCard(casePid) : '') +
+        (hasCase ? caseReviewCard(casePid, caseInfo) : '') +
         (hasCase ? caseAuthorityCard(casePid, caseInfo) : '') +
 
         // flagged claims — adjudicate from provider
@@ -168,7 +169,7 @@
       mount.querySelectorAll(".pv-review").forEach(function (el) { el.addEventListener("click", function (e) { e.stopPropagation(); window.APP.openAllegation(el.getAttribute("data-id")); }); });
       wireRadar(mount, id);
       wireEntityContext(id);
-      if (hasCase) { wireCaseNarrative(casePid, caseInfo, id); wireRelatedCases(casePid, id); wireCaseAuthority(casePid, caseInfo, id); wireBulkLink(mount, casePid, caseInfo, id); }
+      if (hasCase) { wireCaseNarrative(casePid, caseInfo, id); wireRelatedCases(casePid, id); wireCaseReview(casePid, caseInfo, id); wireCaseAuthority(casePid, caseInfo, id); wireBulkLink(mount, casePid, caseInfo, id); }
 
       // ---- report-card export ----
       var gHead = ["Group", "Score", "Peer norm", "Outlier"];
@@ -391,6 +392,73 @@
       rerender(viewId);
     });
     refresh();
+  }
+
+  // ---------- case-level review (submit → approve / return) ----------
+  // Distinct from per-lead approvals: the analyst hands the whole case up, the
+  // supervisor reviews narrative + all leads + total exposure and signs off.
+  function caseReviewCard(pid, caseInfo) {
+    var r = window.APP.caseReviewFor(pid);
+    var sup = window.APP.isSupervisor();
+    var hasNarr = !!window.APP.getCaseNarrative(pid);
+    var summary = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0">' +
+      miniKpi("Confirmed leads", caseInfo.leadCount) + miniKpi("Open feeding in", caseInfo.openCount) + miniKpi("Total exposure", window.DP.usd(caseInfo.exposure || 0)) + '</div>';
+
+    // approved
+    if (r && r.status === "approved") {
+      return '<div class="card" id="pv-review" style="border-color:#bfe0c9">' +
+        '<div style="display:flex;align-items:center;gap:8px"><i class="ti ti-checks" style="color:var(--low);font-size:20px"></i>' +
+        '<div><div style="font-weight:500;font-size:13px">Case approved</div>' +
+        '<div class="muted" style="font-size:11px">Approved by ' + window.APP.esc(r.reviewedBy) + ' · ' + window.APP.fmtTs(r.reviewedAt) + ' — ready for disposition below.</div></div></div></div>';
+    }
+    // pending — supervisor acts; analyst waits
+    if (r && r.status === "pending") {
+      if (sup) {
+        return '<div class="card" id="pv-review" style="border-color:#cfe7e3">' +
+          '<div style="font-weight:500;font-size:13px;margin-bottom:2px"><i class="ti ti-user-shield" style="color:var(--accent-d)"></i> Case review <span class="muted" style="font-weight:400;font-size:11px">· supervisor · submitted by ' + window.APP.esc(r.submittedBy) + ' · ' + window.APP.fmtTs(r.submittedAt) + '</span></div>' +
+          '<div class="muted" style="font-size:11px">Review the narrative, the leads and the total exposure, then approve the case or return it to the analyst.</div>' +
+          summary +
+          '<div style="display:flex;gap:8px;align-items:flex-start"><input id="pv-review-note" class="input" placeholder="Return note (required to return)…" style="flex:1;font-size:12px">' +
+          '<button class="btn" id="pv-review-return" style="font-size:11px"><i class="ti ti-corner-up-left"></i> Return</button>' +
+          '<button class="btn primary" id="pv-review-approve" style="font-size:11px;background:var(--low);border-color:var(--low)"><i class="ti ti-check"></i> Approve case</button></div></div>';
+      }
+      return '<div class="card" id="pv-review">' +
+        '<div style="display:flex;align-items:center;gap:8px"><i class="ti ti-clock-hour-4" style="color:var(--med);font-size:20px"></i>' +
+        '<div><div style="font-weight:500;font-size:13px">Pending supervisor review</div>' +
+        '<div class="muted" style="font-size:11px">Submitted ' + window.APP.fmtTs(r.submittedAt) + '. Karen Boyd will approve the case or return it.</div></div></div>' + summary + '</div>';
+    }
+    // returned — analyst revises & resubmits
+    if (r && r.status === "returned") {
+      return '<div class="card" id="pv-review" style="border-color:#e7c99a">' +
+        '<div style="font-weight:500;font-size:13px;margin-bottom:6px"><i class="ti ti-corner-up-left" style="color:var(--med-tx)"></i> Returned by the supervisor</div>' +
+        '<div style="background:var(--med-bg);border:0.5px solid #e7c99a;border-radius:7px;padding:8px 10px;font-size:11.5px;color:var(--med-tx)">' + window.APP.esc(r.reviewedBy) + ': ' + window.APP.esc(r.note || "(no note)") + '</div>' +
+        (sup ? '' : '<div style="margin-top:8px"><button class="btn primary" id="pv-review-submit" style="font-size:11px"' + (hasNarr ? "" : " disabled") + '><i class="ti ti-send"></i> Revise &amp; resubmit for review</button></div>') +
+        '</div>';
+    }
+    // not yet submitted — analyst (or supervisor) submits
+    return '<div class="card" id="pv-review">' +
+      '<div style="font-weight:500;font-size:13px;margin-bottom:2px"><i class="ti ti-clipboard-check" style="color:var(--accent-d)"></i> Case review <span class="muted" style="font-weight:400;font-size:11px">· hand the case up for supervisor sign-off</span></div>' +
+      '<div class="muted" style="font-size:11px">Once the case story is written and its leads are confirmed, submit the whole case for supervisor review.</div>' + summary +
+      '<button class="btn primary" id="pv-review-submit" style="font-size:11px"' + (hasNarr ? "" : " disabled") + '><i class="ti ti-send"></i> Submit case for review</button>' +
+      (hasNarr ? '' : '<div class="muted" style="font-size:10.5px;margin-top:5px"><i class="ti ti-info-circle"></i> Write the case narrative above before submitting.</div>') +
+      '</div>';
+  }
+  function miniKpi(l, v) { return '<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:7px;padding:7px 9px"><div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.03em">' + l + '</div><div style="font-size:14px;font-weight:600;margin-top:1px">' + window.APP.esc(v) + '</div></div>'; }
+  function wireCaseReview(pid, caseInfo, viewId) {
+    var submit = document.getElementById("pv-review-submit");
+    if (submit) submit.addEventListener("click", function () {
+      var res = window.APP.submitCaseForReview(pid);
+      if (res && res.error === "narrative-required") { window.alert("Write the case narrative before submitting for review."); return; }
+      rerender(viewId);
+    });
+    var appr = document.getElementById("pv-review-approve");
+    if (appr) appr.addEventListener("click", function () { window.APP.caseReviewAction(pid, "approve"); rerender(viewId); });
+    var ret = document.getElementById("pv-review-return");
+    if (ret) ret.addEventListener("click", function () {
+      var note = document.getElementById("pv-review-note").value.trim();
+      if (!note) { document.getElementById("pv-review-note").focus(); return; }
+      window.APP.caseReviewAction(pid, "return", note); rerender(viewId);
+    });
   }
 
   // ---------- case authority: close & refer (supervisor only) ----------
