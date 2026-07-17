@@ -2,7 +2,7 @@
 (function () {
   var mount;
   var APP = {
-    state: { view: "queue", allegationId: null, filters: {}, decisions: {}, audit: [], investigations: [], role: "analyst", watchlist: {}, businessWatchlist: {}, mode: "retrospective", prepayDecisions: {}, comments: {}, workingRecord: {}, uploads: {}, artifacts: {}, recordsRequestText: {},
+    state: { view: "queue", allegationId: null, filters: {}, decisions: {}, audit: [], investigations: [], role: "analyst", watchlist: {}, businessWatchlist: {}, mode: "retrospective", prepayDecisions: {}, comments: {}, workingRecord: {}, uploads: {}, artifacts: {}, recordsRequestText: {}, recordsRequests: {},
       caseLinks: {}, caseLinkTypes: {}, caseRelations: [], caseNarratives: {}, closedCases: {}, referrals: {} },
 
     ROLES: { analyst: { name: "Dana Whitmore", title: "Analyst", initials: "DW" }, supervisor: { name: "Karen Boyd", title: "Supervisor", initials: "KB" } },
@@ -28,6 +28,11 @@
       d = d || new Date();
       var p = function (n) { return String(n).padStart(2, "0"); };
       return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes());
+    },
+    fmtDate: function (d) {
+      d = d || new Date();
+      var p = function (n) { return String(n).padStart(2, "0"); };
+      return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
     },
     esc: function (s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]; }); },
 
@@ -452,6 +457,83 @@
       (APP.state.uploads[id] = APP.state.uploads[id] || []).push(u);
       APP.auditLog("DOCUMENT_UPLOADED", "Lead #" + id + " · attached “" + u.name + "”" + (size ? " (" + Math.max(1, Math.round(size / 1024)) + " KB)" : ""));
       return u;
+    },
+
+    // ---- medical-records requests ----
+    // A records request is a real workflow artifact: it goes out on a channel, to a
+    // named recipient, and a response clock starts. The investigator can't adjudicate
+    // documentation they never asked for, so the request and its status are evidence.
+    // Lifecycle: requested → sent → awaiting → received.
+    RECORDS_CHANNELS: [
+      { c: "fax", l: "Fax", icon: "printer", sub: "transmits to the provider's fax on file", verb: "transmitted by fax" },
+      { c: "email", l: "Secure email", icon: "mail", sub: "encrypted message to the billing contact", verb: "delivered by secure email" },
+      { c: "portal", l: "Provider portal invite", icon: "cloud-upload", sub: "provider uploads records directly", verb: "portal invite issued" }
+    ],
+    recordsChannel: function (c) { return APP.RECORDS_CHANNELS.find(function (x) { return x.c === c; }) || APP.RECORDS_CHANNELS[0]; },
+    RECORDS_STEPS: [
+      { c: "requested", l: "Requested" }, { c: "sent", l: "Sent" },
+      { c: "awaiting", l: "Awaiting response" }, { c: "received", l: "Received" }
+    ],
+    RECORDS_DUE_DAYS: 14,
+    recordsRequestFor: function (id) { return (APP.state.recordsRequests || {})[id] || null; },
+    // Days until (or past) the response due date. Negative = overdue.
+    recordsDaysLeft: function (r) {
+      if (!r || !r.dueAt) return null;
+      return Math.ceil((r.dueAt - new Date()) / 86400000);
+    },
+    // Send the request out. Stamps the transmission receipt the channel would produce.
+    requestRecords: function (id, o) {
+      o = o || {};
+      var a = window.DP.getAllegation(id); if (!a) return null;
+      var ch = APP.recordsChannel(o.channel);
+      var contact = window.DP.getProviderContact(a.providerId) || {};
+      var recipient = ch.c === "fax" ? contact.fax : ch.c === "email" ? contact.email : contact.portal;
+      var now = new Date();
+      var r = {
+        leadId: id, channel: ch.c, recipient: recipient, items: (o.items || "").trim(),
+        status: "sent", by: (APP.ROLES[APP.state.role] || {}).name || "Dana Whitmore",
+        requestedAt: now, sentAt: now, dueAt: new Date(now.getTime() + APP.RECORDS_DUE_DAYS * 86400000),
+        // the receipt a real channel hands back — what an investigator would file
+        confirmation: ch.c === "fax" ? "FAX-" + id + "-" + String(now.getMinutes()).padStart(2, "0") + String(now.getSeconds()).padStart(2, "0")
+          : ch.c === "email" ? "MSG-" + id + "-" + String(now.getMinutes()).padStart(2, "0") + String(now.getSeconds()).padStart(2, "0")
+            : "INV-" + id,
+        pages: ch.c === "fax" ? 2 : null,
+        receivedAt: null, receivedFile: null
+      };
+      (APP.state.recordsRequests = APP.state.recordsRequests || {})[id] = r;
+      APP.auditLog("RECORDS_REQUESTED", "Lead #" + id + " · records requested from " + (a.provider ? a.provider.name : a.providerId) + " · " + ch.l + " → " + recipient + " · " + (r.items || "supporting documentation"));
+      APP.auditLog("RECORDS_SENT", "Lead #" + id + " · " + ch.verb + " to " + recipient + " · confirmation " + r.confirmation + " · response due " + APP.fmtDate(r.dueAt));
+      return r;
+    },
+    // The transmission landed; the response clock is now running.
+    markRecordsAwaiting: function (id) {
+      var r = APP.recordsRequestFor(id); if (!r || r.status !== "sent") return null;
+      r.status = "awaiting";
+      APP.auditLog("RECORDS_AWAITING", "Lead #" + id + " · awaiting provider response · due " + APP.fmtDate(r.dueAt));
+      return r;
+    },
+    // Records came back — from the provider portal, or logged by hand for fax/email.
+    receiveRecords: function (id, file) {
+      var r = APP.recordsRequestFor(id); if (!r || r.status === "received") return null;
+      file = file || {};
+      r.status = "received"; r.receivedAt = new Date();
+      r.receivedFile = { name: file.name || "provider-records.pdf", size: file.size || 0, via: file.via || r.channel };
+      APP.auditLog("RECORDS_RECEIVED", "Lead #" + id + " · records received from the provider via " + APP.recordsChannel(r.receivedFile.via).l + " · “" + r.receivedFile.name + "”");
+      // the records themselves become evidence on the lead
+      APP.addUpload(id, r.receivedFile.name, r.receivedFile.size);
+      return r;
+    },
+    cancelRecordsRequest: function (id) {
+      var r = APP.recordsRequestFor(id); if (!r) return;
+      delete APP.state.recordsRequests[id];
+      APP.auditLog("RECORDS_REQUEST_CANCELLED", "Lead #" + id + " · records request withdrawn");
+    },
+    // Provider portal — the simulated provider-facing upload screen. Real
+    // implementation lives in views/portal.js (task 13); this is the entry point.
+    openPortal: function (id) {
+      if (window.Views && window.Views.portal) { APP.state.portalLeadId = id; APP.nav("portal", { id: id }); return; }
+      // fallback until the portal view ships: log the upload directly
+      APP.receiveRecords(id, { name: "provider-records_Lead-" + id + ".pdf", size: 348000, via: "portal" });
     },
 
     // ---- generated artifacts (AI justification memos attached to a lead) ----

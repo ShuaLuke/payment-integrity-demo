@@ -368,6 +368,25 @@
       };
     },
 
+    // ---- provider contact (for records requests) ----
+    // Deterministic, and impossible-to-be-real by construction: fax numbers sit in the
+    // 555-01xx block reserved for fiction, and email uses the reserved example.com
+    // domain. Derived here rather than generated so the dataset stays byte-stable.
+    AREA_BY_STATE: { TX: "210", AZ: "602", CA: "619", NV: "702", NM: "505", OK: "405", LA: "504", AR: "501" },
+    getProviderContact: function (pid) {
+      var p = providers[pid]; if (!p) return null;
+      var digits = String(pid).replace(/\D/g, "") || "0";
+      var last2 = String(Number(digits) % 100).padStart(2, "0");
+      var area = this.AREA_BY_STATE[p.state] || "210";
+      var slug = String(p.name || "provider").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").split("-").slice(0, 3).join("-");
+      return {
+        fax: "+1 (" + area + ") 555-01" + last2,
+        email: "records@" + slug + ".example.com",
+        portal: "VA Provider Portal · " + (p.npi || pid),
+        attention: "Health Information Management / Release of Information"
+      };
+    },
+
     // ---- CPT crosswalk: is THIS code payable billed with THIS modifier? ----
     // Three reference checks per claim line, the way a coder reads a claim:
     //   PTP  — NCCI procedure-to-procedure edits. A column-2 code billed with its

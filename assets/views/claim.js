@@ -65,8 +65,7 @@
         '<div class="card"><div class="l" style="font-size:10.5px;color:var(--text2);margin-bottom:7px">Evidence on file</div>' +
         '<div id="c-docs" style="display:flex;flex-direction:column;gap:5px">' + docsHtml + '</div>' +
         '<div id="c-doc" style="margin-top:8px"></div>' +
-        '<button class="btn" id="c-req" style="margin-top:8px;width:100%;font-size:11px"><i class="ti ti-plus"></i>Request additional records</button>' +
-        '<div id="c-support" style="margin-top:6px"></div></div>' +
+        '<div id="c-support" style="margin-top:8px">' + recordsPanelHtml(id, a) + '</div></div>' +
         '</div>' +
         // ---- main column: tabs ----
         '<div style="flex:1;min-width:0">' +
@@ -89,21 +88,7 @@
           window.APP.auditLog(key === "mr" ? "MEDICAL_RECORD_VIEWED" : "EVIDENCE_VIEWED", kind + " #" + id + (key === "mr" ? "" : " · " + key));
         });
       });
-      document.getElementById("c-req").addEventListener("click", function () {
-        var saved = (window.APP.state.recordsRequestText || {})[id];
-        var def = saved || defaultRecordsRequest(a);
-        document.getElementById("c-support").innerHTML =
-          '<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:7px;padding:8px 9px">' +
-          '<div style="font-size:10.5px;color:var(--text2);margin-bottom:4px">Records to request <span style="color:var(--text3)">(editable per case)</span></div>' +
-          '<textarea id="c-req-text" class="input" style="min-height:54px;font-size:11.5px">' + window.APP.esc(def) + '</textarea>' +
-          '<button class="btn primary" id="c-req-send" style="margin-top:6px;width:100%;font-size:11px"><i class="ti ti-send"></i> Send request to provider</button></div>';
-        document.getElementById("c-req-send").addEventListener("click", function () {
-          var txt = document.getElementById("c-req-text").value.trim() || def;
-          (window.APP.state.recordsRequestText = window.APP.state.recordsRequestText || {})[id] = txt;
-          window.APP.auditLog("RECORDS_REQUESTED", kind + " #" + id + " · " + txt);
-          document.getElementById("c-support").innerHTML = '<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:7px;padding:7px 9px;font-size:11px;color:var(--text2)"><i class="ti ti-clock"></i> Requested from provider: <span style="color:var(--ink)">' + window.APP.esc(txt) + '</span></div>';
-        });
-      });
+      wireRecords(id, a);
       var sumBtn = document.getElementById("c-summarize");
       if (sumBtn) sumBtn.addEventListener("click", function () { if (window.COPILOT) window.COPILOT.summarize(id); });
       var msHist = document.getElementById("c-ms-hist");
@@ -657,6 +642,112 @@
     return m[a.fwaType] || "Itemized medical records and documentation supporting the billed services.";
   }
 
+  // ---------- medical-records request (channel + status lifecycle) ----------
+  // Left-rail panel. Three states: no request → the compose form; sent/awaiting →
+  // the tracking card with the response clock; received → the closed-out receipt.
+  function recordsPanelHtml(id, a) {
+    var r = window.APP.recordsRequestFor(id);
+    if (!r) {
+      return '<button class="btn" id="c-req" style="width:100%;font-size:11px"><i class="ti ti-plus"></i> Request additional records</button>' +
+        '<div id="c-req-form"></div>';
+    }
+    return recordsTrackHtml(id, r);
+  }
+  function recordsComposeHtml(id, a) {
+    var contact = window.DP.getProviderContact(a.providerId) || {};
+    var def = (window.APP.state.recordsRequestText || {})[id] || defaultRecordsRequest(a);
+    var chans = window.APP.RECORDS_CHANNELS.map(function (ch, i) {
+      return '<label class="c-rq-ch" style="display:flex;gap:7px;align-items:flex-start;padding:6px 7px;border:0.5px solid ' + (i === 0 ? "var(--accent)" : "var(--border)") + ';border-radius:6px;margin-bottom:4px;cursor:pointer;background:' + (i === 0 ? "var(--accent-l)" : "#fff") + '">' +
+        '<input type="radio" name="c-rq-ch" value="' + ch.c + '"' + (i === 0 ? " checked" : "") + ' style="margin-top:1px">' +
+        '<div style="min-width:0"><div style="font-size:11.5px;font-weight:500"><i class="ti ti-' + ch.icon + '" style="color:var(--accent-d)"></i> ' + ch.l + '</div>' +
+        '<div style="font-size:10px;color:var(--text2)">' + ch.sub + '</div></div></label>';
+    }).join("");
+    return '<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:7px;padding:8px 9px;margin-top:6px">' +
+      '<div style="font-size:10.5px;color:var(--text2);margin-bottom:4px">Channel</div>' + chans +
+      '<div id="c-rq-to" style="font-size:10px;color:var(--text2);margin:2px 0 6px"></div>' +
+      '<div style="font-size:10.5px;color:var(--text2);margin-bottom:4px">Records to request <span style="color:var(--text3)">(editable)</span></div>' +
+      '<textarea id="c-req-text" class="input" style="min-height:52px;font-size:11.5px">' + window.APP.esc(def) + '</textarea>' +
+      '<div style="display:flex;gap:6px;margin-top:6px"><button class="btn" id="c-req-cancel" style="flex:none;font-size:11px">Cancel</button>' +
+      '<button class="btn primary" id="c-req-send" style="flex:1;font-size:11px"><i class="ti ti-send"></i> Send request</button></div></div>';
+  }
+  function recordsStepper(status) {
+    var cur = window.APP.RECORDS_STEPS.findIndex(function (s) { return s.c === status; });
+    return '<div style="display:flex;align-items:center;margin:2px 0 8px">' + window.APP.RECORDS_STEPS.map(function (s, i) {
+      var done = i < cur, at = i === cur;
+      var bg = done ? "var(--accent)" : at ? "#fff" : "var(--border2)";
+      var bd = done || at ? "var(--accent)" : "var(--border)";
+      var dot = '<div style="width:12px;height:12px;border-radius:50%;flex:none;background:' + bg + ';border:1.5px solid ' + bd + ';display:flex;align-items:center;justify-content:center">' + (done ? '<i class="ti ti-check" style="color:#fff;font-size:8px"></i>' : at ? '<span style="width:4px;height:4px;border-radius:50%;background:var(--accent);display:block"></span>' : '') + '</div>';
+      var line = i < window.APP.RECORDS_STEPS.length - 1 ? '<div style="flex:1;height:1.5px;background:' + (done ? "var(--accent)" : "var(--border2)") + '"></div>' : '';
+      return dot + line;
+    }).join("") + '</div>' +
+      '<div style="display:flex;justify-content:space-between;font-size:8.5px;color:var(--text3);margin-bottom:8px">' +
+      window.APP.RECORDS_STEPS.map(function (s) { return '<span>' + s.l.split(" ")[0] + '</span>'; }).join("") + '</div>';
+  }
+  function recordsTrackHtml(id, r) {
+    var ch = window.APP.recordsChannel(r.channel);
+    var received = r.status === "received";
+    var daysLeft = window.APP.recordsDaysLeft(r);
+    var overdue = daysLeft != null && daysLeft < 0;
+    var clock = received
+      ? '<div style="font-size:10.5px;color:var(--low-tx)"><i class="ti ti-circle-check"></i> Received ' + window.APP.fmtDate(r.receivedAt) + ' · “' + window.APP.esc(r.receivedFile.name) + '” filed to evidence</div>'
+      : '<div style="font-size:10.5px;color:' + (overdue ? "var(--high-tx)" : "var(--text2)") + '"><i class="ti ti-clock"></i> Response due ' + window.APP.fmtDate(r.dueAt) + (daysLeft != null ? ' · ' + (overdue ? Math.abs(daysLeft) + "d overdue" : daysLeft + "d left") : "") + '</div>';
+    var actions = received ? ''
+      : '<div style="display:flex;gap:5px;margin-top:7px">' +
+        (r.channel === "portal"
+          ? '<button class="btn primary" id="c-req-portal" style="flex:1;font-size:11px"><i class="ti ti-external-link"></i> Open provider portal</button>'
+          : '<button class="btn primary" id="c-req-receive" style="flex:1;font-size:11px"><i class="ti ti-mail-check"></i> Log records received</button>') +
+        '<button class="btn" id="c-req-cancel2" style="flex:none;font-size:11px" title="Withdraw request"><i class="ti ti-x"></i></button></div>';
+    return '<div style="background:var(--surface);border:0.5px solid ' + (received ? "#bfe0c9" : overdue ? "#f3c9c9" : "var(--border)") + ';border-radius:7px;padding:9px 10px">' +
+      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><i class="ti ti-' + ch.icon + '" style="color:var(--accent-d)"></i>' +
+      '<span style="font-size:11.5px;font-weight:500">Records request</span>' +
+      '<span class="tag" style="margin-left:auto;background:' + (received ? "var(--low-bg)" : "var(--med-bg)") + ';color:' + (received ? "var(--low-tx)" : "var(--med-tx)") + '">' + (received ? "Received" : r.status === "sent" ? "Sent" : "Awaiting") + '</span></div>' +
+      recordsStepper(r.status) +
+      '<div style="font-size:10.5px;color:var(--text2);line-height:1.55">' + ch.l + ' → <span class="mono">' + window.APP.esc(r.recipient) + '</span><br>' +
+      'Conf. <span class="mono">' + window.APP.esc(r.confirmation) + '</span>' + (r.pages ? ' · ' + r.pages + ' pp' : '') + ' · sent ' + window.APP.fmtDate(r.sentAt) + '</div>' +
+      '<div style="font-size:10.5px;color:var(--text2);margin-top:4px">' + window.APP.esc(r.items || "Supporting documentation") + '</div>' +
+      '<div style="margin-top:6px">' + clock + '</div>' + actions + '</div>';
+  }
+  function wireRecords(id, a) {
+    var openBtn = document.getElementById("c-req");
+    if (openBtn) openBtn.addEventListener("click", function () {
+      document.getElementById("c-req-form").innerHTML = recordsComposeHtml(id, a);
+      openBtn.style.display = "none";
+      wireRecordsCompose(id, a);
+    });
+    wireRecordsTrack(id, a);
+  }
+  function wireRecordsCompose(id, a) {
+    var contact = window.DP.getProviderContact(a.providerId) || {};
+    var toLine = function () {
+      var ch = (document.querySelector('input[name="c-rq-ch"]:checked') || {}).value || "fax";
+      var to = ch === "fax" ? contact.fax : ch === "email" ? contact.email : contact.portal;
+      document.getElementById("c-rq-to").innerHTML = '<i class="ti ti-arrow-narrow-right"></i> ' + window.APP.esc(to) + ' · Attn: ' + window.APP.esc(contact.attention || "HIM");
+    };
+    document.querySelectorAll('.c-rq-ch').forEach(function (lab) {
+      lab.querySelector("input").addEventListener("change", function () {
+        document.querySelectorAll('.c-rq-ch').forEach(function (l) { var on = l.querySelector("input").checked; l.style.borderColor = on ? "var(--accent)" : "var(--border)"; l.style.background = on ? "var(--accent-l)" : "#fff"; });
+        toLine();
+      });
+    });
+    toLine();
+    document.getElementById("c-req-cancel").addEventListener("click", function () { rerender(id); });
+    document.getElementById("c-req-send").addEventListener("click", function () {
+      var ch = (document.querySelector('input[name="c-rq-ch"]:checked') || {}).value || "fax";
+      var txt = document.getElementById("c-req-text").value.trim();
+      (window.APP.state.recordsRequestText = window.APP.state.recordsRequestText || {})[id] = txt || defaultRecordsRequest(a);
+      window.APP.requestRecords(id, { channel: ch, items: txt || defaultRecordsRequest(a) });
+      rerender(id);
+    });
+  }
+  function wireRecordsTrack(id, a) {
+    var recv = document.getElementById("c-req-receive");
+    if (recv) recv.addEventListener("click", function () { window.APP.receiveRecords(id, { name: "provider-records_Lead-" + id + ".pdf", size: 348000, via: (window.APP.recordsRequestFor(id) || {}).channel }); rerender(id); });
+    var portal = document.getElementById("c-req-portal");
+    if (portal) portal.addEventListener("click", function () { window.APP.openPortal(id); });
+    var cancel = document.getElementById("c-req-cancel2");
+    if (cancel) cancel.addEventListener("click", function () { window.APP.cancelRecordsRequest(id); rerender(id); });
+  }
+
   // ---------- Analysis (decision-supporting graphs) ----------
   function card(title, body) { return '<div class="card"><div style="font-weight:500;font-size:13px;margin-bottom:8px">' + title + '</div>' + body + '</div>'; }
   function analysisHtml(a) {
@@ -742,7 +833,7 @@
     DECISION_CONFIRM: ["gavel", "var(--high)"], DECISION_DISMISS: ["circle-x", "var(--text2)"], DECISION_ESCALATE: ["arrow-up-right", "var(--med)"],
     PREPAY_PAY: ["check", "var(--low)"], PREPAY_HOLD: ["clock-hour-4", "var(--med)"], PREPAY_DENY: ["ban", "var(--high)"],
     SUBMITTED_FOR_REVIEW: ["send", "var(--accent-d)"], SUPERVISOR_APPROVED: ["circle-check", "var(--low)"], SUPERVISOR_RETURNED: ["corner-up-left", "var(--med)"],
-    RECORDS_REQUESTED: ["mail-forward", "var(--accent-d)"], RECORDS_RECEIVED: ["mail-check", "var(--low)"],
+    RECORDS_REQUESTED: ["mail-forward", "var(--accent-d)"], RECORDS_SENT: ["send", "var(--accent-d)"], RECORDS_AWAITING: ["clock-hour-4", "var(--med)"], RECORDS_RECEIVED: ["mail-check", "var(--low)"], RECORDS_REQUEST_CANCELLED: ["x", "var(--text2)"],
     MEDICAL_RECORD_VIEWED: ["eye", "var(--text3)"], EVIDENCE_VIEWED: ["eye", "var(--text3)"], PRECEDENT_VIEWED: ["history", "var(--text3)"], NETWORK_VIEWED: ["share-3", "var(--text3)"],
     DOCUMENT_UPLOADED: ["paperclip", "var(--accent-d)"], NOTE_ADDED: ["message", "var(--accent-d)"],
     AI_JUSTIFICATION_DRAFTED: ["sparkles", "var(--accent-d)"], AI_JUSTIFICATION_ATTACHED: ["file-text", "var(--accent-d)"],
