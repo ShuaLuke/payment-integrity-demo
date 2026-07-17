@@ -250,6 +250,69 @@
       };
     },
 
+    // ---- licensure & credentials (incl. OIG LEIE exclusion) ----
+    // Derived here (static, seeded per provider — no data.js regen). Identifiers are
+    // impossible-to-be-real by construction: license numbers carry a 0000 block, DEA
+    // numbers deliberately fail the checksum. Excluded-while-billing is an automatic
+    // finding, so the OIG LEIE exclusions are a small curated list (LEIE is itself a
+    // specific list) and surface as the headline credential signal.
+    LEIE_EXCLUSIONS: {
+      PR301: { basis: "1128(b)(4)", reason: "Licensure revocation / suspension in another state", since: "2024-08-19", reinstatement: null, npiOnList: true },
+      PR205: { basis: "1128(a)(3)", reason: "Felony conviction — health-care fraud", since: "2023-11-02", reinstatement: "2028-11-02", npiOnList: true }
+    },
+    getLicensure: function (id) {
+      var p = providers[id]; if (!p) return null;
+      var tax = p.taxonomyCode || "";
+      var isOrg = /^3/.test(tax) || /^28/.test(tax) || /^251/.test(tax);
+      var seed = 0; for (var i = 0; i < id.length; i++) seed = (seed * 31 + id.charCodeAt(i)) >>> 0;
+      var rnd = function () { seed = (seed * 1103515245 + 12345) >>> 0; return seed / 4294967296; };
+      var yr = function (min, max) { return (min + Math.floor(rnd() * (max - min + 1))); };
+      var n4 = function () { return String(1000 + Math.floor(rnd() * 8999)); };
+      var st = p.state || "TX";
+      var excl = this.LEIE_EXCLUSIONS[id] || null;
+      var risk = p.riskScore || 0;
+
+      // Credential friction is reserved for high-risk providers so a clean peer reads
+      // as genuinely clear. A lapsed license/DEA/board cert is a softer signal than
+      // exclusion; a revalidation-due is benign/administrative. Deterministic per seed.
+      var lapse = !excl && risk >= 82 && rnd() > 0.45;
+      var deaExpired = !excl && risk >= 82 && rnd() > 0.5;
+      var boardExpired = !excl && risk >= 85 && rnd() > 0.5;
+      var revalDue = !excl && risk >= 65 && rnd() > 0.5;
+
+      var creds = [];
+      if (isOrg) {
+        creds.push({ type: "State facility license", authority: st + " Dept. of Health", number: st + "-FAC-0000" + n4().slice(-3), status: (excl ? "Suspended" : lapse ? "Lapsed — renewal pending" : "Active"), expires: yr(2026, 2028) + "-0" + (1 + Math.floor(rnd() * 8)) + "-15" });
+        creds.push({ type: "Accreditation", authority: rnd() > 0.5 ? "CARF" : "The Joint Commission", number: "ACR-0000" + n4().slice(-3), status: excl ? "Under review" : "Accredited", expires: yr(2026, 2027) + "-11-30" });
+      } else {
+        creds.push({ type: "State medical license", authority: st + " Medical Board", number: st + "-MD-0000" + n4().slice(-3), status: (excl ? "Suspended" : lapse ? "Lapsed — renewal pending" : "Active"), expires: yr(2026, 2028) + "-0" + (1 + Math.floor(rnd() * 8)) + "-31" });
+        creds.push({ type: "DEA registration", authority: "DEA", number: "B" + String.fromCharCode(65 + Math.floor(rnd() * 26)) + "0000000", status: (excl ? "Retired" : deaExpired ? "Expired" : "Active"), expires: yr(2025, 2027) + "-06-30" });
+        creds.push({ type: "Board certification", authority: p.taxonomyLabel || "Specialty board", number: "ABMS-0000" + n4().slice(-3), status: excl ? "Not certified" : boardExpired ? "Expired" : "Certified", expires: yr(2026, 2030) + "-12-31" });
+      }
+      creds.push({ type: "Medicare/PECOS enrollment", authority: "CMS", number: "PECOS-" + (p.npi || id), status: excl ? "Deactivated" : revalDue ? "Revalidation due" : "Enrolled", expires: revalDue ? yr(2026, 2026) + "-09-30" : yr(2027, 2028) + "-03-31" });
+
+      // alerts, most severe first
+      var alerts = [];
+      if (excl) alerts.push({ sev: "high", text: "OIG LEIE exclusion — excluded from all federal health-care programs; claims paid during exclusion are recoverable in full." });
+      creds.forEach(function (c) {
+        if (/Suspended|Lapsed|Expired|Deactivated|Retired|Under review/.test(c.status) && !(excl && c.status === "Suspended"))
+          alerts.push({ sev: c.status === "Expired" && c.type === "Board certification" ? "med" : "med", text: c.type + " " + c.status.toLowerCase() + " (" + c.authority + ")." });
+        if (c.status === "Revalidation due") alerts.push({ sev: "low", text: "Medicare revalidation due " + c.expires + "." });
+      });
+
+      return {
+        isOrg: isOrg,
+        entityType: isOrg ? "Facility / organization" : "Individual practitioner",
+        credentials: creds,
+        exclusion: excl ? { basis: excl.basis, reason: excl.reason, since: excl.since, reinstatement: excl.reinstatement, npiOnList: excl.npiOnList } : null,
+        excluded: !!excl,
+        alerts: alerts,
+        // a benign revalidation-due (low sev) alone does not warrant "Action needed"
+        status: excl ? "Excluded" : alerts.some(function (x) { return x.sev !== "low"; }) ? "Action needed" : "Clear"
+      };
+    },
+    isExcluded: function (id) { return !!this.LEIE_EXCLUSIONS[id]; },
+
     // ---- provider report card (radar spokes + drill-down) ----
     getGroups: function () { var p = D.providers.find(function (x) { return x.groupScores; }); return p ? p.groupScores.map(function (g) { return g.group; }) : []; },
     getReportCard: function (id) { var p = providers[id]; return p ? { groups: p.groupScores || [], attributes: p.groupAttributes || {} } : null; },

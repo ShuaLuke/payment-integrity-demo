@@ -60,6 +60,7 @@
         (hasCase ? '<span class="pill ' + (caseInfo.status === "Under investigation" ? "p-esc" : "p-new") + '"><i class="ti ti-folder"></i> Case · ' + caseInfo.leadCount + ' confirmed' + (caseInfo.openCount ? ' · +' + caseInfo.openCount + ' open' : '') + '</span>'
           : (allegs.length ? '<span class="pill p-asg"><i class="ti ti-flag"></i> ' + allegs.length + ' open lead' + (allegs.length === 1 ? '' : 's') + ' · no case yet</span>' : '')) +
         (repeatOffender ? '<span class="pill" style="background:var(--high-bg);color:var(--high-tx)"><i class="ti ti-alert-triangle"></i> Repeat offender</span>' : '') +
+        (window.DP.isExcluded(id) ? '<span class="pill" style="background:var(--high-bg);color:var(--high-tx)"><i class="ti ti-ban"></i> OIG excluded</span>' : '') +
         (watched ? '<span class="pill" style="background:var(--med-bg);color:var(--med-tx)"><i class="ti ti-bookmark"></i> On watchlist</span>' : '') +
         '<span style="flex:1"></span>' + window.EXPORT.group("pv") +
         '<button class="btn' + (watched ? ' on' : '') + '" id="pv-flag">' + (watched ? '<i class="ti ti-bookmark-off"></i> Remove from watchlist' : '<i class="ti ti-bookmark"></i> Flag for future reference') + '</button></div>' +
@@ -94,6 +95,9 @@
 
         // outlier comparison across providers on the selected group
         '<div class="card" id="pv-compare">' + compareHtml(id, selGroup) + '</div>' +
+
+        // licensure & credentials (OIG LEIE exclusion, DEA, PECOS, board cert)
+        licensureCard(id) +
 
         // TrackLight-style external profile / secondary scoring
         secondaryPanel(id) +
@@ -528,6 +532,39 @@
         : '<div style="font-size:11.5px;font-weight:600;margin-bottom:1px"><i class="ti ti-user-search"></i> Individual / officer</div><div class="muted" style="font-size:11px;padding:8px 0">No named officer on the business registration — individual OSINT enrichment not applicable.</div>') +
       '</div></div>' +
       '<div style="font-size:10.5px;color:var(--text3);margin-top:8px"><i class="ti ti-info-circle"></i> Synthetic external data for the demo. Secondary scoring corroborates the claims-based flag with registry, litigation and OSINT signals — the DataProvider seam accepts a real TrackLight / LexisNexis feed.</div>' +
+      '</div>';
+  }
+
+  // ---------- licensure & credentials (incl. OIG LEIE exclusion) ----------
+  function licensureCard(id) {
+    var L = window.DP.getLicensure(id); if (!L) return "";
+    var st = { "Excluded": ["circle-x", "var(--high-tx)", "var(--high-bg)", "#f3c9c9"], "Action needed": ["alert-triangle", "var(--med-tx)", "var(--med-bg)", "#e7c99a"], "Clear": ["circle-check", "var(--low-tx)", "var(--low-bg)", "#bfe0c9"] }[L.status];
+    var credBad = function (s) { return /Suspended|Lapsed|Expired|Deactivated|Retired|Not certified|Under review|Revalidation/.test(s); };
+    var credChip = function (s) {
+      var warn = credBad(s), red = /Suspended|Deactivated|Not certified|Retired/.test(s);
+      return '<span class="tag" style="background:' + (red ? "var(--high-bg)" : warn ? "var(--med-bg)" : "var(--low-bg)") + ';color:' + (red ? "var(--high-tx)" : warn ? "var(--med-tx)" : "var(--low-tx)") + '">' + window.APP.esc(s) + '</span>';
+    };
+    var rows = L.credentials.map(function (c) {
+      return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-top:0.5px solid var(--border2)">' +
+        '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:500">' + window.APP.esc(c.type) + '</div>' +
+        '<div class="mono" style="font-size:10.5px;color:var(--text3)">' + window.APP.esc(c.authority) + ' · ' + window.APP.esc(c.number) + ' · exp ' + window.APP.esc(c.expires) + '</div></div>' +
+        credChip(c.status) + '</div>';
+    }).join("");
+    var exclBanner = L.exclusion
+      ? '<div style="background:var(--high-bg);border:0.5px solid #f3c9c9;border-radius:7px;padding:10px 12px;margin-bottom:9px">' +
+        '<div style="font-weight:600;font-size:12.5px;color:var(--high-tx)"><i class="ti ti-ban"></i> OIG LEIE exclusion — provider is excluded from federal health-care programs</div>' +
+        '<div style="font-size:11.5px;color:var(--high-tx);margin-top:4px;line-height:1.55">Basis <b>' + window.APP.esc(L.exclusion.basis) + '</b> · ' + window.APP.esc(L.exclusion.reason) + '. Excluded since ' + window.APP.esc(L.exclusion.since) + (L.exclusion.reinstatement ? '; earliest reinstatement ' + window.APP.esc(L.exclusion.reinstatement) : '; no reinstatement date') + '.</div>' +
+        '<div style="font-size:11.5px;color:var(--high-tx);margin-top:5px"><i class="ti ti-alert-triangle"></i> <b>Any claim paid during the exclusion period is an improper payment recoverable in full</b> — this is an automatic finding independent of coding review.</div></div>'
+      : "";
+    var otherAlerts = L.alerts.filter(function (x) { return x.sev !== "high"; });
+    return '<div class="card" id="pv-lic">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px">' +
+      '<div style="font-weight:500;font-size:13px"><i class="ti ti-license" style="color:var(--accent-d)"></i> Licensure &amp; credentials <span class="muted" style="font-weight:400;font-size:11px">· ' + window.APP.esc(L.entityType) + ' · verified against OIG LEIE, CMS/PECOS &amp; state boards (synthetic)</span></div>' +
+      '<span class="tag" style="background:' + st[2] + ';color:' + st[1] + '"><i class="ti ti-' + st[0] + '"></i> ' + L.status + '</span></div>' +
+      exclBanner + rows +
+      (otherAlerts.length ? '<div style="margin-top:9px;display:flex;flex-direction:column;gap:4px">' + otherAlerts.map(function (al) {
+        return '<div style="display:flex;gap:6px;font-size:11px;color:' + (al.sev === "med" ? "var(--med-tx)" : "var(--text2)") + '"><i class="ti ti-' + (al.sev === "med" ? "alert-triangle" : "info-circle") + '" style="margin-top:1px"></i><span>' + window.APP.esc(al.text) + '</span></div>';
+      }).join("") + '</div>' : "") +
       '</div>';
   }
 })();
