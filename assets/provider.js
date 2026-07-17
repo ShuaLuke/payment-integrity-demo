@@ -100,6 +100,47 @@
     },
 
     getTrends: function () { return D.trends || []; },
+
+    // ---- rule taxonomy (derived, no data regen) ----
+    // Every rule is classifiable along five dimensions the compliance program uses.
+    // Existing generator rules get their tags here; a few catalog-only rules are
+    // appended so each dimension value has real coverage (exclusion, anti-kickback,
+    // phantom billing, DME, beneficiary have no firing rule in the seed data).
+    RULE_DIMENSIONS: [
+      { key: "regulatorySource", label: "Regulatory source", values: ["CMS NCCI edits", "CMS payment rules", "VA CCN policy", "False Claims Act", "Anti-Kickback Statute", "OIG advisories"] },
+      { key: "entityType", label: "Entity type", values: ["Provider", "DME supplier", "Beneficiary"] },
+      { key: "fraudType", label: "Fraud type", values: ["Upcoding", "Unbundling", "Phantom billing", "Medically unnecessary", "Duplicate billing", "Exclusion violations", "Kickback / self-referral", "Authorization / coverage", "Overpayment / pricing", "Workflow"] },
+      { key: "detectionLevel", label: "Detection level", values: ["Claim-level", "Provider-pattern", "Network-level"] },
+      { key: "severity", label: "Severity", values: ["Critical", "High", "Medium", "Low"] }
+    ],
+    // taxonomy for the 8 generator rules, keyed by rule id
+    RULE_TAXONOMY: {
+      rule_ncci_43235_43239: { regulatorySource: "CMS NCCI edits", entityType: "Provider", fraudType: "Unbundling", detectionLevel: "Claim-level", severity: "High" },
+      rule_mue: { regulatorySource: "CMS NCCI edits", entityType: "Provider", fraudType: "Medically unnecessary", detectionLevel: "Claim-level", severity: "Medium" },
+      rule_mod59: { regulatorySource: "CMS NCCI edits", entityType: "Provider", fraudType: "Unbundling", detectionLevel: "Provider-pattern", severity: "High" },
+      rule_mppr: { regulatorySource: "CMS payment rules", entityType: "Provider", fraudType: "Overpayment / pricing", detectionLevel: "Claim-level", severity: "Low" },
+      rule_fee: { regulatorySource: "VA CCN policy", entityType: "Provider", fraudType: "Overpayment / pricing", detectionLevel: "Claim-level", severity: "Medium" },
+      rule_dup: { regulatorySource: "VA CCN policy", entityType: "Provider", fraudType: "Duplicate billing", detectionLevel: "Claim-level", severity: "High" },
+      rule_auth: { regulatorySource: "VA CCN policy", entityType: "Provider", fraudType: "Authorization / coverage", detectionLevel: "Claim-level", severity: "Medium" },
+      rule_payreport: { regulatorySource: "VA CCN policy", entityType: "Provider", fraudType: "Workflow", detectionLevel: "Claim-level", severity: "Low" }
+    },
+    // catalog-only rules that broaden coverage across every dimension
+    RULE_CATALOG_EXTRA: [
+      { id: "rule_em_level", code: "EM-LEVEL", name: "E/M level validation", source: "CMS payment rules", category: "Coding", description: "Evaluation & management level billed exceeds the documented history/exam/decision-making and the provider's peer-group distribution.", version: "2.1", effectiveDate: "2025-01-01", environment: "Production", regulatorySource: "CMS payment rules", entityType: "Provider", fraudType: "Upcoding", detectionLevel: "Provider-pattern", severity: "High" },
+      { id: "rule_phantom", code: "SVC-RENDERED", name: "Services-not-rendered screen", source: "False Claims Act", category: "Integrity", description: "Billed service has no corroborating encounter, attendance or delivery record for the date of service.", version: "1.3", effectiveDate: "2024-11-01", environment: "Production", regulatorySource: "False Claims Act", entityType: "Provider", fraudType: "Phantom billing", detectionLevel: "Claim-level", severity: "Critical" },
+      { id: "rule_mednec", code: "MED-NEC", name: "Medical-necessity / level-of-care", source: "VA CCN policy", category: "Coverage", description: "Level of care or length of stay exceeds clinical criteria (MCG) for the documented condition.", version: "1.6", effectiveDate: "2024-12-01", environment: "Production", regulatorySource: "VA CCN policy", entityType: "Provider", fraudType: "Medically unnecessary", detectionLevel: "Provider-pattern", severity: "High" },
+      { id: "rule_excl", code: "EXCL-LEIE", name: "OIG LEIE exclusion screening", source: "OIG advisories", category: "Integrity", description: "Rendering or billing provider (or ordering physician) appears on the OIG List of Excluded Individuals/Entities — claims paid during exclusion are recoverable in full.", version: "2.0", effectiveDate: "2025-01-01", environment: "Production", regulatorySource: "OIG advisories", entityType: "Provider", fraudType: "Exclusion violations", detectionLevel: "Provider-pattern", severity: "Critical" },
+      { id: "rule_aks", code: "AKS-STARK", name: "Anti-kickback / self-referral", source: "Anti-Kickback Statute", category: "Integrity", description: "Referral or financial-arrangement pattern between linked entities indicates a prohibited inducement or self-referral.", version: "1.1", effectiveDate: "2024-10-15", environment: "Production", regulatorySource: "Anti-Kickback Statute", entityType: "Provider", fraudType: "Kickback / self-referral", detectionLevel: "Network-level", severity: "Critical" },
+      { id: "rule_dme", code: "DME-NEC", name: "DME medical necessity & delivery", source: "VA CCN policy", category: "Coverage", description: "Durable medical equipment billed without a supporting order, proof of delivery, or documented medical necessity.", version: "1.2", effectiveDate: "2024-09-15", environment: "Production", regulatorySource: "VA CCN policy", entityType: "DME supplier", fraudType: "Medically unnecessary", detectionLevel: "Claim-level", severity: "Medium" },
+      { id: "rule_benelig", code: "BEN-ELIG", name: "Beneficiary eligibility & identity", source: "VA CCN policy", category: "Coverage", description: "Service billed for a date the beneficiary was ineligible, deceased, or where identity could not be verified.", version: "1.0", effectiveDate: "2025-02-01", environment: "Production", regulatorySource: "VA CCN policy", entityType: "Beneficiary", fraudType: "Phantom billing", detectionLevel: "Claim-level", severity: "High" }
+    ],
+    ruleTaxonomyFor: function (id) { return this.RULE_TAXONOMY[id] || null; },
+    // full catalog: generator rules enriched with taxonomy + the catalog-only rules.
+    getRuleCatalog: function () {
+      var tax = this.RULE_TAXONOMY;
+      var base = (D.rules || []).map(function (r) { return Object.assign({}, r, tax[r.id] || {}); });
+      return base.concat(this.RULE_CATALOG_EXTRA);
+    },
     getRules: function () { return D.rules; },
     getModels: function () { return D.models; },
     getPrecedent: function (pid) { return (D.precedents || []).find(function (p) { return p.id === pid; }) || null; },
