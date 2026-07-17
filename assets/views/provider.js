@@ -85,6 +85,9 @@
         kpi(hasCase ? "Confirmed · open" : "Open leads", hasCase ? (caseInfo.leadCount + " · " + caseInfo.openCount) : allegs.length) + kpi("Lead exposure", window.DP.usdShort(exposure)) +
         kpi("Total paid", window.DP.usdShort(p.totalPaid || 0)) + '</div>' +
 
+        // entity context — business, network & licensure in one place
+        entityContextCard(id) +
+
         // report card: radar + drill-down
         '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px"><div style="font-weight:500;font-size:13px">Provider report card</div>' +
         '<span class="muted" style="font-size:11px">' + outlierCount + ' of ' + groups.length + ' groups are outliers · click a spoke to drill in</span></div>' +
@@ -164,6 +167,7 @@
       });
       mount.querySelectorAll(".pv-review").forEach(function (el) { el.addEventListener("click", function (e) { e.stopPropagation(); window.APP.openAllegation(el.getAttribute("data-id")); }); });
       wireRadar(mount, id);
+      wireEntityContext(id);
       if (hasCase) { wireCaseNarrative(casePid, caseInfo, id); wireRelatedCases(casePid, id); wireCaseAuthority(casePid, caseInfo, id); wireBulkLink(mount, casePid, caseInfo, id); }
 
       // ---- report-card export ----
@@ -533,6 +537,67 @@
       '</div></div>' +
       '<div style="font-size:10.5px;color:var(--text3);margin-top:8px"><i class="ti ti-info-circle"></i> Synthetic external data for the demo. Secondary scoring corroborates the claims-based flag with registry, litigation and OSINT signals — the DataProvider seam accepts a real TrackLight / LexisNexis feed.</div>' +
       '</div>';
+  }
+
+  // ---------- entity context (business + network + licensure in one place) ----------
+  // The SME ask: from a case, reach the business entity, the network, and the
+  // licences together. This consolidates the three "who is this entity, really"
+  // lenses into one orienting panel with a drill-down each.
+  function entityTile(icon, label, statusHtml, lines, actionId, actionLabel, actionOn) {
+    return '<div style="flex:1;min-width:190px;border:0.5px solid var(--border);border-radius:8px;padding:10px 11px;background:#fff">' +
+      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px"><i class="ti ti-' + icon + '" style="color:var(--accent-d)"></i><span style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.03em">' + label + '</span><span style="margin-left:auto">' + statusHtml + '</span></div>' +
+      '<div style="font-size:11.5px;line-height:1.5;color:var(--text);min-height:44px">' + lines + '</div>' +
+      (actionOn ? '<div style="font-size:11.5px;color:var(--accent-d);cursor:pointer;margin-top:6px" id="' + actionId + '">' + actionLabel + ' <i class="ti ti-chevron-right" style="font-size:12px"></i></div>' : '<div class="muted" style="font-size:11px;margin-top:6px">' + actionLabel + '</div>') +
+      '</div>';
+  }
+  function entityContextCard(id) {
+    var p = window.DP.getProvider(id) || {};
+    var ring = window.DP.listProviders().filter(function (x) { return x.tin === p.tin; }).length > 1;
+    var bizId = p.registrationId || (ring ? p.tin : null);
+    var hasBiz = bizId && window.DP.getBusiness(bizId);
+    var s = window.Collusion ? window.Collusion.analyze(id) : null;
+    var L = window.DP.getLicensure(id);
+    var sec = window.DP.getSecondaryProfile(id);
+
+    // business tile
+    var bizStatus = sec && sec.business && sec.business.registryStatus !== "Active"
+      ? '<span class="tag" style="background:var(--med-bg);color:var(--med-tx)">' + window.APP.esc(sec.business.registryStatus) + '</span>' : '';
+    var bizLines = sec && sec.business
+      ? '<b>' + window.APP.esc(sec.business.name) + '</b><br>' + (p.officer ? 'Officer ' + window.APP.esc(p.officer) + ' · ' : '') + (sec.business.openCorporatesRelated ? sec.business.openCorporatesRelated + ' related registration' + (sec.business.openCorporatesRelated === 1 ? '' : 's') : 'no related registrations')
+      : 'Billing entity · TIN ' + window.APP.esc(p.tin || "—");
+
+    // network tile
+    var netStatus = s && s.isRing ? '<span class="tag" style="background:var(--high-bg);color:var(--high-tx)">' + (s.kind === "chain" ? "Chain" : "Ring") + '</span>' : '<span class="tag" style="background:var(--low-bg);color:var(--low-tx)">None</span>';
+    var netLines = s && s.isRing
+      ? '<b>' + s.providerCount + ' linked providers</b><br>' + (s.sharedTin ? 'shared TIN ' + window.APP.esc(s.tin || "") : s.sharedRegistration ? 'same registration' : 'commonly controlled') + (s.referralCount ? ' · ' + s.referralCount + ' cross-referrals' : '')
+      : 'No coordinated network detected around this provider.';
+
+    // licensure tile
+    var licColors = { "Excluded": ["var(--high-bg)", "var(--high-tx)"], "Action needed": ["var(--med-bg)", "var(--med-tx)"], "Clear": ["var(--low-bg)", "var(--low-tx)"] }[L.status];
+    var licStatus = '<span class="tag" style="background:' + licColors[0] + ';color:' + licColors[1] + '">' + L.status + '</span>';
+    var topAlert = L.alerts[0];
+    var licLines = L.excluded
+      ? '<b style="color:var(--high-tx)">OIG LEIE excluded</b><br>excluded from federal programs — claims recoverable in full'
+      : (topAlert ? window.APP.esc(topAlert.text.slice(0, 68)) : 'All credentials active; no exclusion.');
+
+    return '<div class="card" id="pv-ec">' +
+      '<div style="font-weight:500;font-size:13px;margin-bottom:9px"><i class="ti ti-affiliate" style="color:var(--accent-d)"></i> Entity context <span class="muted" style="font-weight:400;font-size:11px">· business, network &amp; licensure for this case</span></div>' +
+      '<div style="display:flex;gap:9px;flex-wrap:wrap">' +
+      entityTile("building-community", "Business entity", bizStatus, bizLines, "pv-ec-biz", hasBiz ? "View entity" : "No registered entity", !!hasBiz) +
+      entityTile("share-3", "Network", netStatus, netLines, "pv-ec-net", s && s.isRing ? "View network" : "Open network", true) +
+      entityTile("license", "Licensure", licStatus, licLines, "pv-ec-lic", "View licences", true) +
+      '</div></div>';
+  }
+  function wireEntityContext(id) {
+    var p = window.DP.getProvider(id) || {};
+    var ring = window.DP.listProviders().filter(function (x) { return x.tin === p.tin; }).length > 1;
+    var bizId = p.registrationId || (ring ? p.tin : null);
+    var biz = document.getElementById("pv-ec-biz");
+    if (biz) biz.addEventListener("click", function () { if (bizId && window.DP.getBusiness(bizId)) window.APP.openBusiness(bizId); });
+    var net = document.getElementById("pv-ec-net");
+    if (net) net.addEventListener("click", function () { window.APP.auditLog("NETWORK_VIEWED", "Case " + id + " · " + (p.name || "")); window.APP.nav("network"); });
+    var lic = document.getElementById("pv-ec-lic");
+    if (lic) lic.addEventListener("click", function () { var el = document.getElementById("pv-lic"); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); });
   }
 
   // ---------- licensure & credentials (incl. OIG LEIE exclusion) ----------
