@@ -537,6 +537,31 @@
   // ---------- Utilization management (Milliman MCG) ----------
   function umKv(k, v) { return '<div class="card" style="padding:7px 9px;box-shadow:none;background:var(--surface)"><div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.03em">' + k + '</div><div style="font-size:12px;font-weight:500;margin-top:2px">' + window.APP.esc(v) + '</div></div>'; }
   function losRow(label, val, rec, act, color) { var max = Math.max(rec, act, 1); var w = Math.round(val / max * 100); return '<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:2px"><span>' + label + '</span><span style="font-weight:600">' + val + ' days</span></div><div style="height:9px;background:var(--border2);border-radius:5px;overflow:hidden"><div style="height:100%;width:' + w + '%;background:' + color + '"></div></div></div>'; }
+  // Facility capacity: patient-days billed vs what the staffed beds can physically
+  // hold. Over-capacity = impossible days no coding review would catch.
+  function capacityCard(a) {
+    var c = window.DP.getFacilityCapacity(a.providerId); if (!c) return "";
+    var over = c.overCapacity;
+    var barMax = Math.max(c.capacityDays, c.patientDaysBilled, 1);
+    var bar = function (label, val, color, sub) {
+      var w = Math.round(val / barMax * 100);
+      return '<div style="margin-bottom:7px"><div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:2px"><span>' + label + '</span><span style="font-weight:600">' + val.toLocaleString() + ' <span style="font-weight:400;color:var(--text2);font-size:10.5px">' + sub + '</span></span></div><div style="height:9px;background:var(--border2);border-radius:5px;overflow:hidden"><div style="height:100%;width:' + Math.min(100, w) + '%;background:' + color + '"></div></div></div>';
+    };
+    var st = { bg: over ? "var(--high-bg)" : "var(--low-bg)", bd: over ? "#f3c9c9" : "#bfe0c9", tx: over ? "var(--high-tx)" : "var(--low-tx)" };
+    return '<div class="card">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">' +
+      '<div style="font-weight:500;font-size:12.5px"><i class="ti ti-bed" style="color:var(--accent-d)"></i> Facility capacity <span class="muted" style="font-weight:400;font-size:11px">· beds vs patient-days billed · ' + c.periodLabel + '</span></div>' +
+      '<span class="tag" style="background:' + st.bg + ';color:' + st.tx + '"><i class="ti ti-' + (over ? "alert-triangle" : "circle-check") + '"></i> ' + c.utilization + '% of capacity</span></div>' +
+      '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:9px;font-size:11.5px">' +
+      umKv("Licensed beds", c.licensedBeds) + umKv("Staffed beds", c.staffedBeds) + '</div>' +
+      bar("Physical capacity (staffed beds × " + c.periodDays + " days)", c.capacityDays, "#6b7a8d", "patient-days") +
+      bar("Patient-days billed", c.patientDaysBilled, over ? "var(--high)" : "var(--accent)", "patient-days") +
+      '<div style="background:' + st.bg + ';border:0.5px solid ' + st.bd + ';border-radius:7px;padding:9px 11px;margin-top:4px;font-size:11.5px;color:' + st.tx + '">' +
+      (over
+        ? '<i class="ti ti-alert-triangle"></i> Billed <b>' + c.excessDays.toLocaleString() + ' more patient-days</b> than the staffed beds can physically hold — impossible days. Peak census <b>' + c.peakConcurrent + '</b> vs <b>' + c.staffedBeds + '</b> staffed beds (' + c.peakExcess + ' over). Independent of coding review.'
+        : '<i class="ti ti-circle-check"></i> Patient-days billed are within physical bed capacity; peak census ' + c.peakConcurrent + ' vs ' + c.staffedBeds + ' staffed beds.') +
+      '</div></div>';
+  }
   function umHtml(a, cl) {
     if (!cl) return noClaimCard("utilization management");
     var d = window.DP.getUtilizationMgmt(cl.id); if (!d) return noClaimCard("utilization management");
@@ -546,6 +571,7 @@
     var critRows = d.criteria.map(function (c) { return '<div style="display:flex;gap:9px;align-items:flex-start;padding:6px 0;border-top:0.5px solid var(--border2)"><i class="ti ti-' + (c.met ? "circle-check" : "circle-x") + '" style="color:' + (c.met ? "var(--low)" : "var(--high)") + ';font-size:16px;margin-top:1px"></i><div><div style="font-size:12px' + (c.met ? "" : ";font-weight:500") + '">' + window.APP.esc(c.label) + '</div>' + (c.note ? '<div style="font-size:11px;color:var(--text2)">' + window.APP.esc(c.note) + '</div>' : '') + '</div></div>'; }).join("");
     var losBar = los ? ('<div class="card"><div style="font-weight:500;font-size:12.5px;margin-bottom:7px">Length of stay</div>' + losRow("MCG recommended", los.recommendedDays, los.recommendedDays, los.actualDays, "#98a4b3") + losRow("Actual (billed)", los.actualDays, los.recommendedDays, los.actualDays, los.actualDays > los.recommendedDays ? "var(--high)" : "var(--accent)") + '<div style="font-size:11px;color:var(--text2);margin-top:4px">' + (los.actualDays > los.recommendedDays ? ('<b style="color:var(--high-tx)">' + (los.actualDays - los.recommendedDays) + ' days</b> beyond the MCG-recommended ' + los.recommendedDays + '-day stay.') : 'Within the recommended range.') + '</div></div>') : '';
     return '<div style="display:flex;flex-direction:column;gap:10px">' +
+      capacityCard(a) +
       '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div style="font-weight:500;font-size:13px"><i class="ti ti-clipboard-heart" style="color:var(--accent-d)"></i> Utilization management <span class="muted" style="font-weight:400;font-size:11px">· clinical criteria &amp; medical necessity</span></div>' +
       '<span class="tag" style="background:var(--surface)"><i class="ti ti-plug-connected"></i> ' + window.APP.esc(d.source) + ' · ' + d.edition + '</span></div>' +
       '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px">' + umKv("Guideline", d.guideline.code + " — " + d.guideline.title) + umKv("Recommended level of care", d.levelOfCare.recommended) + umKv("Billed level of care", d.levelOfCare.billed) + umKv("Prior authorization", d.priorAuth.required ? ((d.priorAuth.number || "—") + " · " + d.priorAuth.status) : d.priorAuth.status) + '</div></div>' +

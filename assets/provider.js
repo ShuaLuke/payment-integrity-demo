@@ -450,6 +450,40 @@
       };
     },
 
+    // ---- facility capacity (beds vs patient-days billed) ----
+    // Only meaningful for bedded facilities (residential / inpatient). The fraud
+    // signal is billing more patient-days than the staffed bed count can physically
+    // hold over a period — impossible days that no coding review would surface,
+    // and a peak-concurrent census above the staffed beds. Derived (no data regen).
+    getFacilityCapacity: function (id) {
+      var p = providers[id]; if (!p) return null;
+      var tax = p.taxonomyCode || "";
+      var residential = /^3245/.test(tax);   // substance-abuse residential
+      var hospital = /^282N/.test(tax);      // general hospital
+      if (!residential && !hospital) return null;
+      var seed = 0; for (var i = 0; i < id.length; i++) seed = (seed * 31 + id.charCodeAt(i) + 7) >>> 0;
+      var rnd = function () { seed = (seed * 1103515245 + 12345) >>> 0; return seed / 4294967296; };
+      var chain = p.role === "chain";
+      var periodDays = 90;
+      var licensedBeds = residential ? 36 + Math.floor(rnd() * 10) : 140 + Math.floor(rnd() * 60);
+      var staffedBeds = Math.round(licensedBeds * (residential ? 0.72 : 0.86));
+      var capacityDays = staffedBeds * periodDays;
+      // a chain residential facility bills beyond what its beds can hold; others sit within
+      var util = chain ? 1.10 + rnd() * 0.09 : 0.58 + rnd() * 0.22;
+      var patientDaysBilled = Math.round(capacityDays * util);
+      var peakConcurrent = chain ? staffedBeds + 4 + Math.floor(rnd() * 5) : Math.round(staffedBeds * (0.68 + rnd() * 0.18));
+      return {
+        periodLabel: "trailing 90 days", periodDays: periodDays,
+        licensedBeds: licensedBeds, staffedBeds: staffedBeds,
+        capacityDays: capacityDays, patientDaysBilled: patientDaysBilled,
+        utilization: Math.round(util * 100),
+        overCapacity: patientDaysBilled > capacityDays,
+        excessDays: Math.max(0, patientDaysBilled - capacityDays),
+        peakConcurrent: peakConcurrent, peakOverStaffed: peakConcurrent > staffedBeds,
+        peakExcess: Math.max(0, peakConcurrent - staffedBeds)
+      };
+    },
+
     // ---- CPT crosswalk: is THIS code payable billed with THIS modifier? ----
     // Three reference checks per claim line, the way a coder reads a claim:
     //   PTP  — NCCI procedure-to-procedure edits. A column-2 code billed with its
