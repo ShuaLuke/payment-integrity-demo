@@ -211,7 +211,7 @@
     if (name === "overview") { panel.innerHTML = overviewHtml(ctx.a, ctx.prepay); var ovd = document.getElementById("c-ov-decide"); if (ovd) ovd.onclick = function () { showTab("decision"); }; wireWorkingRecord(ctx.id); wirePeerStats(ctx.a); }
     else if (name === "evidence") { panel.innerHTML = evidenceHtml(ctx.a, ctx.cl); wireEvidenceUploads(ctx.id); wireEvidenceDocs(ctx.id, ctx.a, ctx.cl); wireClaimLines(panel); wireArtifacts(panel); }
     else if (name === "coding") { panel.innerHTML = xwalkHtml(ctx.a, ctx.cl); }
-    else if (name === "pricing") { panel.innerHTML = pricingHtml(ctx.a, ctx.cl); }
+    else if (name === "pricing") { panel.innerHTML = pricingHtml(ctx.a, ctx.cl); wirePricingVersions(panel); }
     else if (name === "utilization") { panel.innerHTML = umHtml(ctx.a, ctx.cl); }
     else if (name === "analysis") { panel.innerHTML = analysisHtml(ctx.a); var rc = document.getElementById("c-openrc"); if (rc) rc.onclick = function () { window.APP.openProvider(ctx.p.id); }; }
     else if (name === "network") { panel.innerHTML = networkHtml(); renderCollusion(ctx.p, ctx.id); }
@@ -463,8 +463,45 @@
       '<tr style="font-weight:600;border-top:1px solid var(--border)"><td colspan="2">Claim total</td><td class="right">' + m(d.totals.submitted) + '</td><td class="right">' + m(d.totals.cmsAllowed) + '</td><td class="right">' + m(d.totals.paid) + '</td><td class="right" style="color:var(--high-tx)">+' + m(d.totals.variance) + '</td><td></td></tr></tbody></table></div>' +
       (d.totals.overpayment > 0 ? '<div style="background:var(--high-bg);border:0.5px solid #f3c9c9;border-radius:7px;padding:9px 11px;font-size:11.5px;color:var(--high-tx)"><b>' + m(d.totals.overpayment) + '</b> exposure above the CMS-allowed amount — recoverable per CMS reference pricing.</div>' : '') +
       (a.mode === "prepay" ? '<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:7px;padding:9px 11px;font-size:11.5px;color:var(--text2)"><i class="ti ti-info-circle"></i> This claim is <b>pre-payment</b> — exposure is $0 per line because nothing has been paid yet. Compare the submitted charge against the CMS-allowed amount to price it before releasing payment.</div>' : '') +
-      '<div class="card"><div style="font-weight:500;font-size:12.5px;margin-bottom:6px">Pricing rules applied</div>' + d.rulesApplied.map(function (r) { return '<div style="display:flex;gap:7px;font-size:11.5px;color:var(--text2);padding:2px 0"><i class="ti ti-check" style="color:var(--accent-d)"></i>' + window.APP.esc(r) + '</div>'; }).join("") + '</div>' +
+      pricingVersionsHtml(d.ruleVersions) +
       '</div>';
+  }
+  // Pricing rules with version history — each rule shows the version in force plus
+  // its prior versions (effective date + value + what changed), expandable.
+  function pricingVersionsHtml(vers) {
+    if (!vers || !vers.length) return "";
+    var rows = vers.map(function (r, i) {
+      var hist = (r.history || []).map(function (h) {
+        return '<div style="display:flex;gap:8px;align-items:baseline;padding:5px 0 5px 22px;border-top:0.5px solid var(--border2)">' +
+          '<span class="mono" style="font-size:10.5px;color:var(--text3);white-space:nowrap;min-width:56px">' + window.APP.esc(h.version) + '</span>' +
+          '<span class="mono" style="font-size:10.5px;color:var(--text3);white-space:nowrap">' + window.APP.esc(h.effective) + '</span>' +
+          '<span style="font-size:11px;flex:1"><span style="color:var(--text)">' + window.APP.esc(h.value) + '</span>' + (h.change ? ' <span style="color:var(--text2)">· ' + window.APP.esc(h.change) + '</span>' : '') + '</span></div>';
+      }).join("");
+      return '<div style="border-top:0.5px solid var(--border2)">' +
+        '<div class="pv-rule" data-i="' + i + '" style="display:flex;gap:9px;align-items:center;padding:8px 0;cursor:pointer">' +
+        '<i class="ti ti-chevron-right pv-rule-caret" style="color:var(--text3);font-size:14px;transition:transform .12s"></i>' +
+        '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:500">' + window.APP.esc(r.name) + ' <span class="muted" style="font-weight:400;font-size:10.5px">· ' + window.APP.esc(r.authority) + '</span></div>' +
+        '<div style="font-size:10.5px;color:var(--text2)">' + window.APP.esc(r.note) + '</div></div>' +
+        '<div style="text-align:right;white-space:nowrap"><div class="mono" style="font-size:11px;font-weight:500">' + window.APP.esc(r.current.version) + '</div>' +
+        '<div style="font-size:11px;color:var(--text)">' + window.APP.esc(r.current.value) + '</div>' +
+        '<div class="mono" style="font-size:10px;color:var(--text3)">eff. ' + window.APP.esc(r.current.effective) + '</div></div></div>' +
+        '<div class="pv-hist" data-i="' + i + '" style="display:none;padding-bottom:6px">' +
+        '<div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;padding:2px 0 3px 22px">Prior versions</div>' + (hist || '<div style="font-size:11px;color:var(--text3);padding-left:22px">No prior versions on file.</div>') + '</div>';
+    }).join("");
+    return '<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:2px">' +
+      '<div style="font-weight:500;font-size:12.5px"><i class="ti ti-history" style="color:var(--accent-d)"></i> Pricing rules &amp; version history <span class="muted" style="font-weight:400;font-size:11px">· the version in force priced this claim; click a rule for prior versions</span></div></div>' +
+      rows + '</div>';
+  }
+  function wirePricingVersions(root) {
+    (root || document).querySelectorAll(".pv-rule").forEach(function (row) {
+      row.addEventListener("click", function () {
+        var i = row.getAttribute("data-i");
+        var hist = (root || document).querySelector('.pv-hist[data-i="' + i + '"]'); if (!hist) return;
+        var open = hist.style.display !== "none";
+        hist.style.display = open ? "none" : "block";
+        var c = row.querySelector(".pv-rule-caret"); if (c) c.style.transform = open ? "" : "rotate(90deg)";
+      });
+    });
   }
 
   // ---------- CPT crosswalk (Coding) ----------

@@ -468,8 +468,65 @@
         source: "Zellis — CMS reference pricing", asOf: "2025 CMS fee schedules", locality: (p.state || "TX") + " · locality 05",
         lines: lines,
         totals: { submitted: sum("submittedCharge"), cmsAllowed: sum("cmsAllowed"), paid: sum("paid"), variance: Math.round((sum("submittedCharge") - sum("cmsAllowed")) * 100) / 100, overpayment: Math.round(Math.max(0, sum("paid") - sum("cmsAllowed")) * 100) / 100 },
-        rulesApplied: ["MPFS locality adjustment (" + (p.state || "TX") + " 05)", inst ? "OPPS status-indicator pricing" : "RVU × conversion factor ($32.74)", "MPPR — multiple-procedure payment reduction", "NCCI PTP bundling edits", "Site-of-service differential"]
+        rulesApplied: ["MPFS locality adjustment (" + (p.state || "TX") + " 05)", inst ? "OPPS status-indicator pricing" : "RVU × conversion factor ($32.74)", "MPPR — multiple-procedure payment reduction", "NCCI PTP bundling edits", "Site-of-service differential"],
+        ruleVersions: this.getPricingRuleVersions(claimId)
       };
+    },
+    // Version history for the pricing rules that priced the claim. Static / synthetic
+    // (no data regen). A claim's date of service could fall under a prior version —
+    // this surfaces what changed and when, so the reviewer can see the lineage of the
+    // rates applied. Effective as of DOS is the one that priced the claim.
+    getPricingRuleVersions: function (claimId) {
+      var cl = claims[claimId]; if (!cl) return [];
+      var p = providers[cl.providerId] || {}, st = p.state || "TX", inst = cl.type === "837I";
+      return [
+        {
+          name: "MPFS conversion factor", authority: "CMS", current: { version: "CY2025", effective: "2025-01-01", value: "$32.74 / RVU" },
+          note: "The dollar multiplier applied to each code's relative value units. Updated annually in the Medicare Physician Fee Schedule final rule.",
+          history: [
+            { version: "CY2024", effective: "2024-01-01", value: "$33.89 / RVU", change: "−3.4% CF reduction (CY2025 final rule)" },
+            { version: "CY2023", effective: "2023-01-01", value: "$33.06 / RVU", change: "CF set by CY2024 final rule" }
+          ]
+        },
+        {
+          name: "GPCI locality adjustment", authority: "CMS", current: { version: "CY2025 GPCI", effective: "2025-01-01", value: st + " · locality 05" },
+          note: "Geographic Practice Cost Index — adjusts the fee for local cost differences.",
+          history: [
+            { version: "CY2024 GPCI", effective: "2024-01-01", value: st + " · locality 05", change: "Work/PE/MP indices refreshed" },
+            { version: "CY2023 GPCI", effective: "2023-01-01", value: st + " · locality 05", change: "Prior triennial GPCI update" }
+          ]
+        },
+        {
+          name: "MPPR — multiple-procedure payment reduction", authority: "CMS", current: { version: "v1.0", effective: "2024-07-01", value: "50% on 2nd+ procedure" },
+          note: "Reduces payment for the second and subsequent procedures billed in the same session.",
+          history: [
+            { version: "v0.9", effective: "2023-01-01", value: "25% on 2nd+ procedure", change: "Reduction increased 25% → 50%" }
+          ]
+        },
+        {
+          name: inst ? "OPPS status-indicator pricing" : "RVU relative value file", authority: "CMS", current: { version: inst ? "CY2025 OPPS" : "CY2025 RVU", effective: "2025-01-01", value: inst ? "APC weights CY2025" : "RVUs CY2025" },
+          note: inst ? "Outpatient Prospective Payment System — APC weights and status indicators." : "Work / practice-expense / malpractice RVUs per code.",
+          history: [
+            { version: inst ? "CY2024 OPPS" : "CY2024 RVU", effective: "2024-01-01", value: inst ? "APC weights CY2024" : "RVUs CY2024", change: "Annual valuation update" }
+          ]
+        },
+        {
+          name: "NCCI PTP edit set", authority: "CMS NCCI", current: { version: "v31.1", effective: "2025-01-01", value: "Q1 CY2025 edit file" },
+          note: "Procedure-to-procedure bundling edits, refreshed quarterly.",
+          history: [
+            { version: "v30.3", effective: "2024-10-01", value: "Q4 CY2024 edit file", change: "212 pairs added, 47 removed" },
+            { version: "v30.0", effective: "2024-01-01", value: "Q1 CY2024 edit file", change: "Annual baseline refresh" }
+          ]
+        },
+        {
+          name: "VA fee schedule / CMAC allowance", authority: "VA CCN", current: { version: "v3.1", effective: "2025-01-15", value: "CMAC table 2025" },
+          note: "VA Community Care allowance table used where it governs over MPFS.",
+          history: [
+            { version: "v3.0", effective: "2024-07-01", value: "CMAC table 2024 H2", change: "Mid-year CMAC refresh" },
+            { version: "v2.4", effective: "2024-01-01", value: "CMAC table 2024 H1", change: "Annual CMAC update" }
+          ]
+        }
+      ];
     },
 
     // ---- provider contact (for records requests) ----
