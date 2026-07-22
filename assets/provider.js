@@ -742,6 +742,234 @@
         ],
         determination: em ? "Review — documented complexity maps to a lower E/M level" : "Meets criteria"
       });
+    },
+
+    // ---------------------------------------------------------------------------
+    // Reviewer-grade claim record (Round 6). Everything below is DERIVED, seeded and
+    // deterministic — no data.js regen — so the hero dollar figures never move.
+    // The remittance reconciles to the claim's existing paidAmount by construction:
+    //   submitted (gross charge)  = allowed + CO-45 contractual write-off
+    //   allowed (fee schedule)    = payer-paid + patient responsibility
+    //   patient responsibility    = $0  (VA Community Care — veteran has no cost-share)
+    //   Σ payer-paid              = claim.paidAmount   (byte-stable)
+    // ---------------------------------------------------------------------------
+
+    // ICD-10-CM descriptors (principal + the comorbidity pools we derive from). Kept
+    // deliberately small; anything unseen falls back to a generic label.
+    ICD10: {
+      "K21.9": "Gastro-esophageal reflux disease without esophagitis",
+      "F10.20": "Alcohol dependence, uncomplicated",
+      "N18.6": "End stage renal disease",
+      // GI / GERD comorbidities
+      "E78.5": "Hyperlipidemia, unspecified", "I10": "Essential (primary) hypertension",
+      "E11.9": "Type 2 diabetes mellitus without complications", "K29.70": "Gastritis, unspecified, without bleeding",
+      "R10.13": "Epigastric pain", "F41.1": "Generalized anxiety disorder", "Z79.899": "Other long term (current) drug therapy",
+      // Behavioral health / SUD comorbidities
+      "F17.210": "Nicotine dependence, cigarettes, uncomplicated", "F32.9": "Major depressive disorder, single episode, unspecified",
+      "E66.9": "Obesity, unspecified", "K70.30": "Alcoholic cirrhosis of liver without ascites",
+      "R45.851": "Suicidal ideations", "F10.239": "Alcohol dependence with withdrawal, unspecified",
+      // ESRD / renal comorbidities
+      "I12.0": "Hypertensive chronic kidney disease with stage 5 CKD or ESRD", "E11.22": "Type 2 diabetes mellitus with diabetic chronic kidney disease",
+      "D63.1": "Anemia in chronic kidney disease", "E83.42": "Hypomagnesemia",
+      "N25.81": "Secondary hyperparathyroidism of renal origin", "Z99.2": "Dependence on renal dialysis"
+    },
+    // Comorbidity pools keyed by the principal's category — the derived secondary Dx.
+    COMORBIDITY_POOL: {
+      K: ["E78.5", "I10", "E11.9", "K29.70", "R10.13", "F41.1", "Z79.899"],
+      F: ["F17.210", "F32.9", "F41.1", "E66.9", "K70.30", "R45.851", "F10.239", "Z79.899"],
+      N: ["I12.0", "E11.22", "D63.1", "E83.42", "N25.81", "Z99.2", "I10"],
+      _: ["I10", "E78.5", "E11.9", "Z79.899", "F41.1"]
+    },
+    // ICD-10-PCS procedure descriptors (institutional 837I only).
+    ICD10PCS: {
+      "HZ2ZZZZ": "Detoxification Services for Substance Abuse Treatment",
+      "HZ30ZZZ": "Individual Counseling for Substance Abuse Treatment, Cognitive",
+      "HZ63ZZZ": "Group Counseling for Substance Abuse Treatment, Interpersonal",
+      "GZ56ZZZ": "Psychotherapy for Mental Health, Interactive"
+    },
+    // Claim Adjustment Reason Codes (CARC) + Remittance Advice Remark Codes (RARC).
+    // Standard X12 835 codes — real code numbers, synthetic amounts.
+    CARC_CATALOG: {
+      "45": { group: "CO", label: "Charge exceeds fee schedule / maximum allowable amount", kind: "Contractual obligation" },
+      "97": { group: "CO", label: "Payment is included in the allowance for another service/procedure (bundled)", kind: "Contractual obligation" },
+      "16": { group: "CO", label: "Claim/service lacks information or has submission/billing error(s)", kind: "Contractual obligation" },
+      "59": { group: "CO", label: "Processed based on multiple or concurrent procedure rules", kind: "Contractual obligation" },
+      "1": { group: "PR", label: "Deductible amount", kind: "Patient responsibility" }
+    },
+    RARC_CATALOG: {
+      "N657": "This should be billed with the appropriate code for these services.",
+      "N19": "Procedure code incidental to primary procedure.",
+      "N130": "Consult plan benefit documents/guidelines for information about restrictions for this service.",
+      "M80": "Not covered when performed during the same session/date as a previously processed service.",
+      "N59": "Please refer to your provider manual for additional program and provider information."
+    },
+    // Post-payment integrity remark attached to a flagged line, keyed by the rule that
+    // fired. These are informational on the 835 (the claim was paid); they carry the
+    // recovery basis a reviewer would act on. The dialysis frequency flag is benign —
+    // clinical review clears it — which is exactly the human-in-the-loop dismiss story.
+    _integrityRemark: function (ruleIds) {
+      var ids = ruleIds || [];
+      if (ids.indexOf("model_em_peer") >= 0) return { rarc: "N657", carc: "45", text: "Level-5 E/M not substantiated by the record — documentation supports 99213. Recoverable as the level-of-service differential.", recover: true };
+      if (ids.indexOf("rule_ncci_43235_43239") >= 0 || ids.indexOf("rule_mod59") >= 0) return { rarc: "N19", carc: "97", text: "Diagnostic endoscopy is a component of 43239; modifier 59 not substantiated by a distinct procedural service. Recoverable as bundled.", recover: true };
+      if (ids.indexOf("model_los") >= 0) return { rarc: "N130", carc: "16", text: "Continued-stay days beyond the authorized 14 are not supported by continued-stay criteria. Recoverable for the unauthorized days.", recover: true };
+      if (ids.indexOf("model_freq") >= 0) return { rarc: "N59", carc: null, text: "Frequency flagged by the model; clinical review found it consistent with the ESRD standing order (M/W/F). No adjustment.", recover: false };
+      return { rarc: "N59", carc: null, text: "Flagged for post-payment integrity review — see the rule-engine outcomes on the Evidence tab.", recover: false };
+    },
+
+    // A stable helper — add whole days to an ISO date (deterministic in the browser).
+    _addDays: function (iso, n) { var d = new Date(iso + "T00:00:00Z"); d.setUTCDate(d.getUTCDate() + (n || 0)); return d.toISOString().slice(0, 10); },
+
+    // The consolidated claim record: header + diagnoses + procedures + adjudicated
+    // service lines + remittance, all reconciled to the existing paidAmount.
+    getClaimDetail: function (claimId) {
+      var cl = claims[claimId]; if (!cl) return null;
+      var p = providers[cl.providerId] || {}, ve = veterans[cl.veteranId] || {};
+      var inst = cl.type === "837I";
+      var resid = (cl.lines || []).some(function (l) { return l.cpt === "H0018"; });
+      var dialysis = (cl.lines || []).some(function (l) { return l.cpt === "90935"; });
+      var rnd = this._seed(claimId, "detail");
+      var self = this;
+
+      // ---- place of service / bill type (same mapping as get837) ----
+      var pos = inst ? (resid ? "55" : "21") : (dialysis ? "65" : "11");
+      var posLabel = { "11": "Office", "21": "Inpatient Hospital", "22": "Outpatient Hospital", "55": "Residential Facility", "65": "ESRD Facility", "12": "Home" }[pos] || pos;
+      var billType = inst ? (resid ? "86X — Special facility (residential)" : "111 — Hospital inpatient") : null;
+
+      // ---- diagnoses: principal + seeded secondaries with POA (institutional) ----
+      var principal = (cl.diagnosisCodes || [])[0] || null;
+      var pool = (this.COMORBIDITY_POOL[(principal || "_").charAt(0)] || this.COMORBIDITY_POOL._).slice();
+      // deterministic shuffle + count (institutional carries a fuller problem list)
+      for (var s = pool.length - 1; s > 0; s--) { var j = Math.floor(rnd() * (s + 1)); var t = pool[s]; pool[s] = pool[j]; pool[j] = t; }
+      var secCount = inst ? 6 + Math.floor(rnd() * 4) : 2 + Math.floor(rnd() * 3);
+      var secs = pool.filter(function (c) { return c !== principal; }).slice(0, secCount);
+      var poaCodes = ["Y", "Y", "Y", "N", "W", "U"];
+      var diagnoses = [];
+      if (principal) diagnoses.push({ seq: 1, code: principal, description: this.ICD10[principal] || "Diagnosis " + principal, type: "principal", poa: inst ? "Y" : null });
+      secs.forEach(function (c, i) { diagnoses.push({ seq: diagnoses.length + 1, code: c, description: self.ICD10[c] || "Diagnosis " + c, type: "secondary", poa: inst ? poaCodes[i % poaCodes.length] : null }); });
+
+      // ---- ICD-10-PCS procedures (institutional only) ----
+      var procedures = [];
+      if (inst) {
+        var pcs = resid ? ["HZ2ZZZZ", "HZ30ZZZ", "HZ63ZZZ"] : ["GZ56ZZZ"];
+        pcs.forEach(function (code, i) { procedures.push({ seq: i + 1, code: code, description: self.ICD10PCS[code] || code, date: cl.dateOfService }); });
+      }
+
+      // ---- rendering / attending provider (deterministic, synthetic NPI) ----
+      var npi = function () { return "1" + String(100000000 + Math.floor(rnd() * 899999999)); };
+      var attendingNames = ["Dr. A. Morgan", "Dr. L. Chen", "Dr. R. Patel", "Dr. S. Okafor"];
+      var attending = attendingNames[Math.floor(rnd() * attendingNames.length)];
+      var attendingNpi = npi(), renderingNpi = npi();
+
+      // ---- statement / admit-discharge dates + DRG + discharge status (institutional) ----
+      var los = null, admitDate = null, dischargeDate = null, drg = null, dischargeStatus = null;
+      if (inst) {
+        var um = this.getUtilizationMgmt(claimId);
+        los = (um && um.lengthOfStay && um.lengthOfStay.actualDays) || (resid ? 27 : 4);
+        admitDate = cl.dateOfService;
+        dischargeDate = this._addDays(admitDate, los);
+        drg = resid ? "896 — Alcohol/drug abuse or dependence w/o rehabilitation therapy w/o MCC" : "897 — Alcohol/drug abuse or dependence w/o rehabilitation therapy";
+        dischargeStatus = "01 — Discharged to home / self-care (routine)";
+      }
+
+      // ---- service lines with line-level adjudication ----
+      var carcUsed = {}, rarcUsed = {};
+      var lines = (cl.lines || []).map(function (l, i) {
+        var flagged = (l.violatesRuleIds || []).length > 0;
+        var allowed = l.allowed, paid = l.paid;                 // byte-stable
+        // gross submitted charge: deterministic markup over the fee-schedule allowed
+        var submitted = Math.max(l.billed, Math.round(allowed * (1.6 + rnd() * 1.2)));
+        var co45 = Math.round((submitted - allowed) * 100) / 100; // contractual write-off (CARC CO-45)
+        var patientResp = 0;                                     // VA CCN — no veteran cost-share
+        var carc = [];
+        if (co45 > 0) { carc.push({ group: "CO", code: "45", amount: co45 }); carcUsed["45"] = true; }
+        var remark = flagged ? self._integrityRemark(l.violatesRuleIds) : null;
+        if (remark) { rarcUsed[remark.rarc] = true; if (remark.carc) carcUsed[remark.carc] = true; }
+        return {
+          lineNo: i + 1, cpt: l.cpt, description: l.description, modifiers: l.modifiers || [], units: l.units || 1,
+          revenueCode: inst ? (l.cpt === "H0018" ? "1002" : "0" + (250 + i * 50)) : null,
+          renderingNpi: renderingNpi,
+          submitted: submitted, allowed: allowed, contractual: co45, patientResp: patientResp, paid: paid,
+          carc: carc, remark: remark, flagged: flagged
+        };
+      });
+
+      var sum = function (k) { return Math.round(lines.reduce(function (a, l) { return a + l[k]; }, 0) * 100) / 100; };
+      var totals = { submitted: sum("submitted"), contractual: sum("contractual"), allowed: sum("allowed"), patientResp: sum("patientResp"), paid: sum("paid") };
+      // recovery basis (post-pay) — the exposure a reviewer would pursue on the flagged lines
+      var recoverable = Math.round(lines.filter(function (l) { return l.remark && l.remark.recover; }).reduce(function (a, l) { return a + l.paid; }, 0) * 100) / 100;
+
+      var carcLegend = Object.keys(carcUsed).map(function (c) { return { code: c, group: self.CARC_CATALOG[c] ? self.CARC_CATALOG[c].group : "CO", label: self.CARC_CATALOG[c] ? self.CARC_CATALOG[c].label : c, kind: self.CARC_CATALOG[c] ? self.CARC_CATALOG[c].kind : "" }; });
+      var rarcLegend = Object.keys(rarcUsed).map(function (c) { return { code: c, label: self.RARC_CATALOG[c] || c }; });
+
+      return {
+        header: {
+          controlNumber: cl.claimNumber, type: cl.type, formName: inst ? "837I / UB-04 institutional" : "837P / CMS-1500 professional",
+          placeOfService: pos + " — " + posLabel, billType: billType,
+          dateOfService: cl.dateOfService, statementDates: inst ? (admitDate + " – " + dischargeDate) : cl.dateOfService,
+          admitDate: admitDate, dischargeDate: dischargeDate, lengthOfStay: los, drg: drg, dischargeStatus: dischargeStatus,
+          attending: inst ? { name: attending, npi: attendingNpi } : null,
+          rendering: inst ? null : { name: p.name, npi: renderingNpi },
+          billingProvider: { name: p.name, npi: p.npi, tin: p.tin, taxonomy: p.taxonomyCode || "—" },
+          payer: "VA Community Care Network (VACCN)", subscriber: { name: ve.name || "—", memberId: ve.memberId || "—", dob: ve.dob || "—", sex: ve.sex || "—" },
+          claimStatus: cl.claimStatus, paymentType: cl.paymentType, mode: cl.mode || "retrospective"
+        },
+        diagnoses: diagnoses, procedures: procedures, serviceLines: lines,
+        remittance: { totals: totals, patientResponsibility: 0, recoverable: recoverable, carc: carcLegend, rarc: rarcLegend },
+        reconciliation: "Submitted charge − CO-45 contractual write-off = fee-schedule allowed; allowed − $0 veteran cost-share = payer-paid. Payer-paid ties to the paid amount on file (" + usd(cl.paidAmount) + ")."
+      };
+    },
+
+    // The same claim expressed as an HL7 FHIR R4 ExplanationOfBenefit resource (CARIN
+    // Blue Button-aligned) — for the interoperability toggle on the Claim tab.
+    getClaimFhir: function (claimId) {
+      var d = this.getClaimDetail(claimId); if (!d) return null;
+      var cl = claims[claimId], inst = d.header.type === "837I", h = d.header;
+      var money = function (v) { return { value: Math.round(v * 100) / 100, currency: "USD" }; };
+      var eob = {
+        resourceType: "ExplanationOfBenefit",
+        id: String(h.controlNumber).replace(/[^A-Za-z0-9-]/g, "-"),
+        meta: { profile: ["http://hl7.org/fhir/us/carin-bb/StructureDefinition/C4BB-ExplanationOfBenefit-" + (inst ? "Inpatient-Institutional" : "Professional-NonClinician")] },
+        status: "active",
+        type: { coding: [{ system: "http://terminology.hl7.org/CodeSystem/claim-type", code: inst ? "institutional" : "professional" }] },
+        use: "claim",
+        patient: { reference: "Patient/" + h.subscriber.memberId, display: h.subscriber.name },
+        billablePeriod: inst ? { start: h.admitDate, end: h.dischargeDate } : { start: h.dateOfService, end: h.dateOfService },
+        insurer: { display: "VA Community Care Network" },
+        provider: { display: h.billingProvider.name, identifier: { system: "http://hl7.org/fhir/sid/us-npi", value: h.billingProvider.npi } },
+        outcome: "complete",
+        diagnosis: d.diagnoses.map(function (dx) {
+          var o = { sequence: dx.seq, diagnosisCodeableConcept: { coding: [{ system: "http://hl7.org/fhir/sid/icd-10-cm", code: dx.code, display: dx.description }] }, type: [{ coding: [{ system: "http://terminology.hl7.org/CodeSystem/ex-diagnosistype", code: dx.type }] }] };
+          if (dx.poa) o.onAdmission = { coding: [{ system: "https://www.cms.gov/Medicare/Medicare-Fee-for-Service-Payment/HospitalAcqCond/Coding", code: dx.poa }] };
+          return o;
+        })
+      };
+      if (inst && d.procedures.length) eob.procedure = d.procedures.map(function (pr) { return { sequence: pr.seq, procedureCodeableConcept: { coding: [{ system: "http://www.cms.gov/Medicare/Coding/ICD10", code: pr.code, display: pr.description }] }, date: pr.date }; });
+      if (inst && h.drg) eob.supportingInfo = [{ sequence: 1, category: { coding: [{ code: "drg" }] }, code: { text: h.drg } }];
+      eob.item = d.serviceLines.map(function (l) {
+        var adj = [
+          { category: { coding: [{ system: "http://terminology.hl7.org/CodeSystem/adjudication", code: "submitted" }] }, amount: money(l.submitted) },
+          { category: { coding: [{ system: "http://terminology.hl7.org/CodeSystem/adjudication", code: "eligible" }] }, amount: money(l.allowed) },
+          { category: { coding: [{ system: "http://terminology.hl7.org/CodeSystem/adjudication", code: "deductible" }] }, amount: money(l.patientResp) },
+          { category: { coding: [{ system: "http://terminology.hl7.org/CodeSystem/adjudication", code: "benefit" }] }, amount: money(l.paid) }
+        ];
+        l.carc.forEach(function (c) { adj.push({ category: { coding: [{ system: "http://terminology.hl7.org/CodeSystem/adjudication", code: "adjustmentreason" }] }, reason: { coding: [{ system: "https://x12.org/codes/claim-adjustment-reason-codes", code: c.group + "-" + c.code }] }, amount: money(c.amount) }); });
+        var item = {
+          sequence: l.lineNo,
+          productOrService: { coding: [{ system: "http://www.ama-assn.org/go/cpt", code: l.cpt, display: l.description }] },
+          servicedDate: cl.dateOfService, quantity: { value: l.units },
+          unitPrice: money(l.submitted), net: money(l.submitted), adjudication: adj
+        };
+        if (l.modifiers.length) item.modifier = l.modifiers.map(function (m) { return { coding: [{ system: "http://www.ama-assn.org/go/cpt", code: m }] }; });
+        if (l.revenueCode) item.revenue = { coding: [{ system: "https://www.nubc.org/CodeSystem/RevenueCodes", code: l.revenueCode }] };
+        return item;
+      });
+      eob.total = [
+        { category: { coding: [{ code: "submitted" }] }, amount: money(d.remittance.totals.submitted) },
+        { category: { coding: [{ code: "eligible" }] }, amount: money(d.remittance.totals.allowed) },
+        { category: { coding: [{ code: "benefit" }] }, amount: money(d.remittance.totals.paid) }
+      ];
+      eob.payment = { amount: money(d.remittance.totals.paid) };
+      return eob;
     }
   };
 })();
