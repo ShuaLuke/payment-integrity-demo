@@ -123,7 +123,7 @@
     // phantom billing, DME, beneficiary have no firing rule in the seed data).
     RULE_DIMENSIONS: [
       { key: "regulatorySource", label: "Regulatory source", values: ["CMS NCCI edits", "CMS payment rules", "VA CCN policy", "False Claims Act", "Anti-Kickback Statute", "OIG advisories"] },
-      { key: "entityType", label: "Entity type", values: ["Provider", "DME supplier", "Beneficiary"] },
+      { key: "entityType", label: "Entity type", values: ["Provider", "DME supplier", "Pharmacy", "Beneficiary"] },
       { key: "fraudType", label: "Fraud type", values: ["Upcoding", "Unbundling", "Phantom billing", "Medically unnecessary", "Duplicate billing", "Exclusion violations", "Kickback / self-referral", "Authorization / coverage", "Overpayment / pricing", "Workflow"] },
       { key: "detectionLevel", label: "Detection level", values: ["Claim-level", "Provider-pattern", "Network-level"] },
       { key: "severity", label: "Severity", values: ["Critical", "High", "Medium", "Low"] }
@@ -137,7 +137,9 @@
       rule_fee: { regulatorySource: "VA CCN policy", entityType: "Provider", fraudType: "Overpayment / pricing", detectionLevel: "Claim-level", severity: "Medium" },
       rule_dup: { regulatorySource: "VA CCN policy", entityType: "Provider", fraudType: "Duplicate billing", detectionLevel: "Claim-level", severity: "High" },
       rule_auth: { regulatorySource: "VA CCN policy", entityType: "Provider", fraudType: "Authorization / coverage", detectionLevel: "Claim-level", severity: "Medium" },
-      rule_payreport: { regulatorySource: "VA CCN policy", entityType: "Provider", fraudType: "Workflow", detectionLevel: "Claim-level", severity: "Low" }
+      rule_payreport: { regulatorySource: "VA CCN policy", entityType: "Provider", fraudType: "Workflow", detectionLevel: "Claim-level", severity: "Low" },
+      rule_rx_nondispense: { regulatorySource: "VA CCN policy", entityType: "Pharmacy", fraudType: "Phantom billing", detectionLevel: "Provider-pattern", severity: "High" },
+      rule_ben_identity: { regulatorySource: "VA CCN policy", entityType: "Beneficiary", fraudType: "Duplicate billing", detectionLevel: "Network-level", severity: "High" }
     },
     // catalog-only rules that broaden coverage across every dimension
     RULE_CATALOG_EXTRA: [
@@ -157,6 +159,174 @@
       return base.concat(this.RULE_CATALOG_EXTRA);
     },
     getRules: function () { return D.rules; },
+
+    // ---- rule drill-down (Round 6 Phase D) --------------------------------
+    // For a selected rule: its decision LOGIC (criteria / pseudo-logic), the required
+    // DATA INPUTS it reads (claim fields → 837/NCPDP segments + external references),
+    // and its OUTPUT structure (flag / score / disposition + what it feeds downstream).
+    // Rich, hand-authored specs for the rules that matter in the demo; a generic spec
+    // derived from the rule's dimensions for the rest. Synthetic — real edit logic
+    // (Wendy's FAMS examples) drops in later behind this same shape.
+    RULE_DETAIL: {
+      rule_ncci_43235_43239: {
+        logic: {
+          summary: "NCCI procedure-to-procedure (PTP) edit: a column-2 code billed with its column-1 code on the same date by the same provider is bundled unless a valid override modifier documents a distinct service.",
+          criteria: [
+            { when: "Two lines on the claim form an NCCI PTP pair (column-1 / column-2), same DOS & rendering provider", then: "The pair is subject to the edit" },
+            { when: "Modifier indicator = 0", then: "No modifier may override — deny the column-2 line" },
+            { when: "Indicator = 1 and no 59 / X{EPSU} modifier present", then: "Bundle — column-2 not separately payable" },
+            { when: "Indicator = 1 and a 59 / X modifier present", then: "Payable only if the record documents a distinct procedural service — route to review" }
+          ],
+          pseudocode: "for each PTP pair (c1,c2) on claim:\n  if indicator==0: deny(c2)\n  elif no override_modifier(c2): bundle(c2)\n  else: review(c2, 'distinct service?')"
+        },
+        inputs: [
+          { field: "Procedure code (HCPCS/CPT)", source: "837P · 2400 · SV1-01", example: "43235, 43239" },
+          { field: "Line modifiers", source: "837P · 2400 · SV1-01 (2–5)", example: "59" },
+          { field: "Date of service", source: "837P · 2400 · DTP*472", example: "2025-04-22" },
+          { field: "Rendering provider NPI", source: "837P · 2310B · NM1*82", example: "1…" },
+          { field: "NCCI PTP edit file", source: "External reference · CMS (quarterly)", example: "v31.1" }
+        ],
+        output: { signal: "flag", emits: "NCCI_PTP_VIOLATION", disposition: "Column-2 line not separately payable — recover as bundled", downstream: "Line adjudication CARC CO-97 · lead created (Unbundling)" }
+      },
+      rule_mod59: {
+        logic: {
+          summary: "Modifier-59 / X{EPSU} misuse: an override modifier applied where no distinct procedural service is documented, or a provider whose 59-modifier rate far exceeds the peer norm.",
+          criteria: [
+            { when: "A 59/X modifier is applied to a line", then: "Confirm an NCCI PTP edit actually exists to override" },
+            { when: "No PTP edit exists for the pair", then: "The override is unnecessary — flag as potential unbundling mask" },
+            { when: "Provider 59-modifier rate > 3σ above specialty peers", then: "Escalate to a provider-pattern review" }
+          ],
+          pseudocode: "if modifier in {59,XE,XP,XS,XU}:\n  if not ptp_edit(line): flag('unsupported override')\n  if provider.mod59_rate > peer_mean + 3*peer_sd: flag('pattern')"
+        },
+        inputs: [
+          { field: "Line modifiers", source: "837P · 2400 · SV1-01 (2–5)", example: "59, XU" },
+          { field: "Procedure code", source: "837P · 2400 · SV1-01", example: "43235" },
+          { field: "Provider 59-modifier rate", source: "Derived · provider claim history", example: "31% vs peer 4%" },
+          { field: "NCCI PTP edit file", source: "External reference · CMS", example: "v31.1" }
+        ],
+        output: { signal: "flag + score", emits: "MODIFIER_59_MISUSE (+ pattern score)", disposition: "Route to review — payable only if the record documents a distinct service", downstream: "Line adjudication · provider-pattern lead" }
+      },
+      rule_em_level: {
+        logic: {
+          summary: "E/M upcoding: the evaluation & management level billed exceeds both the documented history/exam/decision-making and the provider's peer-group level distribution.",
+          criteria: [
+            { when: "Billed E/M level (e.g. 99215) share is far above the specialty peer median", then: "Compute a peer-deviation score (σ)" },
+            { when: "Linked diagnoses map to low clinical complexity", then: "Documentation unlikely to support the level" },
+            { when: "Deviation ≥ threshold sustained across months", then: "Flag for provider-pattern review + downcode basis" }
+          ],
+          pseudocode: "share = pct(level5_visits)\nsigma = (share - peer_mean)/peer_sd\nif sigma >= 4 and dx_complexity == 'low': flag(score=sigma)"
+        },
+        inputs: [
+          { field: "E/M procedure code", source: "837P · 2400 · SV1-01", example: "99215" },
+          { field: "Diagnosis pointers / codes", source: "837P · 2300 · HI (ABK/ABF)", example: "K21.9" },
+          { field: "Provider E/M distribution", source: "Derived · provider claim history", example: "90% level-5 vs peer 14%" },
+          { field: "Peer-group benchmark", source: "External reference · specialty peer set", example: "Internal Medicine" }
+        ],
+        output: { signal: "score → flag", emits: "EM_UPCODE (peer-deviation σ)", disposition: "Downcode to the supported level — recover the differential", downstream: "Lead created (Upcoding) · remittance RARC N657" }
+      },
+      rule_mednec: {
+        logic: {
+          summary: "Medical-necessity / level-of-care: the billed level of care or length of stay exceeds clinical criteria (MCG) for the documented condition.",
+          criteria: [
+            { when: "Billed level of care > MCG-recommended level for the diagnosis", then: "Flag the excess" },
+            { when: "Length of stay > authorized / continued-stay criteria", then: "Recover the unauthorized days" },
+            { when: "Continued-stay criteria not met on review day", then: "Step-down indicated" }
+          ],
+          pseudocode: "if los.actual > auth.days and not continued_stay_criteria_met():\n  flag(excess_days = los.actual - auth.days)"
+        },
+        inputs: [
+          { field: "Revenue / procedure code", source: "837I · 2400 · SV2", example: "H0018" },
+          { field: "Statement dates (admit–discharge)", source: "837I · 2300 · DTP*434", example: "2025-01-03 – 01-31" },
+          { field: "Prior authorization", source: "External reference · UM auth record", example: "14 days approved" },
+          { field: "MCG care guideline", source: "External reference · Milliman MCG", example: "BHG-RES" }
+        ],
+        output: { signal: "flag", emits: "LOC_LOS_EXCEEDED", disposition: "Recover the days beyond the authorized / criteria-met stay", downstream: "Lead (Residential LOS) · remittance RARC N130" }
+      },
+      rule_excl: {
+        logic: {
+          summary: "OIG LEIE exclusion screening: the rendering or billing provider (or ordering physician) appears on the OIG List of Excluded Individuals/Entities for a date of service — claims paid during exclusion are recoverable in full.",
+          criteria: [
+            { when: "Provider NPI/name matches an active LEIE exclusion", then: "Any claim with a DOS during the exclusion is an automatic finding" },
+            { when: "Exclusion effective ≤ DOS ≤ reinstatement (or open)", then: "Recover 100% — no medical review needed" }
+          ],
+          pseudocode: "hit = LEIE.match(provider.npi | provider.name)\nif hit and hit.effective <= dos: flag('excluded', recover=paid)"
+        },
+        inputs: [
+          { field: "Billing / rendering provider NPI", source: "837 · 2010AA / 2310B · NM1", example: "1…" },
+          { field: "Ordering physician", source: "837 · 2420E · NM1*DK", example: "—" },
+          { field: "Date of service", source: "837 · 2400 · DTP*472/434", example: "…" },
+          { field: "OIG LEIE list", source: "External reference · OIG (monthly)", example: "exclusion since 2023-08" }
+        ],
+        output: { signal: "flag", emits: "LEIE_EXCLUSION (critical)", disposition: "Automatic finding — recover in full; refer to OIG", downstream: "Lead (Exclusion) · supervisor referral" }
+      },
+      rule_rx_nondispense: {
+        logic: {
+          summary: "Prescription non-dispensing / DAW screen: a prescription billed with no matching dispensing (pickup) record, or a brand billed under DAW-1 without documented medical necessity where a generic equivalent exists.",
+          criteria: [
+            { when: "Claim paid but no dispensing / pickup record within the fill window", then: "Flag as non-dispensed — recoverable" },
+            { when: "Brand billed with DAW 1 and a generic equivalent exists", then: "Require documented medical necessity" },
+            { when: "Quantity billed exceeds the days-supply norm for the drug", then: "Flag excess quantity" }
+          ],
+          pseudocode: "if paid and not pickup_record(rx): flag('non-dispensed')\nif daw==1 and generic_exists(ndc) and not medical_necessity(): flag('DAW misuse')"
+        },
+        inputs: [
+          { field: "Drug (NDC)", source: "NCPDP D.0 · Claim · 407-D7", example: "00000-0471-30" },
+          { field: "DAW / product-selection code", source: "NCPDP D.0 · Claim · 408-D8", example: "1" },
+          { field: "Quantity dispensed / days supply", source: "NCPDP D.0 · Claim · 442-E7 / 405-D5", example: "30 mL / 30 days" },
+          { field: "Dispensing (pickup) record", source: "External reference · pharmacy dispensing log", example: "none on file" }
+        ],
+        output: { signal: "flag + score", emits: "RX_NONDISPENSE / DAW_MISUSE", disposition: "Recover as non-dispensed / DAW misuse", downstream: "Lead (Non-dispensed) · remittance RARC M123 / CARC CO-16" }
+      },
+      rule_ben_identity: {
+        logic: {
+          summary: "Beneficiary identity / card-sharing screen: one member ID billed across multiple unrelated providers with overlapping dates of service or duplicate high-cost services — indicates identity misuse or card sharing.",
+          criteria: [
+            { when: "One member ID appears on claims from ≥ N distinct providers within a short window", then: "Compute a dispersion score" },
+            { when: "Overlapping / same-day services at different providers or states", then: "Physically implausible — flag" },
+            { when: "Duplicate high-cost services on the identity", then: "Flag duplicate exposure" }
+          ],
+          pseudocode: "grp = claims.group_by(member_id, window=21d)\nif grp.distinct_providers >= 6 or grp.has_overlapping_dos(): flag(score)"
+        },
+        inputs: [
+          { field: "Member ID (subscriber)", source: "837 · 2010BA · NM1*IL / NCPDP 302-C2", example: "MBR-…" },
+          { field: "Billing provider NPI", source: "837 · 2010AA · NM1*85", example: "multiple" },
+          { field: "Date / place of service", source: "837 · 2400 · DTP / CLM05", example: "overlapping · TX·AZ·NM" },
+          { field: "Enrollment / eligibility record", source: "External reference · VA enrollment", example: "single beneficiary" }
+        ],
+        output: { signal: "flag + score", emits: "BENEFICIARY_IDENTITY_MISUSE", disposition: "Investigate identity misuse / card sharing across the involved providers", downstream: "Lead (Beneficiary subject) · network review" }
+      }
+    },
+    getRuleDetail: function (ruleId) {
+      var rule = this.getRuleCatalog().find(function (r) { return r.id === ruleId; });
+      if (!rule) return null;
+      var spec = this.RULE_DETAIL[ruleId];
+      if (!spec) {
+        // generic spec derived from the rule's own dimensions
+        var claimLevel = rule.detectionLevel === "Claim-level";
+        spec = {
+          logic: {
+            summary: rule.description,
+            criteria: [
+              { when: "The claim/provider matches the " + (rule.fraudType || "").toLowerCase() + " pattern this rule screens for", then: "Evaluate against the rule threshold" },
+              { when: "The condition is met at the " + (rule.detectionLevel || "claim") + " level", then: "Raise a " + (rule.severity || "") + "-severity flag" }
+            ],
+            pseudocode: null
+          },
+          inputs: [
+            { field: "Procedure / service code", source: claimLevel ? "837 · 2400 · SV1/SV2" : "Derived · claim history", example: "—" },
+            { field: "Provider identifiers", source: "837 · 2010AA / 2310B · NM1", example: "NPI / TIN" },
+            { field: rule.regulatorySource + " reference", source: "External reference", example: "—" }
+          ],
+          output: { signal: rule.detectionLevel === "Claim-level" ? "flag" : "flag + score", emits: rule.code + "_FLAG", disposition: "Route to " + (rule.detectionLevel === "Network-level" ? "network" : rule.detectionLevel === "Provider-pattern" ? "provider-pattern" : "claim") + " review", downstream: "Lead created (" + rule.fraudType + ")" }
+        };
+      }
+      return {
+        id: rule.id, code: rule.code, name: rule.name, version: rule.version, effectiveDate: rule.effectiveDate, environment: rule.environment,
+        regulatorySource: rule.regulatorySource, entityType: rule.entityType, fraudType: rule.fraudType, detectionLevel: rule.detectionLevel, severity: rule.severity,
+        logic: spec.logic, inputs: spec.inputs, output: spec.output
+      };
+    },
+
     getModels: function () { return D.models; },
     getPrecedent: function (pid) { return (D.precedents || []).find(function (p) { return p.id === pid; }) || null; },
     // ---- business entities (TrackLight-style): providers grouped by a shared
