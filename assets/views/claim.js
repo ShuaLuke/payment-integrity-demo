@@ -48,6 +48,7 @@
         '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">' +
         '<span class="btn" id="c-back" style="padding:5px 9px"><i class="ti ti-arrow-left"></i> ' + window.APP.esc(window.APP.backLabel()) + '</span>' +
         '<span class="page-title">' + window.APP.esc(headText) + '</span><span id="c-status">' + window.UI.statusPill(prepay ? a.status : window.UI.leadStatus(a)) + '</span>' +
+        window.UI.subjectBadge(a) +
         exposureTypePill(a) +
         '<span style="font-size:11px;color:var(--text2);display:inline-flex;align-items:center;gap:4px"><i class="ti ti-lock"></i> Locked to you</span>' +
         '<span style="flex:1"></span>' + window.EXPORT.group("c") + '<button class="btn primary" id="c-summarize" style="font-size:12px"><i class="ti ti-file-analytics"></i> Summarize for adjudication</button></div>' +
@@ -434,14 +435,21 @@
       var on = claimView === key;
       return '<button class="cv-seg' + (on ? " on" : "") + '" data-cv="' + key + '" style="flex:1;border:0.5px solid ' + (on ? "var(--accent)" : "var(--border)") + ';background:' + (on ? "var(--accent-l)" : "#fff") + ';color:' + (on ? "var(--accent-d)" : "var(--ink)") + ';border-radius:var(--r,8px);padding:8px 6px;cursor:pointer;text-align:center;font-weight:' + (on ? "600" : "400") + '"><i class="ti ti-' + icon + '"></i> ' + label + '<div style="font-size:10px;color:var(--text2);font-weight:400">' + sub + '</div></button>';
     };
-    var body = claimView === "837" ? claim837Html(d, cl) : claimView === "fhir" ? claimFhirHtml(cl) : claimSummaryHtml(d, cl);
+    var pharm = !!d.pharmacy;
+    var body = claimClaimBody(claimView, d, cl, pharm);
     return '<div style="display:flex;flex-direction:column;gap:10px">' +
       '<div style="display:flex;gap:6px">' +
       seg("summary", "file-description", "Summary", "reviewer view") +
-      seg("837", "file-code", "X12 837 EDI", "as submitted") +
+      (pharm ? seg("837", "prescription", "NCPDP D.0", "as transmitted") : seg("837", "file-code", "X12 837 EDI", "as submitted")) +
       seg("fhir", "brand-nodejs", "HL7 FHIR", "ExplanationOfBenefit") +
       '</div>' +
       '<div id="c-claimbody">' + body + '</div></div>';
+  }
+  // Route the three representations, pharmacy-aware (NCPDP vs 837).
+  function claimClaimBody(view, d, cl, pharm) {
+    if (view === "837") return pharm ? claimNcpdpHtml(cl) : claim837Html(d, cl);
+    if (view === "fhir") return claimFhirHtml(cl);
+    return pharm ? claimPharmacySummaryHtml(d, cl) : claimSummaryHtml(d, cl);
   }
 
   function kvRow(k, v, mono) {
@@ -497,17 +505,77 @@
       '<tr style="font-weight:600;border-top:1px solid var(--border)"><td colspan="4">Claim total</td><td class="right">' + m(t.submitted) + '</td><td class="right" style="color:var(--text2)">−' + m(t.contractual) + '</td><td class="right">' + m(t.allowed) + '</td><td class="right">' + m(t.patientResp) + '</td><td class="right">' + m(t.paid) + '</td><td></td></tr>' +
       '</tbody></table></div></div>';
 
-    // ---- remittance / reconciliation ----
+    return '<div style="display:flex;flex-direction:column;gap:10px">' + headerCard + dxCard + procCard + slCard + remittanceCardHtml(d) + '</div>';
+  }
+
+  // Shared 835 remittance + reconciliation card (837 and pharmacy summaries both use it).
+  function remittanceCardHtml(d) {
+    var m = window.DP.usd, t = d.remittance.totals, pharm = !!d.pharmacy;
     var flow = function (label, val, strong) { return '<div style="text-align:center;flex:none"><div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.03em">' + label + '</div><div style="font-size:14px;font-weight:' + (strong ? "700" : "600") + ';color:' + (strong ? "var(--accent-d)" : "var(--ink)") + '">' + m(val) + '</div></div>'; };
     var arrow = '<div style="color:var(--text3);align-self:center"><i class="ti ti-arrow-right"></i></div>';
-    var reconCard = '<div class="card"><div style="font-weight:500;font-size:13px;margin-bottom:9px"><i class="ti ti-receipt" style="color:var(--accent-d)"></i> Remittance &amp; reconciliation <span class="muted" style="font-weight:400;font-size:11px">· 835 electronic remittance advice</span></div>' +
+    return '<div class="card"><div style="font-weight:500;font-size:13px;margin-bottom:9px"><i class="ti ti-receipt" style="color:var(--accent-d)"></i> Remittance &amp; reconciliation <span class="muted" style="font-weight:400;font-size:11px">· 835 electronic remittance advice</span></div>' +
       '<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;justify-content:center;padding:8px 4px;background:var(--surface);border-radius:8px">' +
-      flow("Submitted", t.submitted) + arrow + flow("− Contractual (CO-45)", t.contractual) + arrow + flow("= Allowed", t.allowed) + arrow + flow("− Patient", t.patientResp) + arrow + flow("= Payer paid", t.paid, true) + '</div>' +
+      flow("Submitted", t.submitted) + arrow + flow("− Contractual (CO-45)", t.contractual) + arrow + flow("= Allowed", t.allowed) + arrow + flow("− Patient", t.patientResp) + arrow + flow(pharm ? "= Plan paid" : "= Payer paid", t.paid, true) + '</div>' +
       '<div style="font-size:11px;color:var(--text2);margin-top:9px;line-height:1.6"><i class="ti ti-info-circle"></i> ' + window.APP.esc(d.reconciliation) + ' Veteran cost-share is <b>$0</b> under VA Community Care.</div>' +
       (d.remittance.recoverable > 0 ? '<div style="background:var(--high-bg);border:0.5px solid #f3c9c9;border-radius:7px;padding:9px 11px;font-size:11.5px;color:var(--high-tx);margin-top:9px"><i class="ti ti-flag"></i> <b>' + m(d.remittance.recoverable) + '</b> exposure on flagged lines — post-payment recovery basis is carried in the line remarks below.</div>' : '') +
       remarksHtml(d) + codeLegendHtml(d) + '</div>';
+  }
 
-    return '<div style="display:flex;flex-direction:column;gap:10px">' + headerCard + dxCard + procCard + slCard + reconCard + '</div>';
+  // ---------- Pharmacy (NCPDP/NDC) summary ----------
+  function claimPharmacySummaryHtml(d, cl) {
+    var h = d.header, m = window.DP.usd;
+    var left = kvRow("Claim control #", h.controlNumber, true) + kvRow("Claim form", h.formName) + kvRow("Place of service", h.placeOfService) +
+      kvRow("Rx service reference #", h.rxNumber, true) + kvRow("Date of service", h.dateOfService);
+    var right = kvRow("Payer", h.payer) + kvRow("Status", h.claimStatus + " · " + h.paymentType) +
+      kvRow("Pharmacy", h.pharmacyName + " · NCPDP " + h.ncpdpId) + kvRow("BIN / PCN", h.binPcn, true) +
+      kvRow("Prescriber", h.prescriber.name + " · NPI " + h.prescriber.npi) + kvRow("Member", h.subscriber.name + " · " + h.subscriber.memberId, false);
+    var headerCard = '<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px">' +
+      '<div style="font-weight:600;font-size:13.5px"><i class="ti ti-prescription" style="color:var(--accent-d)"></i> Pharmacy claim <span class="mono" style="font-weight:400">' + h.controlNumber + '</span></div>' +
+      '<span class="tag">NCPDP D.0 · pharmacy</span></div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 20px">' + left + right + '</div></div>';
+
+    var dxCard = d.diagnoses.length ? '<div class="card" style="padding:0;overflow:hidden"><div style="padding:9px 12px;font-weight:500;font-size:13px;border-bottom:0.5px solid var(--border2)"><i class="ti ti-clipboard-list" style="color:var(--accent-d)"></i> Diagnosis <span class="muted" style="font-weight:400;font-size:11px">· ICD-10-CM · drug indication</span></div>' +
+      '<table><thead><tr><th class="right">#</th><th>Code</th><th>Description</th></tr></thead><tbody>' +
+      d.diagnoses.map(function (x) { return '<tr><td class="right" style="color:var(--text3)">' + x.seq + '</td><td class="mono">' + x.code + '</td><td>' + window.APP.esc(x.description) + '</td></tr>'; }).join("") + '</tbody></table></div>' : "";
+
+    var rows = d.serviceLines.map(function (l) {
+      var carc = l.carc.map(function (c) { return c.group + "-" + c.code; }).join(", ") + (l.remark && l.remark.carc && l.carc.map(function (c) { return c.code; }).indexOf(l.remark.carc) < 0 ? (l.carc.length ? ", " : "") + "CO-" + l.remark.carc : "");
+      return '<tr' + (l.flagged ? ' class="flag-row"' : '') + '>' +
+        '<td class="mono">' + l.ndc + '</td><td>' + window.APP.esc(l.drugName) + '</td>' +
+        '<td class="right">' + window.APP.esc(String(l.qtyDispensed)) + '</td><td class="right">' + (l.daysSupply || "—") + '</td>' +
+        '<td class="mono" style="font-size:10.5px">' + window.APP.esc(String(l.daw).split(" — ")[0]) + '</td>' +
+        '<td class="right">' + m(l.submitted) + '</td><td class="right" style="color:var(--text2)">−' + m(l.contractual) + '</td><td class="right">' + m(l.allowed) + '</td>' +
+        '<td class="right" style="font-weight:500">' + m(l.paid) + '</td><td class="mono" style="font-size:10.5px">' + (carc || "—") + '</td></tr>';
+    }).join("");
+    var t = d.remittance.totals;
+    var slCard = '<div class="card" style="padding:0;overflow:hidden"><div style="padding:9px 12px;font-weight:500;font-size:13px;border-bottom:0.5px solid var(--border2)"><i class="ti ti-pill" style="color:var(--accent-d)"></i> Drug lines &amp; adjudication <span class="muted" style="font-weight:400;font-size:11px">· NDC · quantity · days supply · DAW</span></div>' +
+      '<div style="overflow-x:auto"><table><thead><tr><th>NDC</th><th>Drug</th><th class="right">Qty</th><th class="right">Days</th><th>DAW</th><th class="right">Submitted</th><th class="right">CO-45</th><th class="right">Allowed</th><th class="right">Paid</th><th>CARC</th></tr></thead><tbody>' + rows +
+      '<tr style="font-weight:600;border-top:1px solid var(--border)"><td colspan="5">Claim total</td><td class="right">' + m(t.submitted) + '</td><td class="right" style="color:var(--text2)">−' + m(t.contractual) + '</td><td class="right">' + m(t.allowed) + '</td><td class="right">' + m(t.paid) + '</td><td></td></tr>' +
+      '</tbody></table></div><div style="padding:7px 12px;font-size:10.5px;color:var(--text3);border-top:0.5px solid var(--border2)"><i class="ti ti-info-circle"></i> DAW = Dispense As Written. NDCs use the reserved <span class="mono">00000</span> labeler — synthetic by construction.</div></div>';
+
+    return '<div style="display:flex;flex-direction:column;gap:10px">' + headerCard + dxCard + slCard + remittanceCardHtml(d) + '</div>';
+  }
+
+  // ---------- NCPDP D.0 telecommunication view (pharmacy analog of the 837) ----------
+  function claimNcpdpHtml(cl) {
+    var d = window.DP.getNcpdp(cl.id); if (!d) return noClaimCard("the NCPDP transaction");
+    var kv = function (k, v) { return '<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0;font-size:11.5px;border-top:0.5px solid var(--border2)"><span style="color:var(--text2)">' + k + '</span><span class="mono" style="text-align:right">' + window.APP.esc(String(v == null ? "—" : v)) + '</span></div>'; };
+    var sect = function (title, seg, rows) { return '<div style="margin-bottom:8px;break-inside:avoid"><div style="font-size:11px;font-weight:600;color:var(--accent-d)">' + title + ' <span class="mono" style="font-weight:400;color:var(--text3);font-size:10px">' + seg + '</span></div>' + rows + '</div>'; };
+    var t = d.transaction, ph = d.pharmacy, pt = d.patient, pr = d.prescriber, c = d.claim;
+    var drugRows = d.drugs.map(function (g) {
+      return '<div style="padding:5px 0;border-top:0.5px solid var(--border2)' + (g.flagged ? ';background:var(--high-bg)' : '') + '"><div style="font-size:11.5px;font-weight:500">Rx ' + g.line + ' · <span class="mono">NDC ' + window.APP.esc(g.ndc) + '</span> ' + (g.flagged ? '<i class="ti ti-flag" style="color:var(--high-tx)"></i>' : '') + '</div>' +
+        '<div style="font-size:11px;color:var(--text2)">' + window.APP.esc(g.name) + '</div>' +
+        '<div style="font-size:10.5px;color:var(--text2)" class="mono">' + g.productQualifier + ' · qty ' + window.APP.esc(String(g.qtyDispensed)) + ' · days ' + (g.daysSupply || "—") + ' · DAW ' + window.APP.esc(String(g.daw).split(" — ")[0]) + ' · refill ' + g.refill + ' · ingredient $' + g.ingredientCost + ' · disp fee $' + g.dispensingFee.toFixed(2) + ' · plan paid $' + g.planPaid + '</div></div>';
+    }).join("");
+    var body =
+      sect("Transaction header", "B1 · D.0", kv("Standard", t.standard) + kv("Transaction", t.type) + kv("BIN", t.bin) + kv("PCN", t.pcn) + kv("Software / vendor", t.softwareVendor)) +
+      sect("Pharmacy", "Svc provider", kv("ID qualifier", ph.qualifier) + kv("NPI", ph.npi) + kv("NCPDP ID", ph.ncpdp) + kv("Name", ph.name) + kv("Service type", ph.serviceProvider)) +
+      sect("Patient", "Cardholder", kv("Member ID", pt.memberId) + kv("Name", pt.name) + kv("DOB / sex", pt.dob + " · " + pt.gender) + kv("Relationship", pt.relationship)) +
+      sect("Prescriber", "01 · NPI", kv("ID qualifier", pr.qualifier) + kv("NPI", pr.npi) + kv("Name", pr.name)) +
+      sect("Claim", "Rx billing", kv("Rx service ref #", c.rxServiceRef) + kv("Ref qualifier", c.rxQualifier) + kv("Date of service", c.dateOfService) + kv("Payer", c.payer)) +
+      sect("Drugs", "Claim / Pricing", drugRows);
+    return '<div class="card"><div style="font-weight:500;font-size:13px;margin-bottom:2px"><i class="ti ti-prescription" style="color:var(--accent-d)"></i> NCPDP D.0 <span class="muted" style="font-weight:400;font-size:11px">· this prescription claim as an NCPDP Telecommunication D.0 billing transaction</span></div>' +
+      '<div style="margin-top:9px;display:grid;grid-template-columns:1fr 1fr;gap:0 18px">' + body + '</div></div>';
   }
 
   // Post-payment integrity remarks (RARC) attached to the flagged lines.
@@ -570,7 +638,7 @@
       '<div style="font-weight:500;font-size:13px"><i class="ti ti-brand-nodejs" style="color:var(--accent-d)"></i> HL7 FHIR R4 <span class="muted" style="font-weight:400;font-size:11px">· ExplanationOfBenefit — CARIN Blue Button aligned</span></div>' +
       '<span class="tag" style="background:var(--surface)"><i class="ti ti-plug-connected"></i> application/fhir+json</span></div>' +
       '<pre class="mono" style="margin:0;background:#0f2033;color:#cfe8e2;border-radius:8px;padding:12px 14px;font-size:11px;line-height:1.55;overflow-x:auto;max-height:560px;overflow-y:auto">' + json + '</pre>' +
-      '<div style="font-size:11px;color:var(--text2);margin-top:8px"><i class="ti ti-info-circle"></i> The same claim served as a FHIR resource for interoperability — diagnoses (ICD-10-CM), items (CPT), and per-line <span class="mono">adjudication</span> slices (submitted / eligible / benefit) with CARC reasons.</div></div>';
+      '<div style="font-size:11px;color:var(--text2);margin-top:8px"><i class="ti ti-info-circle"></i> The same claim served as a FHIR resource for interoperability — diagnoses (ICD-10-CM), items (CPT / NDC), and per-line <span class="mono">adjudication</span> slices (submitted / eligible / benefit) with CARC reasons.</div></div>';
   }
 
   function wireClaimTab(root) {
@@ -578,9 +646,10 @@
       btn.addEventListener("click", function () {
         var v = btn.getAttribute("data-cv"); if (v === claimView) return;
         claimView = v;
-        window.APP.auditLog("CLAIM_VIEW", ctx.id ? ("Lead #" + ctx.id + " · " + (v === "837" ? "X12 837" : v === "fhir" ? "HL7 FHIR" : "Summary")) : v);
+        var det = window.DP.getClaimDetail(ctx.cl.id), pharm = !!(det && det.pharmacy);
+        window.APP.auditLog("CLAIM_VIEW", ctx.id ? ("Lead #" + ctx.id + " · " + (v === "837" ? (pharm ? "NCPDP D.0" : "X12 837") : v === "fhir" ? "HL7 FHIR" : "Summary")) : v);
         var body = document.getElementById("c-claimbody");
-        if (body && ctx) body.innerHTML = (v === "837" ? claim837Html(window.DP.getClaimDetail(ctx.cl.id), ctx.cl) : v === "fhir" ? claimFhirHtml(ctx.cl) : claimSummaryHtml(window.DP.getClaimDetail(ctx.cl.id), ctx.cl));
+        if (body && ctx) body.innerHTML = claimClaimBody(v, det, ctx.cl, pharm);
         (root || document).querySelectorAll(".cv-seg").forEach(function (b2) {
           var on = b2.getAttribute("data-cv") === v;
           b2.classList.toggle("on", on);
@@ -595,8 +664,11 @@
 
   // ---------- CMS pricing (Zellis) — submitted charge vs CMS-allowed ----------
   function noClaimCard(what) { return '<div class="card" style="text-align:center;padding:28px"><i class="ti ti-file-off" style="font-size:26px;color:var(--text3)"></i><div style="font-size:12.5px;color:var(--text2);margin-top:8px">No itemized claim on this lead — ' + what + ' is unavailable.</div><div style="font-size:11px;color:var(--text3);margin-top:3px">Manual / referral leads have no 837 claim until records are attached.</div></div>'; }
+  // Pharmacy (NCPDP) claims don't run through the professional-claim engines.
+  function pharmacyNaCard(what) { return '<div class="card" style="text-align:center;padding:28px"><i class="ti ti-prescription" style="font-size:26px;color:var(--text3)"></i><div style="font-size:12.5px;color:var(--text2);margin-top:8px">' + what + ' does not apply to a pharmacy (NCPDP) claim.</div><div style="font-size:11px;color:var(--text3);margin-top:3px">See the <b>Claim</b> tab for the NDC-level detail, DAW screening and pharmacy adjudication.</div></div>'; }
   function pricingHtml(a, cl) {
     if (!cl) return noClaimCard("CMS pricing");
+    if (cl.type === "NCPDP") return pharmacyNaCard("CMS reference pricing (MPFS/OPPS)");
     var d = window.DP.getCmsPricing(cl.id); if (!d) return noClaimCard("CMS pricing");
     var m = window.DP.usd;
     var rows = d.lines.map(function (l) {
@@ -659,6 +731,7 @@
   // modifier-validity checks, so the reviewer can see WHY a pairing is improper.
   function xwalkHtml(a, cl) {
     if (!cl) return noClaimCard("the CPT crosswalk");
+    if (cl.type === "NCPDP") return pharmacyNaCard("NCCI / CPT coding validation");
     var d = window.DP.getCptCrosswalk(cl.id); if (!d) return noClaimCard("the CPT crosswalk");
     var V = {
       pass: ["circle-check", "var(--low-tx)", "var(--low-bg)", "Passes"],
@@ -751,6 +824,7 @@
   }
   function umHtml(a, cl) {
     if (!cl) return noClaimCard("utilization management");
+    if (cl.type === "NCPDP") return pharmacyNaCard("Clinical utilization review (MCG)");
     var d = window.DP.getUtilizationMgmt(cl.id); if (!d) return noClaimCard("utilization management");
     var los = d.lengthOfStay;
     var dl = d.determination.toLowerCase();

@@ -58,14 +58,27 @@
       return typeof limit === "number" ? rows.slice(0, limit) : rows;
     },
 
+    // ---- subject of investigation (Round 6 Phase B) ----
+    // Who/what is under review on a lead: the Provider, the Beneficiary (veteran), or
+    // the Pharmacy. Derived from an explicit subjectType on the lead, defaulting to
+    // Provider (every data-driven lead today is provider-subject).
+    SUBJECT_TYPES: {
+      Provider: { label: "Provider", icon: "building-hospital", tone: "asg", desc: "The billing or rendering provider is the subject of the review." },
+      Beneficiary: { label: "Beneficiary", icon: "user-heart", tone: "esc", desc: "The veteran / beneficiary is the subject — identity, eligibility or utilization pattern." },
+      Pharmacy: { label: "Pharmacy", icon: "prescription", tone: "rev", desc: "The dispensing pharmacy is the subject — NCPDP / NDC prescription claims." }
+    },
+    subjectTypeOf: function (a) { return (a && a.subjectType && this.SUBJECT_TYPES[a.subjectType]) ? a.subjectType : "Provider"; },
+
     getAllegation: function (id) {
       var a = D.allegations.find(function (x) { return x.id === id; });
       if (!a) return null;
       var provider = providers[a.providerId] || null;
       var claim = a.claimId ? claims[a.claimId] : null;
-      var veteran = claim ? veterans[claim.veteranId] : null;
+      // beneficiary-subject leads carry the veteran directly (no single claim); fall
+      // back to the claim's veteran for provider/pharmacy leads.
+      var veteran = (claim ? veterans[claim.veteranId] : null) || (a.subjectVeteranId ? veterans[a.subjectVeteranId] : null) || null;
       return Object.assign({}, a, {
-        provider: provider, claim: claim, veteran: veteran,
+        provider: provider, claim: claim, veteran: veteran, subjectType: this.subjectTypeOf(a),
         model: a.modelId ? models[a.modelId] : null,
         rules: (a.ruleIds || []).map(function (rid) { return rules[rid]; }).filter(Boolean)
       });
@@ -73,6 +86,7 @@
 
     listAllegations: function (f) {
       f = f || {};
+      var self = this;
       var rows = D.allegations.map(function (a) {
         var p = providers[a.providerId];
         return {
@@ -81,6 +95,7 @@
           exposurePost: a.exposurePost, exposurePre: a.exposurePre, createdDate: a.createdDate, providerId: a.providerId,
           mode: a.mode || "retrospective", recommendedAction: a.recommendedAction, manual: !!a.manual,
           providerName: p ? p.name : "—", providerNpi: p ? p.npi : "", providerState: p ? p.state : "",
+          subjectType: self.subjectTypeOf(a),
           hero: ["20481", "20517", "20463"].indexOf(a.id) >= 0 ? 1 : 0
         };
       });
@@ -230,6 +245,7 @@
           riskScore: Math.max.apply(null, caseLeads.map(function (a) { return a.riskScore || 0; }).concat([0])),
           fwaTypes: caseLeads.map(function (a) { return a.fwaType; }).filter(function (t, i, arr) { return t && arr.indexOf(t) === i; }),
           assignee: (caseLeads.find(function (a) { return a.assignee; }) || {}).assignee || null,
+          subjectType: (src.find(function (a) { return a.subjectType && a.subjectType !== "Provider"; }) || {}).subjectType || "Provider",
           escalated: escalated, closed: closed,
           status: closed ? "Closed" : escalated ? "Under investigation" : "Open case"
         };
@@ -440,6 +456,7 @@
     // CMS reference pricing (Zellis): submitted charge vs CMS-allowed per line + methodology.
     getCmsPricing: function (claimId) {
       var cl = claims[claimId]; if (!cl) return null;
+      if (cl.type === "NCPDP") return null;
       var p = providers[cl.providerId] || {}, inst = cl.type === "837I";
       var rnd = this._seed(claimId, "cms");
       var method = function (l) {
@@ -618,6 +635,7 @@
     },
     getCptCrosswalk: function (claimId) {
       var cl = claims[claimId]; if (!cl) return null;
+      if (cl.type === "NCPDP") return null;
       var X = this.CPT_XWALK, lines = cl.lines || [];
       var isEm = function (c) { return /^99/.test(c); };
       var codes = lines.map(function (l) { return l.cpt; });
@@ -699,6 +717,7 @@
     // Utilization management (Milliman MCG): clinical criteria, level of care, LOS.
     getUtilizationMgmt: function (claimId) {
       var cl = claims[claimId]; if (!cl) return null;
+      if (cl.type === "NCPDP") return null;
       var resid = (cl.lines || []).some(function (l) { return l.cpt === "H0018"; });
       var dialysis = (cl.lines || []).some(function (l) { return l.cpt === "90935"; });
       var em = (cl.lines || []).some(function (l) { return /^99/.test(l.cpt); });
@@ -801,6 +820,7 @@
       "N19": "Procedure code incidental to primary procedure.",
       "N130": "Consult plan benefit documents/guidelines for information about restrictions for this service.",
       "M80": "Not covered when performed during the same session/date as a previously processed service.",
+      "M123": "Missing/incomplete/invalid name, strength, or dosage of the drug furnished.",
       "N59": "Please refer to your provider manual for additional program and provider information."
     },
     // Post-payment integrity remark attached to a flagged line, keyed by the rule that
@@ -812,6 +832,7 @@
       if (ids.indexOf("model_em_peer") >= 0) return { rarc: "N657", carc: "45", text: "Level-5 E/M not substantiated by the record — documentation supports 99213. Recoverable as the level-of-service differential.", recover: true };
       if (ids.indexOf("rule_ncci_43235_43239") >= 0 || ids.indexOf("rule_mod59") >= 0) return { rarc: "N19", carc: "97", text: "Diagnostic endoscopy is a component of 43239; modifier 59 not substantiated by a distinct procedural service. Recoverable as bundled.", recover: true };
       if (ids.indexOf("model_los") >= 0) return { rarc: "N130", carc: "16", text: "Continued-stay days beyond the authorized 14 are not supported by continued-stay criteria. Recoverable for the unauthorized days.", recover: true };
+      if (ids.indexOf("rule_rx_nondispense") >= 0) return { rarc: "M123", carc: "16", text: "Brand billed with DAW 1 but a generic equivalent is available with no documented medical necessity; no dispensing (pickup) record on file for the quantity billed. Recoverable as non-dispensed / DAW misuse.", recover: true };
       if (ids.indexOf("model_freq") >= 0) return { rarc: "N59", carc: null, text: "Frequency flagged by the model; clinical review found it consistent with the ESRD standing order (M/W/F). No adjustment.", recover: false };
       return { rarc: "N59", carc: null, text: "Flagged for post-payment integrity review — see the rule-engine outcomes on the Evidence tab.", recover: false };
     },
@@ -823,6 +844,7 @@
     // service lines + remittance, all reconciled to the existing paidAmount.
     getClaimDetail: function (claimId) {
       var cl = claims[claimId]; if (!cl) return null;
+      if (cl.type === "NCPDP") return this.getPharmacyDetail(claimId);
       var p = providers[cl.providerId] || {}, ve = veterans[cl.veteranId] || {};
       var inst = cl.type === "837I";
       var resid = (cl.lines || []).some(function (l) { return l.cpt === "H0018"; });
@@ -955,10 +977,13 @@
         l.carc.forEach(function (c) { adj.push({ category: { coding: [{ system: "http://terminology.hl7.org/CodeSystem/adjudication", code: "adjustmentreason" }] }, reason: { coding: [{ system: "https://x12.org/codes/claim-adjustment-reason-codes", code: c.group + "-" + c.code }] }, amount: money(c.amount) }); });
         var item = {
           sequence: l.lineNo,
-          productOrService: { coding: [{ system: "http://www.ama-assn.org/go/cpt", code: l.cpt, display: l.description }] },
-          servicedDate: cl.dateOfService, quantity: { value: l.units },
+          productOrService: l.ndc
+            ? { coding: [{ system: "http://hl7.org/fhir/sid/ndc", code: l.ndc, display: l.description }] }
+            : { coding: [{ system: "http://www.ama-assn.org/go/cpt", code: l.cpt, display: l.description }] },
+          servicedDate: cl.dateOfService, quantity: l.ndc ? { value: l.units, unit: "each" } : { value: l.units },
           unitPrice: money(l.submitted), net: money(l.submitted), adjudication: adj
         };
+        if (l.ndc && l.daysSupply) item.detail = [{ sequence: 1, productOrService: item.productOrService, quantity: { value: l.daysSupply, unit: "days-supply" } }];
         if (l.modifiers.length) item.modifier = l.modifiers.map(function (m) { return { coding: [{ system: "http://www.ama-assn.org/go/cpt", code: m }] }; });
         if (l.revenueCode) item.revenue = { coding: [{ system: "https://www.nubc.org/CodeSystem/RevenueCodes", code: l.revenueCode }] };
         return item;
@@ -970,6 +995,162 @@
       ];
       eob.payment = { amount: money(d.remittance.totals.paid) };
       return eob;
+    },
+
+    // ------------------------------------------------------------------
+    // Pharmacy (NCPDP / NDC) claim record — the same reviewer-grade shape as
+    // getClaimDetail but for a retail-pharmacy prescription claim. NDC lives here.
+    // Reconciles to the claim's paid amount the same way (veteran cost-share $0).
+    // ------------------------------------------------------------------
+    getPharmacyDetail: function (claimId) {
+      var cl = claims[claimId]; if (!cl) return null;
+      var p = providers[cl.providerId] || {}, ve = veterans[cl.veteranId] || {};
+      var rnd = this._seed(claimId, "rx"), self = this;
+      var npi = function () { return "1" + String(100000000 + Math.floor(rnd() * 899999999)); };
+      var prescriberNpi = npi();
+      var principal = (cl.diagnosisCodes || [])[0] || null;
+      var diagnoses = principal ? [{ seq: 1, code: principal, description: this.ICD10[principal] || "Diagnosis " + principal, type: "principal", poa: null }] : [];
+
+      var carcUsed = {}, rarcUsed = {};
+      var lines = (cl.lines || []).map(function (l, i) {
+        var flagged = (l.violatesRuleIds || []).length > 0;
+        var allowed = l.allowed, paid = l.paid;
+        var submitted = Math.max(l.billed, Math.round(allowed * (1.5 + rnd() * 0.9)));
+        var co45 = Math.round((submitted - allowed) * 100) / 100;
+        var carc = [];
+        if (co45 > 0) { carc.push({ group: "CO", code: "45", amount: co45 }); carcUsed["45"] = true; }
+        var remark = flagged ? self._integrityRemark(l.violatesRuleIds) : null;
+        if (remark) { rarcUsed[remark.rarc] = true; if (remark.carc) carcUsed[remark.carc] = true; }
+        return {
+          lineNo: i + 1, ndc: l.ndc, cpt: l.ndc, description: l.description, drugName: l.drugName || l.description,
+          modifiers: [], units: l.units || 1, qtyDispensed: l.qtyDispensed || l.units, daysSupply: l.daysSupply || null,
+          daw: l.daw || "0 — No product selection indicated", rxNumber: l.rxNumber || null, refill: l.refill || "00", prescriberNpi: prescriberNpi,
+          submitted: submitted, allowed: allowed, contractual: co45, patientResp: 0, paid: paid,
+          carc: carc, remark: remark, flagged: flagged
+        };
+      });
+      var sum = function (k) { return Math.round(lines.reduce(function (a, l) { return a + l[k]; }, 0) * 100) / 100; };
+      var totals = { submitted: sum("submitted"), contractual: sum("contractual"), allowed: sum("allowed"), patientResp: 0, paid: sum("paid") };
+      var recoverable = Math.round(lines.filter(function (l) { return l.remark && l.remark.recover; }).reduce(function (a, l) { return a + l.paid; }, 0) * 100) / 100;
+      var carcLegend = Object.keys(carcUsed).map(function (c) { return { code: c, group: self.CARC_CATALOG[c] ? self.CARC_CATALOG[c].group : "CO", label: self.CARC_CATALOG[c] ? self.CARC_CATALOG[c].label : c, kind: self.CARC_CATALOG[c] ? self.CARC_CATALOG[c].kind : "" }; });
+      var rarcLegend = Object.keys(rarcUsed).map(function (c) { return { code: c, label: self.RARC_CATALOG[c] || c }; });
+
+      return {
+        pharmacy: true,
+        header: {
+          controlNumber: cl.claimNumber, type: "NCPDP", formName: "NCPDP D.0 telecommunication (retail pharmacy)",
+          placeOfService: "01 — Pharmacy", billType: null, dateOfService: cl.dateOfService, statementDates: cl.dateOfService,
+          rxNumber: (lines[0] && lines[0].rxNumber) || null,
+          pharmacyName: p.name, pharmacyNpi: p.npi, ncpdpId: p.ncpdp || "—", pharmacyDea: cl.pharmacyDea || null,
+          binPcn: cl.binPcn || "610239 / VACCNRX",
+          prescriber: { name: cl.prescriber || "Dr. M. Alvarez", npi: prescriberNpi },
+          billingProvider: { name: p.name, npi: p.npi, tin: p.tin, taxonomy: p.taxonomyCode || "3336C0003X" },
+          payer: "VA Community Care Network — Pharmacy (VACCN Rx)", subscriber: { name: ve.name || "—", memberId: ve.memberId || "—", dob: ve.dob || "—", sex: ve.sex || "—" },
+          claimStatus: cl.claimStatus, paymentType: cl.paymentType, mode: cl.mode || "retrospective"
+        },
+        diagnoses: diagnoses, procedures: [], serviceLines: lines,
+        remittance: { totals: totals, patientResponsibility: 0, recoverable: recoverable, carc: carcLegend, rarc: rarcLegend },
+        reconciliation: "Submitted (ingredient cost + dispensing fee) − CO-45 contractual = plan allowed; allowed − $0 veteran cost-share = plan-paid. Plan-paid ties to the paid amount on file (" + usd(cl.paidAmount) + ")."
+      };
+    },
+
+    // NCPDP D.0 telecommunication representation (the pharmacy analog of get837).
+    getNcpdp: function (claimId) {
+      var cl = claims[claimId]; if (!cl || cl.type !== "NCPDP") return null;
+      var d = this.getPharmacyDetail(claimId); var h = d.header;
+      return {
+        transaction: { standard: "NCPDP Telecommunication D.0", type: "B1 — Billing", bin: (h.binPcn.split(" / ")[0] || "610239"), pcn: (h.binPcn.split(" / ")[1] || "VACCNRX"), softwareVendor: "VACCN-RXSWITCH" },
+        pharmacy: { qualifier: "01 — NPI", npi: h.pharmacyNpi, ncpdp: h.ncpdpId, name: h.pharmacyName, serviceProvider: "01 — Community/Retail" },
+        patient: { memberId: h.subscriber.memberId, name: h.subscriber.name, dob: h.subscriber.dob, gender: h.subscriber.sex, relationship: "1 — Cardholder" },
+        prescriber: { qualifier: "01 — NPI", npi: h.prescriber.npi, name: h.prescriber.name },
+        claim: { rxServiceRef: h.rxNumber || "—", rxQualifier: "1 — Rx Billing", dateOfService: h.dateOfService, payer: h.payer },
+        drugs: d.serviceLines.map(function (l, i) {
+          return {
+            line: i + 1, ndc: l.ndc, name: l.drugName, productQualifier: "03 — NDC",
+            qtyDispensed: l.qtyDispensed, daysSupply: l.daysSupply, daw: l.daw, refill: l.refill,
+            ingredientCost: l.submitted, dispensingFee: 1.40, patientPay: 0, planPaid: l.paid, flagged: l.flagged
+          };
+        })
+      };
+    },
+
+    // Pharmacy claims are NCPDP, not 837 — the professional-claim engines (NCCI, MPFS,
+    // MCG) don't apply. These early-outs let the Coding/Pricing/Utilization tabs show a
+    // clear "not applicable" note instead of nonsensical CPT-based output.
+    isPharmacyClaim: function (claimId) { var c = claims[claimId]; return !!(c && c.type === "NCPDP"); },
+
+    // ---- Phase B seed: subject-of-investigation coverage --------------------
+    // Adds a Pharmacy-subject lead (with a real NCPDP/NDC claim) and a Beneficiary-
+    // subject lead so all three subject types show out of the box. Deterministic and
+    // idempotent; inserts into the raw dataset AND the private lookup maps (the maps
+    // are built once at init, so seeding must live here rather than in app.js).
+    // All identifiers are impossible-to-be-real: NPI fails the 80840 check digit,
+    // TIN uses the 00- prefix, NDC uses the 00000 labeler (never FDA-assigned).
+    seedSubjects: function () {
+      if (providers["PRX01"]) return; // already seeded this session
+
+      // -- synthetic pharmacy (the Pharmacy subject) --
+      var pharm = {
+        id: "PRX01", name: "Lone Star Community Pharmacy", npi: "1730495861", tin: "00-4471903",
+        ncpdp: "5551180", taxonomyCode: "3336C0003X", taxonomyLabel: "Community/Retail Pharmacy",
+        city: "El Paso", state: "TX", peerGroup: "Pharmacy", role: "star",
+        claimCount: 4120, totalPaid: 0, openAllegations: 1, riskScore: 87, groupScores: [], groupAttributes: {}, history: []
+      };
+      D.providers.push(pharm); providers[pharm.id] = pharm;
+
+      // -- pharmacy NCPDP/NDC claim (NDC lives here) --
+      var rxClaim = {
+        id: "CPH01", claimNumber: "RX7742019-00-63", type: "NCPDP", providerId: "PRX01", veteranId: "V0001",
+        dateOfService: "2025-05-14", diagnosisCodes: ["E11.9"], claimStatus: "Paid", paymentType: "POST", mode: "retrospective",
+        binPcn: "610239 / VACCNRX", prescriber: "Dr. Helen Ruiz",
+        billedAmount: 4704, allowedAmount: 4704, paidAmount: 4704,
+        authorizationId: null, paymentId: "PRX0001",
+        lines: [
+          { ndc: "00000-0471-30", drugName: "Insulin glargine 100 units/mL (brand)", description: "Insulin glargine 100 units/mL — 3 × 10 mL vials", units: 30, qtyDispensed: "30 mL", daysSupply: 30, daw: "1 — Substitution not allowed (brand medically necessary)", rxNumber: "RX-4471902", refill: "02", billed: 4680, allowed: 4680, paid: 4680, violatesRuleIds: ["rule_rx_nondispense"] },
+          { ndc: "00000-2231-05", drugName: "Metformin HCl 500 mg tablet (generic)", description: "Metformin HCl 500 mg — 60 tablets", units: 60, qtyDispensed: "60 ea", daysSupply: 30, daw: "0 — No product selection indicated", rxNumber: "RX-4471903", refill: "05", billed: 24, allowed: 24, paid: 24, violatesRuleIds: [] }
+        ]
+      };
+      D.claims.push(rxClaim); claims[rxClaim.id] = rxClaim;
+
+      // -- rules the new leads reference (so Evidence resolves real rule objects) --
+      [
+        { id: "rule_rx_nondispense", code: "RX-NONDISP", name: "Prescription non-dispensing / DAW screen", source: "VA CCN policy", category: "Integrity", description: "Prescription billed with no matching dispensing (pickup) record, or brand billed under DAW-1 without documented medical necessity where a generic equivalent exists.", version: "1.0", effectiveDate: "2025-03-01", environment: "Production" },
+        { id: "rule_ben_identity", code: "BEN-IDENT", name: "Beneficiary identity / card-sharing screen", source: "VA CCN policy", category: "Integrity", description: "One member ID billed across multiple unrelated providers with overlapping dates of service or duplicate high-cost services — indicates beneficiary identity misuse or card sharing.", version: "1.0", effectiveDate: "2025-02-01", environment: "Production" }
+      ].forEach(function (r) { if (!rules[r.id]) { D.rules.push(r); rules[r.id] = r; } });
+
+      // -- the two leads --
+      [
+        {
+          id: "20805", providerId: "PRX01", claimId: "CPH01", subjectType: "Pharmacy", fwaType: "Non-dispensed prescriptions",
+          riskScore: 87, confidence: 91, source: "Rules Engine", sourceType: "Rules", claimType: "NCPDP", status: "New", assignee: null,
+          mode: "retrospective", exposurePre: 0, exposurePost: 61400, submittedForRecovery: 0, verifiedRecoupment: 0, narrative: "",
+          ruleIds: ["rule_rx_nondispense"], modelId: null, createdDate: "2026-06-30",
+          xai: {
+            summary: "Lone Star Community Pharmacy shows a 22% rate of brand DAW-1 fills with no matching pickup (dispensing) record, concentrated in high-cost insulins and specialty drugs — 8.1σ above the retail-pharmacy peer norm. Pattern indicates billing for non-dispensed prescriptions and DAW-1 misuse.",
+            factors: [
+              { label: "Brand DAW-1 no-pickup rate", value: "22%", benchmark: "peer 1.3%" },
+              { label: "Deviation", value: "8.1σ above peer group" },
+              { label: "NDC in pattern", value: "Insulin glargine (brand)" },
+              { label: "Claims in pattern", value: "906 of 4,120" }
+            ]
+          }
+        },
+        {
+          id: "20806", providerId: "PR100", claimId: null, subjectType: "Beneficiary", subjectVeteranId: "V0007", fwaType: "Beneficiary identity misuse",
+          riskScore: 78, confidence: 84, source: "Data mining", sourceType: "Data mining", status: "New", assignee: null,
+          mode: "retrospective", exposurePre: 0, exposurePost: 18900, submittedForRecovery: 0, verifiedRecoupment: 0, narrative: "",
+          ruleIds: ["rule_ben_identity"], modelId: null, createdDate: "2026-07-05",
+          xai: {
+            summary: "One member ID appears on claims from 6 distinct providers across TX, AZ and NM inside a 21-day window, with overlapping service dates and duplicate high-cost fills. The concentration points to beneficiary-side identity misuse / card sharing rather than any single provider's billing error.",
+            factors: [
+              { label: "Distinct billers · 21 days", value: "6 providers" },
+              { label: "States", value: "TX · AZ · NM" },
+              { label: "Overlapping DOS", value: "4 same-day pairs" },
+              { label: "Duplicate high-cost fills", value: "3" }
+            ]
+          }
+        }
+      ].forEach(function (a) { if (!D.allegations.some(function (x) { return x.id === a.id; })) D.allegations.push(a); });
     }
   };
 })();

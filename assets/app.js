@@ -802,6 +802,7 @@
       APP.setModeHeader();
       APP.setRoleHeader();
       APP.auditLog("SESSION_START", APP.ROLES[APP.state.role].name + " signed in · " + (window.SB && window.SB.enabled ? "authenticated" : "PIV authenticated"));
+      if (window.DP.seedSubjects) window.DP.seedSubjects();
       APP.seedManualLeads();
       APP.seedCases();
       APP.seedCaseReviews();
@@ -837,7 +838,15 @@
     // A lead's shown status: once it's reviewed & confirmed/escalated it has fed a
     // case, so it reads "Pending Case" (the lead's terminal state) in the queues.
     leadStatus: function (a) { return (window.DP && window.DP.isCaseLead && window.DP.isCaseLead(a)) ? "Pending Case" : a.status; },
-    srcTag: function (s) { var lbl = s === "Pattern Recognition" ? "ML/AI" : s === "Rules Engine" ? "Rules" : s === "Both" ? "ML/AI + Rules" : s; return '<span class="muted" style="font-size:10.5px">' + window.APP.esc(lbl) + '</span>'; }
+    srcTag: function (s) { var lbl = s === "Pattern Recognition" ? "ML/AI" : s === "Rules Engine" ? "Rules" : s === "Both" ? "ML/AI + Rules" : s; return '<span class="muted" style="font-size:10.5px">' + window.APP.esc(lbl) + '</span>'; },
+    // Subject-of-investigation badge (Provider / Beneficiary / Pharmacy).
+    subjectBadge: function (aOrType, opts) {
+      opts = opts || {};
+      var t = typeof aOrType === "string" ? aOrType : (window.DP.subjectTypeOf ? window.DP.subjectTypeOf(aOrType) : "Provider");
+      var def = (window.DP.SUBJECT_TYPES && window.DP.SUBJECT_TYPES[t]) || { label: t, icon: "user", tone: "asg", desc: "" };
+      return '<span class="pill p-' + def.tone + '"' + (def.desc ? ' title="Subject of investigation — ' + window.APP.esc(def.desc) + '"' : '') + ' style="font-size:' + (opts.small ? "10px" : "10.5px") + '">' +
+        '<i class="ti ti-' + def.icon + '" style="font-size:11px"></i> ' + (opts.prefix ? "Subject: " : "") + window.APP.esc(def.label) + '</span>';
+    }
   };
 
   // Boot is orchestrated by supabase.js (auth gate in Supabase mode, or immediate in local mode).
