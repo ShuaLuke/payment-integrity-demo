@@ -727,11 +727,11 @@
       home: [],
       casework: [{ v: "queue", l: "Leads", role: "analyst" }, { v: "approvals", l: "Approvals", role: "supervisor" }, { v: "casereviews", l: "Case reviews", role: "supervisor" }, { v: "team", l: "Team", role: "supervisor" }, { v: "investigations", l: "Cases" }],
       insights: [{ v: "analytics", l: "Overview" }, { v: "network", l: "Network" }, { v: "businesses", l: "Businesses" }, { v: "heatmap", l: "Heatmap" }],
-      library: [{ v: "rules", l: "Rules" }, { v: "audit", l: "Audit" }]
+      library: [{ v: "rules", l: "Rules" }, { v: "releases", l: "Releases" }, { v: "audit", l: "Audit" }]
     },
     // portal maps to its own area (no nav item / no subnav) — it is a takeover
     // screen simulating the provider's world, not part of the analyst IA.
-    VIEW_AREA: { home: "home", queue: "casework", claim: "casework", investigations: "casework", approvals: "casework", casereviews: "casework", team: "casework", provider: "insights", analytics: "insights", network: "insights", businesses: "insights", business: "insights", heatmap: "insights", rules: "library", audit: "library", portal: "portal" },
+    VIEW_AREA: { home: "home", queue: "casework", claim: "casework", investigations: "casework", approvals: "casework", casereviews: "casework", team: "casework", provider: "insights", analytics: "insights", network: "insights", businesses: "insights", business: "insights", heatmap: "insights", rules: "library", releases: "library", audit: "library", portal: "portal" },
     subsFor: function (area) { return (APP.SUBS[area] || []).filter(function (s) { return !s.role || s.role === APP.state.role; }); },
     areaOf: function (view) { return APP.VIEW_AREA[view] || "casework"; },
     openArea: function (area) {
@@ -748,7 +748,7 @@
       if (s.view === "claim") return "Lead #" + s.allegationId;
       if (s.view === "provider") { var p = window.DP.getProvider(s.providerId); return p ? p.name : "Provider"; }
       if (s.view === "business") { var b = window.DP.getBusiness(s.businessId); return b ? b.name : "Business"; }
-      var map = { queue: "Leads", home: "Home", investigations: "Cases", approvals: "Approvals", casereviews: "Case reviews", analytics: "Analytics", network: "Network", businesses: "Businesses", heatmap: "Heatmap", rules: "Rules", audit: "Audit" };
+      var map = { queue: "Leads", home: "Home", investigations: "Cases", approvals: "Approvals", casereviews: "Case reviews", analytics: "Analytics", network: "Network", businesses: "Businesses", heatmap: "Heatmap", rules: "Rules", releases: "Releases", audit: "Audit" };
       return map[s.view] || "Back";
     },
     backLabel: function () { return APP.state.hist && APP.state.hist.length ? APP.labelForSnap(APP.state.hist[APP.state.hist.length - 1]) : "Leads"; },

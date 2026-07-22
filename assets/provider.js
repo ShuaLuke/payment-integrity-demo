@@ -328,6 +328,109 @@
     },
 
     getModels: function () { return D.models; },
+
+    // ---- CI/CD & release management (Round 6 Phase E) ---------------------
+    // Simulated release pipeline for the app + rule-promotion history through the
+    // controlled environments (dev → test → pre-prod → prod). Static / deterministic
+    // (no data regen). All personas synthetic. Fixed timestamps (no Date.now).
+    getReleasePipeline: function () {
+      var env = function (key, label, appVer, ruleSet, deployedAt, gate, health) { return { key: key, label: label, appVersion: appVer, ruleSet: ruleSet, deployedAt: deployedAt, gate: gate, health: health }; };
+      var stage = function (name, status, dur) { return { name: name, status: status, duration: dur }; };
+      return {
+        environments: [
+          env("dev", "Development", "v2.7.0-rc3", "R2025.07", "2026-07-22 08:14", "Auto-deploy on merge", "healthy"),
+          env("test", "Test / QA", "v2.7.0-rc2", "R2025.07", "2026-07-21 16:02", "QA sign-off", "healthy"),
+          env("preprod", "Pre-prod / UAT", "v2.6.4", "R2025.06", "2026-07-18 11:30", "UAT sign-off", "healthy"),
+          env("prod", "Production", "v2.6.3", "R2025.06", "2026-07-15 09:05", "VA Change Advisory Board", "healthy")
+        ],
+        builds: [
+          {
+            id: "#1487", version: "v2.7.0-rc3", branch: "round6-claim-detail", commit: "e029039", trigger: "Merge → main", startedAt: "2026-07-22 08:10", duration: "4m 21s", status: "Succeeded", target: "dev",
+            stages: [stage("Checkout", "passed", "3s"), stage("Build (static site — no bundler)", "passed", "18s"), stage("Unit / view checks", "passed", "1m 12s"), stage("Secret scan — IBM Vault Radar", "passed", "22s"), stage("SAST", "passed", "48s"), stage("Deploy → dev (GitHub Pages)", "passed", "41s"), stage("Smoke test", "passed", "57s")],
+            log: [
+              "[checkout] round6-claim-detail @ e029039",
+              "[build] static site — no build step; 42 assets verified",
+              "[test] 134 view/DP checks passed",
+              "[scan] IBM Vault Radar — no secrets detected",
+              "[scan] SAST — 0 high · 0 medium · 2 low (accepted)",
+              "[deploy:dev] published to GitHub Pages in 41s",
+              "[smoke] boot OK · 6 areas reachable · 0 console errors",
+              "[done] build #1487 succeeded"
+            ]
+          },
+          {
+            id: "#1486", version: "v2.7.0-rc2", branch: "round6-claim-detail", commit: "5e98131", trigger: "Merge → main", startedAt: "2026-07-21 15:52", duration: "4m 08s", status: "Succeeded", target: "test",
+            stages: [stage("Checkout", "passed", "3s"), stage("Build", "passed", "17s"), stage("Unit / view checks", "passed", "1m 06s"), stage("Secret scan", "passed", "21s"), stage("SAST", "passed", "47s"), stage("Deploy → dev", "passed", "39s"), stage("Integration tests", "passed", "1m 02s"), stage("Promote → test", "passed", "13s")],
+            log: [
+              "[checkout] round6-claim-detail @ 5e98131",
+              "[build] static site — 42 assets verified",
+              "[test] 128 checks passed",
+              "[scan] IBM Vault Radar — no secrets detected",
+              "[deploy:dev] published in 39s",
+              "[integration] subject badges + pharmacy NCPDP claim verified",
+              "[promote:test] QA sign-off — Priya Nair",
+              "[done] build #1486 succeeded"
+            ]
+          },
+          {
+            id: "#1481", version: "v2.6.4", branch: "main", commit: "ccec722", trigger: "Release cut", startedAt: "2026-07-18 11:18", duration: "6m 44s", status: "Succeeded", target: "preprod",
+            stages: [stage("Checkout", "passed", "3s"), stage("Build", "passed", "19s"), stage("Unit / view checks", "passed", "1m 10s"), stage("Secret scan", "passed", "23s"), stage("SAST", "passed", "51s"), stage("Deploy → dev", "passed", "40s"), stage("Integration tests", "passed", "1m 08s"), stage("Deploy → test", "passed", "38s"), stage("UAT sign-off", "passed", "—"), stage("Promote → pre-prod", "passed", "15s")],
+            log: [
+              "[checkout] main @ ccec722",
+              "[test] 121 checks passed",
+              "[scan] IBM Vault Radar — no secrets detected",
+              "[uat] pre-prod UAT sign-off — Dana Whitmore",
+              "[promote:preprod] rule set R2025.06 attached",
+              "[done] build #1481 succeeded"
+            ]
+          },
+          {
+            id: "#1468", version: "v2.6.2-hotfix", branch: "hotfix/pricing-locality", commit: "a91d004", trigger: "Hotfix", startedAt: "2026-07-09 13:40", duration: "2m 51s", status: "Failed", target: "test",
+            stages: [stage("Checkout", "passed", "3s"), stage("Build", "passed", "16s"), stage("Unit / view checks", "failed", "1m 20s"), stage("Secret scan", "skipped", "—"), stage("Deploy → dev", "skipped", "—")],
+            log: [
+              "[checkout] hotfix/pricing-locality @ a91d004",
+              "[test] FAIL — pricing locality regression (2 checks)",
+              "[test] expected MPFS locality 05 · got 04",
+              "[gate] pipeline halted — fix required before deploy",
+              "[done] build #1468 failed"
+            ]
+          }
+        ],
+        rulePromotions: [
+          { code: "EM-LEVEL", name: "E/M level validation", version: "v2.1", steps: [
+            { env: "dev", version: "v2.1", at: "2026-06-20 10:02", approver: "Auto (merge)", status: "promoted" },
+            { env: "test", version: "v2.1", at: "2026-06-24 14:11", approver: "Priya Nair (QA)", status: "promoted" },
+            { env: "preprod", version: "v2.1", at: "2026-06-28 09:40", approver: "Dana Whitmore (UAT)", status: "promoted" },
+            { env: "prod", version: "v2.1", at: "2026-07-01 09:05", approver: "VA CAB — Karen Boyd", status: "live" }
+          ] },
+          { code: "NCCI-PTP", name: "NCCI PTP edit set", version: "v31.1", steps: [
+            { env: "dev", version: "v31.1", at: "2026-06-30 08:00", approver: "Auto (quarterly load)", status: "promoted" },
+            { env: "test", version: "v31.1", at: "2026-07-02 13:20", approver: "Priya Nair (QA)", status: "promoted" },
+            { env: "preprod", version: "v31.1", at: "2026-07-05 10:15", approver: "Dana Whitmore (UAT)", status: "promoted" },
+            { env: "prod", version: "v31.1", at: "2026-07-08 09:00", approver: "VA CAB — Karen Boyd", status: "live" }
+          ] },
+          { code: "RX-NONDISP", name: "Prescription non-dispensing / DAW screen", version: "v1.0", steps: [
+            { env: "dev", version: "v1.0", at: "2026-07-19 11:00", approver: "Auto (merge)", status: "promoted" },
+            { env: "test", version: "v1.0", at: "2026-07-21 15:30", approver: "Priya Nair (QA)", status: "promoted" },
+            { env: "preprod", version: "v1.0", at: "—", approver: "Pending UAT", status: "pending" },
+            { env: "prod", version: "—", at: "—", approver: "—", status: "blocked" }
+          ] },
+          { code: "MED-NEC", name: "Medical-necessity / level-of-care", version: "v1.6", steps: [
+            { env: "dev", version: "v1.6", at: "2026-06-15 09:30", approver: "Auto (merge)", status: "promoted" },
+            { env: "test", version: "v1.6", at: "2026-06-18 14:00", approver: "Priya Nair (QA)", status: "promoted" },
+            { env: "preprod", version: "v1.6", at: "2026-06-22 10:00", approver: "Dana Whitmore (UAT)", status: "promoted" },
+            { env: "prod", version: "v1.6", at: "2026-06-25 09:05", approver: "VA CAB — Karen Boyd", status: "live" }
+          ] },
+          { code: "EXCL-LEIE", name: "OIG LEIE exclusion screening", version: "v2.0", steps: [
+            { env: "dev", version: "v2.0", at: "2026-06-27 08:10", approver: "Auto (monthly LEIE load)", status: "promoted" },
+            { env: "test", version: "v2.0", at: "2026-06-29 13:00", approver: "Priya Nair (QA)", status: "promoted" },
+            { env: "preprod", version: "v2.0", at: "2026-07-01 10:30", approver: "Dana Whitmore (UAT)", status: "promoted" },
+            { env: "prod", version: "v2.0", at: "2026-07-03 09:00", approver: "VA CAB — Karen Boyd", status: "live" }
+          ] }
+        ]
+      };
+    },
+
     getPrecedent: function (pid) { return (D.precedents || []).find(function (p) { return p.id === pid; }) || null; },
     // ---- business entities (TrackLight-style): providers grouped by a shared
     // business registration (holding company) or a shared TIN (one billing entity). ----
