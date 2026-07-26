@@ -578,6 +578,25 @@
       // fallback until the portal view ships: log the upload directly
       APP.receiveRecords(id, { name: "provider-records_Lead-" + id + ".pdf", size: 348000, via: "portal" });
     },
+    // Logo toggle: jump into the provider portal (upload docs), or back out to the
+    // view you were on. Opens the portal against the lead you're looking at, else a
+    // sensible default, seeding a portal records-request so it has context.
+    togglePortal: function () {
+      if (APP.state.view === "portal") {
+        APP.state._portalStaged = [];
+        var snap = APP.state._prePortalSnap;
+        APP.state._prePortalSnap = null;
+        if (snap && snap.view && snap.view !== "portal") {
+          APP.state.allegationId = snap.allegationId; APP.state.providerId = snap.providerId; APP.state.businessId = snap.businessId;
+          APP.nav(snap.view, { id: snap.allegationId || snap.businessId });
+        } else { APP.openArea("home"); }
+        return;
+      }
+      var id = APP.state.allegationId || "20481";
+      APP.state._prePortalSnap = APP.snapshot();
+      if (APP.recordsRequestFor && !APP.recordsRequestFor(id)) APP.requestRecords(id, { channel: "portal", items: "Progress notes and E/M documentation supporting the level billed." });
+      APP.openPortal(id);
+    },
 
     // ---- generated artifacts (AI justification memos attached to a lead) ----
     // Unlike uploads (name + size only), an artifact carries its body, so it can be
@@ -794,6 +813,8 @@
       document.querySelectorAll(".navitem").forEach(function (n) {
         n.addEventListener("click", function () { APP.openArea(n.getAttribute("data-area")); });
       });
+      var brand = document.querySelector(".brand");
+      if (brand) { brand.style.cursor = "pointer"; brand.title = "Provider portal — upload records (click again to return)"; brand.addEventListener("click", function () { APP.togglePortal(); }); }
       var rs = document.getElementById("role-switch");
       if (rs) rs.addEventListener("click", APP.toggleRole);
       var rd = document.getElementById("reset-demo");
