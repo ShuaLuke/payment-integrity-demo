@@ -1207,6 +1207,14 @@
           claimStatus: cl.claimStatus, paymentType: cl.paymentType, mode: cl.mode || "retrospective"
         },
         diagnoses: diagnoses, procedures: procedures, serviceLines: lines,
+        benefitContract: {
+          benefitPlan: "VA Community Care — Medical benefit",
+          coverage: "Covered service · adjudicated in-network",
+          costShare: "Veteran cost-share $0 · no deductible / copay / coinsurance",
+          network: "In-network · VA Community Care Network",
+          rateBasis: "Contracted rate — CMAC / CMS " + (inst ? "OPPS" : "MPFS") + " fee schedule · " + (p.state || "TX") + " locality 05",
+          authorization: cl.authorizationId ? ("Prior authorization " + cl.authorizationId + " on file") : "No prior authorization required for this service"
+        },
         remittance: { totals: totals, patientResponsibility: 0, recoverable: recoverable, carc: carcLegend, rarc: rarcLegend },
         reconciliation: "Submitted charge − CO-45 contractual write-off = fee-schedule allowed; allowed − $0 veteran cost-share = payer-paid. Payer-paid ties to the paid amount on file (" + usd(cl.paidAmount) + ")."
       };
@@ -1320,6 +1328,14 @@
           claimStatus: cl.claimStatus, paymentType: cl.paymentType, mode: cl.mode || "retrospective"
         },
         diagnoses: diagnoses, procedures: [], serviceLines: lines,
+        benefitContract: {
+          benefitPlan: "VA Community Care — Pharmacy benefit",
+          coverage: "Covered drug · on formulary · adjudicated in-network",
+          costShare: "Veteran cost-share $0 · no copay",
+          network: "In-network · VA CCN pharmacy network",
+          rateBasis: "Contracted rate — NADAC / pharmacy fee schedule + dispensing fee",
+          authorization: cl.authorizationId ? ("Prior authorization " + cl.authorizationId + " on file") : "No prior authorization required for this drug"
+        },
         remittance: { totals: totals, patientResponsibility: 0, recoverable: recoverable, carc: carcLegend, rarc: rarcLegend },
         reconciliation: "Submitted (ingredient cost + dispensing fee) − CO-45 contractual = plan allowed; allowed − $0 veteran cost-share = plan-paid. Plan-paid ties to the paid amount on file (" + usd(cl.paidAmount) + ")."
       };

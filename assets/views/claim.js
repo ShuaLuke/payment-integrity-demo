@@ -23,6 +23,42 @@
       '<i class="ti ti-' + (pre ? "shield-half" : "receipt-2") + '" style="font-size:11px"></i> ' + exposureType(a) + '</span>';
   }
 
+  // ---- subject tiles (left rail) ----
+  // The core healthcare entities on this lead, summarized as tiles: the PRIMARY entity
+  // under review (subject of investigation) plus the provider, beneficiary and others.
+  // Each entity has its own profile; the tile links to it where one exists.
+  function subjectTilesHtml(a, p, ve, ring, biz) {
+    var esc = window.APP.esc, st = a.subjectType || "Provider";
+    var primaryBadge = '<span class="pill p-conf" style="font-size:9px;padding:1px 6px"><i class="ti ti-target"></i> Primary subject</span>';
+    var tiles = [];
+    if (p && p.id) {
+      var isPharm = st === "Pharmacy", provPrimary = (st === "Provider" || st === "Pharmacy");
+      tiles.push('<div style="border:0.5px solid ' + (provPrimary ? "var(--accent)" : "var(--border)") + ';border-radius:8px;padding:8px 9px;background:' + (provPrimary ? "var(--accent-l)" : "#fff") + '">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:5px;margin-bottom:2px"><span style="font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--text2)"><i class="ti ti-' + (isPharm ? "prescription" : "building-hospital") + '"></i> ' + (isPharm ? "Pharmacy" : "Provider") + '</span>' + (provPrimary ? primaryBadge : "") + '</div>' +
+        '<div id="c-prov" style="font-weight:600;font-size:12.5px;color:var(--accent-d);cursor:pointer">' + esc(p.name) + ' <i class="ti ti-external-link" style="font-size:10px"></i></div>' +
+        '<div style="font-size:10.5px;color:var(--text2)">' + esc(p.taxonomyLabel || "") + '</div>' +
+        '<div class="mono" style="font-size:10.5px;line-height:1.55;margin-top:3px">NPI ' + p.npi + (isPharm && p.ncpdp ? '<br>NCPDP ' + p.ncpdp : "") + '<br>TIN ' + (ring ? '<span style="background:var(--high-bg);color:var(--high-tx);padding:0 3px;border-radius:3px">' + p.tin + '</span>' : p.tin) + '</div>' +
+        '<div style="font-size:10.5px;color:var(--text2);margin-top:3px">' + esc(p.city || "") + ', ' + (p.state || "") + ' · ' + (p.claimCount || 0) + ' claims · ' + (p.openAllegations || 0) + ' open</div>' +
+        '<div id="c-net" style="font-size:11px;color:var(--accent-d);margin-top:5px;cursor:pointer;display:flex;align-items:center;gap:4px"><i class="ti ti-share-3"></i>View in network</div></div>');
+    }
+    if (ve) {
+      var benPrimary = st === "Beneficiary";
+      tiles.push('<div style="border:0.5px solid ' + (benPrimary ? "var(--accent)" : "var(--border)") + ';border-radius:8px;padding:8px 9px;background:' + (benPrimary ? "var(--accent-l)" : "#fff") + '">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:5px;margin-bottom:2px"><span style="font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--text2)"><i class="ti ti-user-heart"></i> Beneficiary</span>' + (benPrimary ? primaryBadge : "") + '</div>' +
+        '<div style="font-weight:600;font-size:12.5px">' + esc(ve.name) + '</div>' +
+        '<div class="mono" style="font-size:10.5px;color:var(--text2);line-height:1.55">DOB ' + ve.dob + ' · ' + ve.sex + '<br>' + ve.memberId + '</div></div>');
+    }
+    if (biz) {
+      tiles.push('<div style="border:0.5px solid var(--border);border-radius:8px;padding:8px 9px;background:#fff">' +
+        '<div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);margin-bottom:2px"><i class="ti ti-building-community"></i> Billing entity</div>' +
+        '<div id="c-bizentity" style="font-weight:600;font-size:12.5px;color:var(--accent-d);cursor:pointer">' + esc(biz.name) + ' <i class="ti ti-external-link" style="font-size:10px"></i></div>' +
+        '<div class="mono" style="font-size:10.5px;color:var(--text2)">TIN ' + (biz.tin || p.tin) + ' · ' + (biz.providerCount || 0) + ' providers</div>' +
+        (ring ? '<div style="font-size:10.5px;color:var(--high);margin-top:3px"><i class="ti ti-affiliate"></i> Shared TIN — provider ring</div>' : "") + '</div>');
+    }
+    return '<div class="card"><div class="l" style="font-size:10.5px;color:var(--text2);margin-bottom:7px">Subjects on this lead <span style="color:var(--text3)">· primary + related entities</span></div>' +
+      '<div style="display:flex;flex-direction:column;gap:7px">' + tiles.join("") + '</div></div>';
+  }
+
   window.Views.claim = {
     render: function (mount, params) {
       var id = params.id || window.APP.state.allegationId;
@@ -32,6 +68,7 @@
       var prepay = (a.mode === "prepay");
       var dec = prepay ? window.APP.prepayDecisionFor(id) : window.APP.decisionFor(id);
       var ring = p.tin && sharesTin(p);
+      var biz = (ring && p.tin) ? (window.DP.listBusinesses({ all: true }) || []).find(function (b) { return b.tin === p.tin; }) : null;
       if (id !== lastId) { curTab = "overview"; claimView = "summary"; lastId = id; }
       if (id === "20517" && window.APP.state.highlightRule) { curTab = "coding"; }
       ctx = { id: id, a: a, cl: cl, p: p, prepay: prepay };
@@ -56,14 +93,8 @@
         '<div class="split" style="display:flex;gap:12px;align-items:flex-start">' +
         // ---- left rail (identity + evidence) ----
         '<div class="rail" style="width:200px;flex:none;display:flex;flex-direction:column;gap:10px">' +
-        '<div class="card"><div class="l" style="font-size:10.5px;color:var(--text2);margin-bottom:6px">Provider</div>' +
-        '<div id="c-prov" style="font-weight:600;font-size:13px;color:var(--accent-d);cursor:pointer">' + window.APP.esc(p.name) + ' <i class="ti ti-external-link" style="font-size:11px"></i></div><div style="font-size:11px;color:var(--text2);margin-bottom:7px">' + window.APP.esc(p.taxonomyLabel || "") + ' · ' + (p.taxonomyCode || "") + '</div>' +
-        '<div class="mono" style="font-size:11px;line-height:1.6">NPI ' + p.npi + '<br>TIN ' + (ring ? '<span style="background:var(--high-bg);color:var(--high-tx);padding:0 3px;border-radius:3px">' + p.tin + '</span>' : p.tin) + '</div>' +
-        (ring ? '<div style="font-size:11px;color:var(--high);margin-top:5px;display:flex;align-items:center;gap:4px"><i class="ti ti-affiliate"></i>Shared TIN — provider ring</div>' : '') +
-        '<div style="font-size:11px;color:var(--text2);margin-top:6px">' + window.APP.esc(p.city || "") + ', ' + (p.state || "") + ' · ' + (p.claimCount || 0) + ' claims · ' + (p.openAllegations || 0) + ' open</div>' +
-        '<div style="font-size:11.5px;color:var(--accent-d);margin-top:7px;cursor:pointer;display:flex;align-items:center;gap:4px" id="c-net"><i class="ti ti-share-3"></i>View in network</div></div>' +
+        subjectTilesHtml(a, p, ve, ring, biz) +
         (window.APP.isSupervisor() ? '<div class="card"><div class="l" style="font-size:10.5px;color:var(--text2);margin-bottom:6px">Assignment</div><div style="font-size:11.5px;color:var(--text2);margin-bottom:6px">Currently: <span style="color:var(--ink);font-weight:500">' + (a.assignee || "Unassigned") + '</span></div><select id="c-assign" class="input" style="font-size:12px">' + assignOptions(a.assignee) + '</select></div>' : '') +
-        (ve ? '<div class="card"><div class="l" style="font-size:10.5px;color:var(--text2);margin-bottom:6px">Veteran</div><div style="font-weight:500;font-size:12.5px">' + window.APP.esc(ve.name) + '</div><div class="mono" style="font-size:11px;color:var(--text2);line-height:1.6">DOB ' + ve.dob + ' · ' + ve.sex + '<br>' + ve.memberId + '</div></div>' : '') +
         '<div class="card"><div class="l" style="font-size:10.5px;color:var(--text2);margin-bottom:7px">Evidence on file</div>' +
         '<div id="c-docs" style="display:flex;flex-direction:column;gap:5px">' + docsHtml + '</div>' +
         '<div id="c-doc" style="margin-top:8px"></div>' +
@@ -83,6 +114,8 @@
       var asg = document.getElementById("c-assign");
       if (asg) asg.addEventListener("change", function () { window.APP.assignCase(id, this.value === "__unassigned__" ? null : this.value); rerender(id); });
       document.getElementById("c-prov").addEventListener("click", function () { window.APP.openProvider(p.id); });
+      var bizEl = document.getElementById("c-bizentity");
+      if (bizEl && biz) bizEl.addEventListener("click", function () { window.APP.openBusiness(biz.id); });
       mount.querySelectorAll(".doc-row").forEach(function (row) {
         row.addEventListener("click", function () {
           var key = row.getAttribute("data-doc");
@@ -530,7 +563,18 @@
       '<tr style="font-weight:600;border-top:1px solid var(--border)"><td colspan="4">Claim total</td><td class="right">' + m(t.submitted) + '</td><td class="right" style="color:var(--text2)">−' + m(t.contractual) + '</td><td class="right">' + m(t.allowed) + '</td><td class="right">' + m(t.patientResp) + '</td><td class="right">' + m(t.paid) + '</td><td></td></tr>' +
       '</tbody></table></div></div>';
 
-    return '<div style="display:flex;flex-direction:column;gap:10px">' + headerCard + dxCard + procCard + slCard + remittanceCardHtml(d) + '</div>';
+    return '<div style="display:flex;flex-direction:column;gap:10px">' + headerCard + dxCard + procCard + slCard + benefitContractHtml(d) + remittanceCardHtml(d) + '</div>';
+  }
+
+  // Benefit & contract terms governing the service lines (coverage + contracted rate).
+  function benefitContractHtml(d) {
+    var bc = d.benefitContract; if (!bc) return "";
+    return '<div class="card"><div style="font-weight:500;font-size:13px;margin-bottom:6px"><i class="ti ti-shield-check" style="color:var(--accent-d)"></i> Benefit &amp; contract terms <span class="muted" style="font-weight:400;font-size:11px">· coverage and contracted rate governing these service lines</span></div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 20px">' +
+      kvRow("Benefit plan", bc.benefitPlan) + kvRow("Network", bc.network) +
+      kvRow("Coverage", bc.coverage) + kvRow("Rate basis", bc.rateBasis) +
+      kvRow("Member cost-share", bc.costShare) + kvRow("Authorization", bc.authorization) +
+      '</div></div>';
   }
 
   // Shared 835 remittance + reconciliation card (837 and pharmacy summaries both use it).
@@ -578,7 +622,7 @@
       '<tr style="font-weight:600;border-top:1px solid var(--border)"><td colspan="5">Claim total</td><td class="right">' + m(t.submitted) + '</td><td class="right" style="color:var(--text2)">−' + m(t.contractual) + '</td><td class="right">' + m(t.allowed) + '</td><td class="right">' + m(t.paid) + '</td><td></td></tr>' +
       '</tbody></table></div><div style="padding:7px 12px;font-size:10.5px;color:var(--text3);border-top:0.5px solid var(--border2)"><i class="ti ti-info-circle"></i> DAW = Dispense As Written. NDCs use the reserved <span class="mono">00000</span> labeler — synthetic by construction.</div></div>';
 
-    return '<div style="display:flex;flex-direction:column;gap:10px">' + headerCard + dxCard + slCard + remittanceCardHtml(d) + '</div>';
+    return '<div style="display:flex;flex-direction:column;gap:10px">' + headerCard + dxCard + slCard + benefitContractHtml(d) + remittanceCardHtml(d) + '</div>';
   }
 
   // ---------- NCPDP D.0 telecommunication view (pharmacy analog of the 837) ----------
