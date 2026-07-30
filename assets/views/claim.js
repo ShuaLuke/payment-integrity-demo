@@ -687,7 +687,7 @@
     });
   }
 
-  // ---------- CMS pricing (Zellis) — submitted charge vs CMS-allowed ----------
+  // ---------- CMS reference pricing — submitted charge vs CMS-allowed ----------
   function noClaimCard(what) { return '<div class="card" style="text-align:center;padding:28px"><i class="ti ti-file-off" style="font-size:26px;color:var(--text3)"></i><div style="font-size:12.5px;color:var(--text2);margin-top:8px">No itemized claim on this lead — ' + what + ' is unavailable.</div><div style="font-size:11px;color:var(--text3);margin-top:3px">Manual / referral leads have no 837 claim until records are attached.</div></div>'; }
   // Pharmacy (NCPDP) claims don't run through the professional-claim engines.
   function pharmacyNaCard(what) { return '<div class="card" style="text-align:center;padding:28px"><i class="ti ti-prescription" style="font-size:26px;color:var(--text3)"></i><div style="font-size:12.5px;color:var(--text2);margin-top:8px">' + what + ' does not apply to a pharmacy (NCPDP) claim.</div><div style="font-size:11px;color:var(--text3);margin-top:3px">See the <b>Claim</b> tab for the NDC-level detail, DAW screening and pharmacy adjudication.</div></div>'; }
@@ -836,7 +836,7 @@
       '</div>';
   }
 
-  // ---------- Utilization management (Milliman MCG) ----------
+  // ---------- Utilization management (clinical care guidelines) ----------
   function umKv(k, v) { return '<div class="card" style="padding:7px 9px;box-shadow:none;background:var(--surface)"><div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.03em">' + k + '</div><div style="font-size:12px;font-weight:500;margin-top:2px">' + window.APP.esc(v) + '</div></div>'; }
   function losRow(label, val, rec, act, color) { var max = Math.max(rec, act, 1); var w = Math.round(val / max * 100); return '<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:2px"><span>' + label + '</span><span style="font-weight:600">' + val + ' days</span></div><div style="height:9px;background:var(--border2);border-radius:5px;overflow:hidden"><div style="height:100%;width:' + w + '%;background:' + color + '"></div></div></div>'; }
   // Facility capacity: patient-days billed vs what the staffed beds can physically
@@ -866,20 +866,20 @@
   }
   function umHtml(a, cl) {
     if (!cl) return noClaimCard("utilization management");
-    if (cl.type === "NCPDP") return pharmacyNaCard("Clinical utilization review (MCG)");
+    if (cl.type === "NCPDP") return pharmacyNaCard("Clinical utilization review");
     var d = window.DP.getUtilizationMgmt(cl.id); if (!d) return noClaimCard("utilization management");
     var los = d.lengthOfStay;
     var dl = d.determination.toLowerCase();
     var meets = dl.indexOf("does not") < 0 && dl.indexOf("review") < 0;
     var critRows = d.criteria.map(function (c) { return '<div style="display:flex;gap:9px;align-items:flex-start;padding:6px 0;border-top:0.5px solid var(--border2)"><i class="ti ti-' + (c.met ? "circle-check" : "circle-x") + '" style="color:' + (c.met ? "var(--low)" : "var(--high)") + ';font-size:16px;margin-top:1px"></i><div><div style="font-size:12px' + (c.met ? "" : ";font-weight:500") + '">' + window.APP.esc(c.label) + '</div>' + (c.note ? '<div style="font-size:11px;color:var(--text2)">' + window.APP.esc(c.note) + '</div>' : '') + '</div></div>'; }).join("");
-    var losBar = los ? ('<div class="card"><div style="font-weight:500;font-size:12.5px;margin-bottom:7px">Length of stay</div>' + losRow("MCG recommended", los.recommendedDays, los.recommendedDays, los.actualDays, "#98a4b3") + losRow("Actual (billed)", los.actualDays, los.recommendedDays, los.actualDays, los.actualDays > los.recommendedDays ? "var(--high)" : "var(--accent)") + '<div style="font-size:11px;color:var(--text2);margin-top:4px">' + (los.actualDays > los.recommendedDays ? ('<b style="color:var(--high-tx)">' + (los.actualDays - los.recommendedDays) + ' days</b> beyond the MCG-recommended ' + los.recommendedDays + '-day stay.') : 'Within the recommended range.') + '</div></div>') : '';
+    var losBar = los ? ('<div class="card"><div style="font-weight:500;font-size:12.5px;margin-bottom:7px">Length of stay</div>' + losRow("Guideline recommended", los.recommendedDays, los.recommendedDays, los.actualDays, "#98a4b3") + losRow("Actual (billed)", los.actualDays, los.recommendedDays, los.actualDays, los.actualDays > los.recommendedDays ? "var(--high)" : "var(--accent)") + '<div style="font-size:11px;color:var(--text2);margin-top:4px">' + (los.actualDays > los.recommendedDays ? ('<b style="color:var(--high-tx)">' + (los.actualDays - los.recommendedDays) + ' days</b> beyond the guideline-recommended ' + los.recommendedDays + '-day stay.') : 'Within the recommended range.') + '</div></div>') : '';
     return '<div style="display:flex;flex-direction:column;gap:10px">' +
       capacityCard(a) +
       '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div style="font-weight:500;font-size:13px"><i class="ti ti-clipboard-heart" style="color:var(--accent-d)"></i> Utilization management <span class="muted" style="font-weight:400;font-size:11px">· clinical criteria &amp; medical necessity</span></div>' +
       '<span class="tag" style="background:var(--surface)"><i class="ti ti-plug-connected"></i> ' + window.APP.esc(d.source) + ' · ' + d.edition + '</span></div>' +
       '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px">' + umKv("Guideline", d.guideline.code + " — " + d.guideline.title) + umKv("Recommended level of care", d.levelOfCare.recommended) + umKv("Billed level of care", d.levelOfCare.billed) + umKv("Prior authorization", d.priorAuth.required ? ((d.priorAuth.number || "—") + " · " + d.priorAuth.status) : d.priorAuth.status) + '</div></div>' +
       losBar +
-      '<div class="card"><div style="font-weight:500;font-size:12.5px;margin-bottom:2px">MCG criteria</div>' + critRows + '</div>' +
+      '<div class="card"><div style="font-weight:500;font-size:12.5px;margin-bottom:2px">Care criteria</div>' + critRows + '</div>' +
       '<div style="background:' + (meets ? "var(--low-bg)" : "var(--high-bg)") + ';border:0.5px solid ' + (meets ? "#bfe0c9" : "#f3c9c9") + ';border-radius:7px;padding:10px 12px;font-size:12px;color:' + (meets ? "var(--low-tx)" : "var(--high-tx)") + '"><i class="ti ti-' + (meets ? "circle-check" : "alert-triangle") + '"></i> <b>Determination:</b> ' + window.APP.esc(d.determination) + '</div>' +
       '</div>';
   }
@@ -1251,7 +1251,7 @@
     return '<div style="display:flex;flex-direction:column;gap:10px">' +
       '<div class="card" id="c-decision"></div>' +
       simLink +
-      '<div class="card"><div style="font-weight:500;font-size:13px;margin-bottom:8px">Case timeline</div>' + timelineHtml(id, a, cl) + '</div>' +
+      '<div class="card"><div style="font-weight:500;font-size:13px;margin-bottom:8px">Lead timeline</div>' + timelineHtml(id, a, cl) + '</div>' +
       '</div>';
   }
   function wirePrecedents(id) {

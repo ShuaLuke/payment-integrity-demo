@@ -143,7 +143,7 @@
     RULE_CATALOG_EXTRA: [
       { id: "rule_em_level", code: "EM-LEVEL", name: "E/M level validation", source: "CMS payment rules", category: "Coding", description: "Evaluation & management level billed exceeds the documented history/exam/decision-making and the provider's peer-group distribution.", version: "2.1", effectiveDate: "2025-01-01", environment: "Production", regulatorySource: "CMS payment rules", entityType: "Provider", fraudType: "Upcoding", detectionLevel: "Provider-pattern", severity: "High" },
       { id: "rule_phantom", code: "SVC-RENDERED", name: "Services-not-rendered screen", source: "False Claims Act", category: "Integrity", description: "Billed service has no corroborating encounter, attendance or delivery record for the date of service.", version: "1.3", effectiveDate: "2024-11-01", environment: "Production", regulatorySource: "False Claims Act", entityType: "Provider", fraudType: "Phantom billing", detectionLevel: "Claim-level", severity: "Critical" },
-      { id: "rule_mednec", code: "MED-NEC", name: "Medical-necessity / level-of-care", source: "VA CCN policy", category: "Coverage", description: "Level of care or length of stay exceeds clinical criteria (MCG) for the documented condition.", version: "1.6", effectiveDate: "2024-12-01", environment: "Production", regulatorySource: "VA CCN policy", entityType: "Provider", fraudType: "Medically unnecessary", detectionLevel: "Provider-pattern", severity: "High" },
+      { id: "rule_mednec", code: "MED-NEC", name: "Medical-necessity / level-of-care", source: "VA CCN policy", category: "Coverage", description: "Level of care or length of stay exceeds evidence-based clinical criteria for the documented condition.", version: "1.6", effectiveDate: "2024-12-01", environment: "Production", regulatorySource: "VA CCN policy", entityType: "Provider", fraudType: "Medically unnecessary", detectionLevel: "Provider-pattern", severity: "High" },
       { id: "rule_excl", code: "EXCL-LEIE", name: "OIG LEIE exclusion screening", source: "OIG advisories", category: "Integrity", description: "Rendering or billing provider (or ordering physician) appears on the OIG List of Excluded Individuals/Entities — claims paid during exclusion are recoverable in full.", version: "2.0", effectiveDate: "2025-01-01", environment: "Production", regulatorySource: "OIG advisories", entityType: "Provider", fraudType: "Exclusion violations", detectionLevel: "Provider-pattern", severity: "Critical" },
       { id: "rule_aks", code: "AKS-STARK", name: "Anti-kickback / self-referral", source: "Anti-Kickback Statute", category: "Integrity", description: "Referral or financial-arrangement pattern between linked entities indicates a prohibited inducement or self-referral.", version: "1.1", effectiveDate: "2024-10-15", environment: "Production", regulatorySource: "Anti-Kickback Statute", entityType: "Provider", fraudType: "Kickback / self-referral", detectionLevel: "Network-level", severity: "Critical" },
       { id: "rule_dme", code: "DME-NEC", name: "DME medical necessity & delivery", source: "VA CCN policy", category: "Coverage", description: "Durable medical equipment billed without a supporting order, proof of delivery, or documented medical necessity.", version: "1.2", effectiveDate: "2024-09-15", environment: "Production", regulatorySource: "VA CCN policy", entityType: "DME supplier", fraudType: "Medically unnecessary", detectionLevel: "Claim-level", severity: "Medium" },
@@ -224,9 +224,9 @@
       },
       rule_mednec: {
         logic: {
-          summary: "Medical-necessity / level-of-care: the billed level of care or length of stay exceeds clinical criteria (MCG) for the documented condition.",
+          summary: "Medical-necessity / level-of-care: the billed level of care or length of stay exceeds evidence-based clinical criteria for the documented condition.",
           criteria: [
-            { when: "Billed level of care > MCG-recommended level for the diagnosis", then: "Flag the excess" },
+            { when: "Billed level of care > guideline-recommended level for the diagnosis", then: "Flag the excess" },
             { when: "Length of stay > authorized / continued-stay criteria", then: "Recover the unauthorized days" },
             { when: "Continued-stay criteria not met on review day", then: "Step-down indicated" }
           ],
@@ -236,7 +236,7 @@
           { field: "Revenue / procedure code", source: "837I · 2400 · SV2", example: "H0018" },
           { field: "Statement dates (admit–discharge)", source: "837I · 2300 · DTP*434", example: "2025-01-03 – 01-31" },
           { field: "Prior authorization", source: "External reference · UM auth record", example: "14 days approved" },
-          { field: "MCG care guideline", source: "External reference · Milliman MCG", example: "BHG-RES" }
+          { field: "Clinical care guideline", source: "External reference · clinical care guidelines", example: "BHG-RES" }
         ],
         output: { signal: "flag", emits: "LOC_LOS_EXCEEDED", disposition: "Recover the days beyond the authorized / criteria-met stay", downstream: "Lead (Residential LOS) · remittance RARC N130" }
       },
@@ -678,9 +678,9 @@
       };
     },
 
-    // ---- 837 EDI / CMS Pricing (Zellis) / Utilization Mgmt (Milliman) mocks ----
+    // ---- 837 EDI / CMS Pricing / Utilization Mgmt mocks ----
     // Deterministic per-claim synthetic data. Seams for real third-party feeds:
-    // a real 837 parser, the Zellis pricing service, and Milliman MCG guidelines.
+    // a real 837 parser, a CMS pricing service, and clinical care guidelines.
     _seed: function (id, salt) { var s = 0; id = String(id) + (salt || ""); for (var i = 0; i < id.length; i++) s = (s * 31 + id.charCodeAt(i)) >>> 0; return function () { s = (s * 1103515245 + 12345) >>> 0; return s / 4294967296; }; },
 
     // Map an internal claim to X12 837 loops/segments (837P professional / 837I institutional).
@@ -724,7 +724,7 @@
       };
     },
 
-    // CMS reference pricing (Zellis): submitted charge vs CMS-allowed per line + methodology.
+    // CMS reference pricing: submitted charge vs CMS-allowed per line + methodology.
     getCmsPricing: function (claimId) {
       var cl = claims[claimId]; if (!cl) return null;
       if (cl.type === "NCPDP") return null;
@@ -753,7 +753,7 @@
       });
       var sum = function (k) { return Math.round(lines.reduce(function (s, l) { return s + l[k]; }, 0) * 100) / 100; };
       return {
-        source: "Zellis — CMS reference pricing", asOf: "2025 CMS fee schedules", locality: (p.state || "TX") + " · locality 05",
+        source: "CMS reference pricing", asOf: "2025 CMS fee schedules", locality: (p.state || "TX") + " · locality 05",
         lines: lines,
         totals: { submitted: sum("submittedCharge"), cmsAllowed: sum("cmsAllowed"), paid: sum("paid"), variance: Math.round((sum("submittedCharge") - sum("cmsAllowed")) * 100) / 100, overpayment: Math.round(Math.max(0, sum("paid") - sum("cmsAllowed")) * 100) / 100 },
         rulesApplied: ["MPFS locality adjustment (" + (p.state || "TX") + " 05)", inst ? "OPPS status-indicator pricing" : "RVU × conversion factor ($32.74)", "MPPR — multiple-procedure payment reduction", "NCCI PTP bundling edits", "Site-of-service differential"],
@@ -985,14 +985,14 @@
       };
     },
 
-    // Utilization management (Milliman MCG): clinical criteria, level of care, LOS.
+    // Utilization management (clinical care guidelines): clinical criteria, level of care, LOS.
     getUtilizationMgmt: function (claimId) {
       var cl = claims[claimId]; if (!cl) return null;
       if (cl.type === "NCPDP") return null;
       var resid = (cl.lines || []).some(function (l) { return l.cpt === "H0018"; });
       var dialysis = (cl.lines || []).some(function (l) { return l.cpt === "90935"; });
       var em = (cl.lines || []).some(function (l) { return /^99/.test(l.cpt); });
-      var rnd = this._seed(claimId, "um"), base = { source: "Milliman MCG Care Guidelines", edition: "28th Edition (2025)" };
+      var rnd = this._seed(claimId, "um"), base = { source: "Clinical care guidelines", edition: "2025 edition" };
       if (resid) {
         return Object.assign(base, {
           guideline: { code: "BHG-RES", title: "Residential Behavioral Health Treatment" },
@@ -1027,7 +1027,7 @@
         priorAuth: { required: false, number: null, status: "Not required for this service" },
         criteria: [
           { label: "Service medically necessary for documented condition", met: true },
-          { label: "Level of service supported by documentation", met: !em, note: em ? "MCG complexity mapping supports a lower E/M level than billed." : undefined },
+          { label: "Level of service supported by documentation", met: !em, note: em ? "Clinical guideline mapping supports a lower E/M level than billed." : undefined },
           { label: "Frequency within expected range", met: true }
         ],
         determination: em ? "Review — documented complexity maps to a lower E/M level" : "Meets criteria"
@@ -1346,7 +1346,7 @@
     },
 
     // Pharmacy claims are NCPDP, not 837 — the professional-claim engines (NCCI, MPFS,
-    // MCG) don't apply. These early-outs let the Coding/Pricing/Utilization tabs show a
+    // clinical guidelines) don't apply. These early-outs let the Coding/Pricing/Utilization tabs show a
     // clear "not applicable" note instead of nonsensical CPT-based output.
     isPharmacyClaim: function (claimId) { var c = claims[claimId]; return !!(c && c.type === "NCPDP"); },
 
