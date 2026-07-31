@@ -3,6 +3,7 @@
 (function () {
   var SUGGEST = ["Summarize this case for adjudication", "How does it compare to peers?", "What's the recommended action?", "Draft a rationale"];
   var open = false;
+  var mode = "chat";   // chat | agents | letters
 
   function ctx() {
     var id = (window.APP.state.view === "claim" && window.APP.state.allegationId) ? window.APP.state.allegationId : "20481";
@@ -24,12 +25,15 @@
     panel.innerHTML =
       '<div style="background:#10243b;color:#fff;padding:12px 14px;display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:8px"><i class="ti ti-sparkles" style="color:#7fe0d6"></i><span style="font-weight:500">Investigative Assistant</span></div><button id="cp-x" style="background:none;border:none;color:#93a7bf;cursor:pointer;font-size:16px"><i class="ti ti-x"></i></button></div>' +
       '<div id="cp-ctx" style="padding:7px 14px;font-size:11px;color:var(--text2);border-bottom:0.5px solid var(--border2);background:var(--surface)"></div>' +
+      '<div id="cp-tabs" style="display:flex;gap:2px;padding:6px 10px 0;border-bottom:0.5px solid var(--border2);background:var(--surface)"></div>' +
       '<div id="cp-chat" class="chat" style="flex:1;overflow-y:auto;padding:12px 14px;min-height:0"></div>' +
-      '<div style="padding:10px 14px;border-top:0.5px solid var(--border2)"><div class="suggest" id="cp-suggest" style="margin-bottom:8px"></div>' +
+      '<div id="cp-alt" style="flex:1;overflow-y:auto;padding:12px 14px;min-height:0;display:none"></div>' +
+      '<div id="cp-foot" style="padding:10px 14px;border-top:0.5px solid var(--border2)"><div class="suggest" id="cp-suggest" style="margin-bottom:8px"></div>' +
       '<div style="display:flex;gap:8px"><input id="cp-input" class="input" placeholder="Ask the Investigative Assistant…"><button class="btn primary" id="cp-send"><i class="ti ti-send"></i></button></div>' +
       '<div style="font-size:10px;color:var(--text3);margin-top:6px"><i class="ti ti-sparkles"></i> Demonstration-scripted, grounded in the case data.</div></div>';
     document.body.appendChild(panel);
 
+    renderTabs();
     document.getElementById("cp-x").onclick = toggle;
     document.getElementById("cp-suggest").innerHTML = SUGGEST.map(function (s) { return '<button class="btn" style="font-size:11.5px">' + s + '</button>'; }).join("");
     document.getElementById("cp-suggest").querySelectorAll("button").forEach(function (b) { b.onclick = function () { ask(b.textContent); }; });
@@ -41,7 +45,25 @@
     open = !open;
     document.getElementById("cp-panel").style.transform = open ? "translateX(0)" : "translateX(100%)";
     document.getElementById("cp-fab").style.display = open ? "none" : "flex";
-    if (open) greet();
+    if (open) { setCtxLine(); renderTabs(); setMode(mode, true); }
+  }
+
+  // ---- mode tabs: Assistant · Agents · Correspondence ----
+  var TABS = [{ m: "chat", l: "Assistant", i: "message" }, { m: "agents", l: "Agents", i: "robot" }, { m: "letters", l: "Correspondence", i: "mail" }];
+  function renderTabs() {
+    var bar = document.getElementById("cp-tabs"); if (!bar) return;
+    bar.innerHTML = TABS.map(function (t) {
+      var on = t.m === mode;
+      return '<button class="cp-tab" data-m="' + t.m + '" style="border:none;border-bottom:2px solid ' + (on ? "var(--accent)" : "transparent") + ';background:none;color:' + (on ? "var(--accent-d)" : "var(--text2)") + ';font-weight:' + (on ? "600" : "400") + ';font-size:11.5px;padding:7px 9px;cursor:pointer;font-family:inherit"><i class="ti ti-' + t.i + '"></i> ' + t.l + '</button>';
+    }).join("");
+    bar.querySelectorAll(".cp-tab").forEach(function (b) { b.onclick = function () { setMode(b.getAttribute("data-m")); }; });
+  }
+  function setMode(m, force) {
+    if (m === mode && !force) return;
+    mode = m; renderTabs();
+    var chat = document.getElementById("cp-chat"), alt = document.getElementById("cp-alt"), foot = document.getElementById("cp-foot");
+    if (m === "chat") { chat.style.display = "block"; alt.style.display = "none"; foot.style.display = "block"; if (!chat.childNodes.length) greet(); }
+    else { chat.style.display = "none"; foot.style.display = "none"; alt.style.display = "block"; if (m === "agents") renderAgents(); else renderLetters(); }
   }
   function setCtxLine() {
     var a = ctx();
@@ -62,6 +84,7 @@
   function ask(qy) {
     if (!qy) return;
     if (!open) toggle();
+    if (mode !== "chat") setMode("chat");
     setCtxLine();
     addUser(qy);
     var a = ctx();
@@ -129,12 +152,66 @@
     setTimeout(function () { var el = document.querySelector('.seg[data-d="' + seg + '"]'); if (el) el.click(); }, 360);
   }
 
+  // ---- Agents mode: three role-specialized agents on the current lead ----
+  var SEV = { high: ["var(--high-bg)", "var(--high-tx)"], medium: ["var(--med-bg)", "var(--med-tx)"], low: ["var(--low-bg)", "var(--low-tx)"] };
+  function renderAgents() {
+    var alt = document.getElementById("cp-alt"); var a = ctx();
+    window.APP.auditLog("AI_AGENTS_RUN", "Lead #" + a.id + " · investigative / claims / policy agents");
+    var reports = window.AI.agentReports(a);
+    var esc = window.APP.esc;
+    var cards = reports.map(function (r) {
+      var findings = r.findings.map(function (f) { var c = SEV[f.sev] || SEV.low; return '<div style="display:flex;gap:7px;padding:5px 0;border-top:0.5px solid var(--border2);font-size:11.5px"><span style="width:7px;height:7px;border-radius:50%;background:' + c[1] + ';flex:none;margin-top:5px"></span><span style="flex:1;line-height:1.5">' + esc(f.text) + '</span></div>'; }).join("");
+      var src = r.sources.map(function (s) { return '<span class="tag" style="background:var(--surface);font-size:10px">' + esc(s) + '</span>'; }).join(" ");
+      return '<div class="card" style="margin:0 0 9px"><div style="display:flex;align-items:center;gap:7px;margin-bottom:2px"><i class="ti ti-' + r.icon + '" style="color:var(--accent-d)"></i><span style="font-weight:600;font-size:12.5px">' + esc(r.role) + ' agent</span><span class="muted" style="font-size:10.5px">· ' + esc(r.focus) + '</span></div>' +
+        findings + '<div style="margin-top:7px;display:flex;gap:5px;flex-wrap:wrap;align-items:center"><span style="font-size:10px;color:var(--text3)">read:</span> ' + src + '</div></div>';
+    }).join("");
+    alt.innerHTML = '<div style="font-size:11.5px;color:var(--text2);margin-bottom:10px"><i class="ti ti-robot" style="color:var(--accent-d)"></i> Three agents examined lead #' + a.id + ' — each grounded in the case data it reads. Findings feed the adjudication brief and any correspondence.</div>' +
+      cards +
+      '<div style="font-size:10px;color:var(--text3);margin-top:2px"><i class="ti ti-sparkles"></i> Demonstration agents · grounded in this case\'s rules, model, network, coding &amp; pricing.</div>';
+  }
+
+  // ---- Correspondence mode: generate → review → attach / export ----
+  var draftLetter = null;
+  function renderLetters() {
+    var alt = document.getElementById("cp-alt"); var a = ctx(), esc = window.APP.esc;
+    if (draftLetter && draftLetter.leadId === a.id) return renderLetterViewer(a);
+    var types = window.AI.CORRESPONDENCE_TYPES.map(function (t) {
+      return '<button class="cp-letter" data-t="' + t.id + '" style="width:100%;text-align:left;border:0.5px solid var(--border);background:#fff;border-radius:9px;padding:10px 12px;cursor:pointer;margin-bottom:8px;font-family:inherit">' +
+        '<div style="display:flex;align-items:center;gap:8px"><i class="ti ti-' + t.icon + '" style="color:var(--accent-d);font-size:16px"></i><span style="font-weight:600;font-size:12.5px">' + esc(t.label) + '</span></div>' +
+        '<div style="font-size:11px;color:var(--text2);margin-top:3px">' + esc(t.blurb) + '</div></button>';
+    }).join("");
+    var kb = window.AI.knowledgeBase().map(function (k) { return '<div style="display:flex;gap:7px;padding:5px 0;border-top:0.5px solid var(--border2);font-size:11px"><i class="ti ti-book" style="color:var(--accent-d);margin-top:1px"></i><div><b>' + esc(k.title) + '</b> <span class="muted">· ' + esc(k.cite) + '</span><div style="color:var(--text2)">' + esc(k.summary) + '</div></div></div>'; }).join("");
+    alt.innerHTML = '<div style="font-size:11.5px;color:var(--text2);margin-bottom:10px"><i class="ti ti-mail" style="color:var(--accent-d)"></i> Generate a notice for lead #' + a.id + ' — ' + esc((a.provider || {}).name || "") + '. Populated with the case specifics; review before attaching or exporting.</div>' +
+      types +
+      '<div class="card" style="margin:6px 0 0;background:var(--surface)"><div style="font-weight:600;font-size:11.5px;margin-bottom:2px"><i class="ti ti-books" style="color:var(--accent-d)"></i> Knowledge base <span class="muted" style="font-weight:400;font-size:10px">· policies the assist grounds against</span></div>' + kb + '</div>';
+    alt.querySelectorAll(".cp-letter").forEach(function (b) { b.onclick = function () { draftLetter = window.AI.correspondence(a, b.getAttribute("data-t")); draftLetter.leadId = a.id; window.APP.auditLog("AI_LETTER_DRAFT", "Lead #" + a.id + " · " + draftLetter.label); renderLetterViewer(a); }; });
+  }
+  function renderLetterViewer(a) {
+    var alt = document.getElementById("cp-alt"), esc = window.APP.esc, L = draftLetter;
+    alt.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px"><span style="font-weight:600;font-size:12.5px"><i class="ti ti-mail" style="color:var(--accent-d)"></i> ' + esc(L.label) + '</span>' +
+      '<button id="cp-let-back" class="btn" style="font-size:11px"><i class="ti ti-arrow-left"></i> Templates</button></div>' +
+      '<pre class="mono" style="margin:0;padding:11px 12px;font-size:10.5px;line-height:1.55;white-space:pre-wrap;background:#fff;border:0.5px solid var(--border);border-radius:8px;max-height:calc(100vh - 280px);overflow:auto">' + esc(L.body) + '</pre>' +
+      '<div style="display:flex;gap:8px;margin-top:10px"><button id="cp-let-attach" class="btn primary" style="flex:1;justify-content:center;font-size:12px"><i class="ti ti-paperclip"></i> Attach to case</button>' +
+      '<button id="cp-let-export" class="btn" style="flex:1;justify-content:center;font-size:12px"><i class="ti ti-printer"></i> Export</button></div>' +
+      '<div style="font-size:10px;color:var(--text3);margin-top:8px"><i class="ti ti-sparkles"></i> Drafted by the agentic assist · adopt after review. Attaching logs to the audit trail.</div>';
+    alt.querySelector("#cp-let-back").onclick = function () { draftLetter = null; renderLetters(); };
+    alt.querySelector("#cp-let-attach").onclick = function () {
+      var name = L.label.replace(/[^a-z0-9]+/gi, "-") + "_Lead-" + a.id + ".txt";
+      window.APP.addArtifact(a.id, { name: name, kind: "correspondence", body: L.body });
+      window.EXPORT.toast("Attached “" + name + "” to the case");
+    };
+    alt.querySelector("#cp-let-export").onclick = function () {
+      window.EXPORT.pdf(L.label + " — Lead #" + a.id, '<pre style="white-space:pre-wrap;font-family:inherit;font-size:12px;line-height:1.5">' + window.EXPORT.htmlEsc(L.body) + '</pre>');
+    };
+  }
+
   window.COPILOT = {
     open: function () { if (!open) toggle(); },
     close: function () { if (open) toggle(); },
     isOpen: function () { return open; }, ask: ask,
     summarize: function (id) {
       if (!open) toggle();
+      if (mode !== "chat") setMode("chat");
       setCtxLine();
       var a = id ? window.DP.getAllegation(id) : ctx();
       addUser("Summarize this case for adjudication");

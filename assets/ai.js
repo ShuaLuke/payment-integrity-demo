@@ -277,5 +277,135 @@
     return iv;
   }
 
-  window.AI = { draftRationale: draftRationale, justificationMemo: justificationMemo, caseNarrative: caseNarrative, adjudicationSummary: adjudicationSummary, copilot: copilot, stream: stream };
+  // ---- Agentic case-assist: role-specialized agents (Element 3.2.iii) --------
+  // Three agents look at the same lead through different lenses and each return a
+  // grounded set of findings + the sources they read. Deterministic — built from
+  // the same DP the human sees (rules, model, xAI, network, pricing, coding,
+  // risk intelligence), so nothing is invented.
+  function agentReports(a) {
+    var p = a.provider || {}, cl = a.claim, out = [];
+    // --- Investigative: entity · network · OSINT ---
+    var inv = [], invSrc = ["Provider registry", "Network graph", "Risk intelligence"];
+    var net = window.Collusion ? window.Collusion.analyze(p.id) : null;
+    if (net && net.isRing) {
+      inv.push({ sev: "high", text: net.kind === "chain"
+        ? p.name + " is one of " + net.providerCount + " facilities under " + (net.registration || "a shared holding company") + " cycling " + net.sharedPct + "% of the same veterans across " + (net.states || []).join("/") + " under separate TINs."
+        : net.providerCount + " NPIs act as one billing entity" + (net.sharedTin ? " (shared TIN " + (net.tin || p.tin) + ")" : "") + ", sharing " + net.sharedPct + "% of veterans — coordinated behavior." });
+    } else { inv.push({ sev: "low", text: p.name + " bills in isolation — no collusion network detected; the case rests on the claim's own evidence." }); }
+    var ri = window.DP.getRiskIntel ? window.DP.getRiskIntel(p.id) : null;
+    if (ri) {
+      inv.push({ sev: ri.band === "high" ? "high" : ri.band === "medium" ? "medium" : "low", text: "External risk " + ri.score + "/100 across " + ri.findingCount + " findings. " + ri.summary.split(". ")[0] + "." });
+      (ri.findings || []).filter(function (f) { return f.severity === "critical" || f.severity === "high"; }).slice(0, 2).forEach(function (f) { inv.push({ sev: f.severity === "critical" ? "high" : "high", text: f.category + ": " + f.title + " (" + f.source + ")." }); });
+      invSrc.push("Federal exclusions / sanctions", "Corporate registry");
+    }
+    out.push({ role: "Investigative", icon: "user-search", focus: "entity · network · OSINT", findings: inv, sources: invSrc });
+
+    // --- Claims: billing · coding · pricing ---
+    var clm = [], clmSrc = ["837 claim", "NCCI edits", "CMS fee schedules"];
+    if (cl && window.DP.getCptCrosswalk) {
+      var x = window.DP.getCptCrosswalk(cl.id);
+      if (x) {
+        if (x.fails) clm.push({ sev: "high", text: x.fails + " line(s) fail NCCI/MUE coding edits — " + x.determination.toLowerCase() + "." });
+        (x.lines || []).forEach(function (l) { if (l.ptp && l.ptp.status !== "pass") clm.push({ sev: "high", text: "Coding: " + l.cpt + (l.modifiers.length ? "-" + l.modifiers.join(",") : "") + " — " + l.ptp.note }); });
+      }
+    }
+    if (cl && window.DP.getCmsPricing) {
+      var pr = window.DP.getCmsPricing(cl.id);
+      if (pr && pr.totals.overpayment > 0) clm.push({ sev: "high", text: "Pricing: " + window.DP.usd(pr.totals.overpayment) + " above the CMS-allowed amount — recoverable per CMS reference pricing." });
+    }
+    if (a.id === "20481") clm.push({ sev: "high", text: "Upcoding: 99215 billed on ~90% of established visits vs a 14% peer median (5.8σ) with low documented complexity." });
+    if (!clm.length) clm.push({ sev: "medium", text: "No hard coding/pricing edit failed on the face of the claim; the flag rests on the utilization/frequency pattern — pull records to confirm." });
+    out.push({ role: "Claims", icon: "file-invoice", focus: "billing · coding · pricing", findings: clm, sources: clmSrc });
+
+    // --- Policy: rules · thresholds · authorities ---
+    var pol = [], polSrc = [];
+    (a.rules || []).forEach(function (r) { pol.push({ sev: "medium", text: r.name + " (" + r.code + ") — authority: " + r.source + "." }); if (polSrc.indexOf(r.source) < 0) polSrc.push(r.source); });
+    if (a.model) pol.push({ sev: "medium", text: "Model in play: " + a.model.name + " (" + a.model.type + ") — flags the pattern for human review." });
+    if (a.mode === "prepay") pol.push({ sev: "medium", text: "Pre-payment posture — 42 CFR 405 payment-suspension authority applies where a credible allegation exists; nothing has been disbursed." });
+    else pol.push({ sev: "medium", text: "Post-payment posture — overpayment is recoverable; determination + demand with appeal rights is the applicable path." });
+    if (!polSrc.length) polSrc.push("VA Community Care policy");
+    polSrc.push("Medicare Claims Processing Manual");
+    out.push({ role: "Policy", icon: "gavel", focus: "rules · thresholds · authorities", findings: pol, sources: polSrc });
+    return out;
+  }
+
+  // ---- Knowledge base the assist grounds against (representative) ----
+  function knowledgeBase() {
+    return [
+      { title: "Medicare Claims Processing Manual, Ch. 12 (MPFS)", cite: "CMS Pub. 100-04", summary: "Physician fee-schedule pricing — RVU × GPCI × conversion factor." },
+      { title: "National Correct Coding Initiative Policy Manual", cite: "CMS NCCI", summary: "Procedure-to-procedure edits, modifier indicators, MUE limits." },
+      { title: "List of Excluded Individuals/Entities", cite: "OIG LEIE", summary: "Providers excluded from federal health-care programs; claims paid during exclusion are recoverable." },
+      { title: "Payment suspension — credible allegation of fraud", cite: "42 CFR 405.371", summary: "Authority to suspend payments pending investigation." },
+      { title: "VA Community Care Network provider agreement", cite: "VA CCN", summary: "Contracted rates (CMAC), records-access and audit provisions." }
+    ];
+  }
+
+  // ---- Correspondence generation (Element 3.2.iii) ---------------------------
+  // Templated notices populated with the case specifics. Each returns a formatted
+  // letter body that can be reviewed, attached to the case (as an artifact), or
+  // exported. Clearly synthetic (reserved identifiers + demonstration footer).
+  var CORRESPONDENCE_TYPES = [
+    { id: "records", label: "Records / clarification request", icon: "file-text", blurb: "Request the medical records supporting the flagged lines." },
+    { id: "suspension", label: "Temporary payment suspension", icon: "player-pause", blurb: "Notice of a pre-payment suspension pending review." },
+    { id: "determination", label: "Overpayment determination", icon: "gavel", blurb: "Determination + demand for the recoverable amount." },
+    { id: "followup", label: "Follow-up notice", icon: "clock", blurb: "Follow-up on an unanswered prior notice." }
+  ];
+  function correspondence(a, type) {
+    var p = a.provider || {}, cl = a.claim, prepay = a.mode === "prepay";
+    var contact = window.DP.getProviderContact ? window.DP.getProviderContact(p.id) : null;
+    var exp = window.DP.usd((prepay ? a.exposurePre : a.exposurePost) || 0);
+    var meta = CORRESPONDENCE_TYPES.filter(function (t) { return t.id === type; })[0] || CORRESPONDENCE_TYPES[0];
+    var ref = "Lead #" + a.id + (cl ? " · Claim " + cl.claimNumber + " (DOS " + cl.dateOfService + ")" : "");
+    var finding = (a.xai && a.xai.summary) || (p.name + " was flagged for " + a.fwaType.toLowerCase() + ".");
+    var L = [];
+    L.push("VA PIVOT · Payment Integrity — Office of Community Care");
+    L.push("Payment Integrity Validation & Oversight");
+    L.push("Date: " + window.APP.fmtTs(new Date()));
+    L.push("");
+    L.push("To:   " + (p.name || "—"));
+    if (contact) L.push("      Attn: " + contact.attention);
+    L.push("      NPI " + (p.npi || "—") + "  ·  TIN " + (p.tin || "—"));
+    if (contact) L.push("      " + contact.email + "  ·  Fax " + contact.fax);
+    L.push("");
+    L.push("Re:   " + meta.label + " — " + ref);
+    L.push("");
+    var body = [];
+    if (type === "records") {
+      body.push("This office is conducting a payment-integrity review of the claim referenced above. Our analysis flagged a potential " + a.fwaType.toLowerCase() + " pattern:");
+      body.push("");
+      body.push("    " + finding);
+      body.push("");
+      body.push("Please provide, within 30 calendar days, the complete medical record supporting the services billed on this claim, including the history, examination and medical-decision-making documentation for each procedure code, any orders, and the treatment plan. Absent sufficient documentation, the flagged lines may be adjusted or the associated payment recovered.");
+    } else if (type === "suspension") {
+      body.push("Pursuant to the payment-suspension authority at 42 CFR 405.371, this notice advises you that payment on the referenced claim (and substantially similar pending claims) is TEMPORARILY SUSPENDED pending a payment-integrity review. The review concerns:");
+      body.push("");
+      body.push("    " + finding);
+      body.push("");
+      body.push("The amount held pending this review is " + exp + ". This is a temporary hold, not a final determination. You may submit documentation rebutting the finding at any time; a determination will follow the review.");
+    } else if (type === "determination") {
+      body.push("Following a payment-integrity review of the referenced claim, this office has determined that an improper payment of " + exp + " was made in connection with a " + a.fwaType.toLowerCase() + " pattern:");
+      body.push("");
+      body.push("    " + finding);
+      body.push("");
+      body.push("Demand is hereby made for repayment of " + exp + ". You have the right to submit a rebuttal and to appeal this determination within the timeframe stated in your provider agreement. Supporting evidence and the basis for this determination are available in the case file.");
+    } else { // followup
+      body.push("Our records indicate that a prior notice regarding the referenced claim has not received a response within the requested timeframe. The matter concerns:");
+      body.push("");
+      body.push("    " + finding);
+      body.push("");
+      body.push("Please respond within 14 calendar days. If no response is received, this office will proceed with the applicable determination on the record available, which may result in " + (prepay ? "denial of the pending payment" : "recovery of " + exp) + ".");
+    }
+    body.forEach(function (line) { L.push(line.length > 96 ? wrap(line, 96) : line); });
+    L.push("");
+    L.push("Sincerely,");
+    var signer = (window.APP.ROLES[window.APP.state.role] || {}).name || "Dana Whitmore";
+    L.push(signer + ", Payment Integrity Analyst");
+    L.push("VA PIVOT — Payment Integrity Validation & Oversight");
+    L.push("");
+    L.push("Drafted by the PIVOT agentic assist and subject to reviewer adoption.");
+    L.push("Synthetic data — for demonstration only. Not a real Veteran, provider, or claim.");
+    return { type: type, label: meta.label, ref: ref, body: L.join("\n") };
+  }
+
+  window.AI = { draftRationale: draftRationale, justificationMemo: justificationMemo, caseNarrative: caseNarrative, adjudicationSummary: adjudicationSummary, copilot: copilot, stream: stream, agentReports: agentReports, knowledgeBase: knowledgeBase, correspondence: correspondence, CORRESPONDENCE_TYPES: CORRESPONDENCE_TYPES };
 })();
