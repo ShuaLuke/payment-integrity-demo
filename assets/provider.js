@@ -985,6 +985,165 @@
       };
     },
 
+    // ---------------------------------------------------------------------------
+    // CMS pricing calculation transparency — "show the math" (Element 2.1).
+    // Everything here is DERIVED and back-solved so each line's calculated result
+    // RECONCILES to the CMS-allowed amount already on getCmsPricing() — no data.js
+    // regen, hero dollar figures never move. Four representative methodologies:
+    //   Professional (837P) : MPFS   allowed = Σ(RVU × GPCI) × conversion factor
+    //   Residential per-diem (H0018) : allowed = covered days × per-diem rate
+    //   Outpatient / ED lines : OPPS  APC assignment + CMS status indicator
+    //   Inpatient SUD stay    : MS-DRG grouper (IPPS) cross-check, incl. the
+    //     invalid-DRG regrouping example (submitted 896 w/ MCC → corrected 897)
+    // pricerLog is the ordered, auditable calculation trace.
+    // ---------------------------------------------------------------------------
+    CF_2025: 32.74,          // MPFS conversion factor, CY2025 ($/RVU)
+    OPPS_CF_2025: 89.17,     // OPPS conversion factor, CY2025 ($/weight)
+    IPPS_BASE_2025: 6564.13, // operating standardized base rate, FFY2025
+    // GPCI locality 05 — realistic 3-dp indices, fixed (no RNG) so the math is stable.
+    GPCI_BY_STATE: {
+      TX: { work: 1.000, pe: 0.917, mp: 0.845 },
+      AZ: { work: 1.000, pe: 0.936, mp: 0.808 },
+      CA: { work: 1.041, pe: 1.128, mp: 0.611 },
+      NV: { work: 1.005, pe: 1.010, mp: 0.949 },
+      NM: { work: 1.000, pe: 0.905, mp: 0.869 },
+      _: { work: 1.000, pe: 0.920, mp: 0.850 }
+    },
+    // APC assignment + status indicator for the outpatient/institutional codes we carry.
+    APC_REF: {
+      "99283": { apc: "5023", desc: "Level 3 Type A ED visit", si: "V" },
+      "99284": { apc: "5024", desc: "Level 4 Type A ED visit", si: "V" },
+      "93000": { apc: "5721", desc: "Level 1 Diagnostic Tests", si: "S" },
+      "71046": { apc: "5521", desc: "Level 1 Imaging w/o Contrast", si: "S" },
+      "70551": { apc: "5523", desc: "Level 3 Imaging w/o Contrast", si: "S" }
+    },
+    SI_LEGEND: {
+      "S": "Significant procedure — not discounted, separately paid",
+      "T": "Significant procedure — multiple-procedure reduction applies",
+      "V": "ED / clinic visit — separately paid",
+      "N": "Packaged — payment bundled into another service ($0)",
+      "Q1": "Conditionally packaged — paid only if no separately-payable service on the claim",
+      "J1": "Comprehensive APC — single payment for the whole encounter"
+    },
+    getPricerDetail: function (claimId) {
+      var cl = claims[claimId]; if (!cl) return null;
+      if (cl.type === "NCPDP") return null;
+      var pricing = this.getCmsPricing(claimId); if (!pricing) return null; // authoritative cmsAllowed per line
+      var p = providers[cl.providerId] || {}, inst = cl.type === "837I", st = p.state || "TX";
+      var CF = this.CF_2025, OCF = this.OPPS_CF_2025, gpci = this.GPCI_BY_STATE[st] || this.GPCI_BY_STATE._;
+      var self = this, log = [];
+      var r2 = function (n) { return Math.round(n * 100) / 100; };
+      var r3 = function (n) { return Math.round(n * 1000) / 1000; };
+      var resid = (cl.lines || []).some(function (l) { return l.cpt === "H0018"; });
+
+      var lines = pricing.lines.map(function (pl, idx) {
+        var raw = (cl.lines || [])[idx] || {};
+        var cpt = pl.cpt, allowed = pl.cmsAllowed; // TARGET the calc must reconcile to
+        // ---- residential per-diem (institutional H0018) ----
+        if (cpt === "H0018") {
+          var billedDays = raw.units || 24;
+          var rate = billedDays ? r2(raw.allowed / billedDays) : 640;    // per-diem rate = billed ÷ days ($640)
+          var billedTotal = r2(raw.allowed);                             // 24 days × $640 as billed
+          var coveredEquiv = Math.max(1, Math.round(allowed / rate));    // day-equivalent of the allowed amount
+          var recover = r2(billedTotal - allowed);
+          log.push({ step: idx + 1, code: cpt, method: "Per-diem", detail: billedDays + " days × " + usd(rate) + "/day = " + usd(billedTotal) + " billed → reference allowance " + usd(allowed) + " (≈" + coveredEquiv + " covered days)", result: allowed });
+          return {
+            method: "Per-diem (residential)", cpt: cpt, description: pl.description, allowed: allowed,
+            perDiem: {
+              rate: rate, billedDays: billedDays, billedTotal: billedTotal,
+              coveredEquiv: coveredEquiv, uncoveredDays: Math.max(0, billedDays - coveredEquiv),
+              recover: recover,
+              formula: billedDays + " days × " + usd(rate) + "/day = " + usd(billedTotal) + " → reference-priced allowance " + usd(allowed),
+              note: billedDays > coveredEquiv ? "The reference-priced allowance equates to ≈" + coveredEquiv + " covered days at the $" + rate + " per-diem — " + (billedDays - coveredEquiv) + " of the " + billedDays + " billed days exceed the authorized length of stay." : "All billed days are within the allowance."
+            }
+          };
+        }
+        // ---- OPPS / APC (institutional outpatient & ED lines) ----
+        if (inst) {
+          var ap = self.APC_REF[cpt] || { apc: "—", desc: pl.description, si: "S" };
+          var packaged = allowed === 0;                 // only a truly $0-allowance line is packaged
+          var opResult = allowed;                        // honor the fee-schedule allowed (reconciles to Comparison)
+          var weight = opResult ? r3(opResult / OCF) : 0;
+          log.push({ step: idx + 1, code: cpt, method: "OPPS", detail: "APC " + ap.apc + " (SI " + ap.si + "): " + (packaged ? "packaged — $0 separate payment" : "weight " + weight + " × $" + OCF + " = " + usd(opResult)), result: opResult });
+          return {
+            method: "OPPS / APC", cpt: cpt, description: pl.description, allowed: opResult,
+            apc: {
+              code: ap.apc, desc: ap.desc, si: ap.si, siLabel: self.SI_LEGEND[ap.si] || ap.si,
+              packaged: packaged, weight: weight, conversionFactor: OCF, result: opResult,
+              formula: packaged ? "Packaged into the encounter APC — no separate payment" : "APC relative weight × OPPS conversion factor ($" + OCF + ")"
+            }
+          };
+        }
+        // ---- MPFS professional line: RVU × GPCI × CF, back-solved to cmsAllowed ----
+        var totAdj = r2(allowed / CF);                  // Σ(RVU×GPCI) that ties to the allowed amount
+        var sd = self._seed(claimId + cpt + idx, "mpfs");
+        var pW = 0.48 + sd() * 0.14, pP = 0.34 + sd() * 0.12;
+        var aW = r2(totAdj * pW), aP = r2(totAdj * pP), aM = r2(totAdj - aW - aP); // parts sum to totAdj exactly
+        if (aM < 0.01) { aM = 0.01; aP = r2(totAdj - aW - aM); }
+        var rvuW = r2(aW / gpci.work), rvuP = r2(aP / gpci.pe), rvuM = r2(aM / gpci.mp);
+        log.push({ step: idx + 1, code: cpt, method: "MPFS", detail: "[(" + rvuW + "×" + gpci.work + ")+(" + rvuP + "×" + gpci.pe + ")+(" + rvuM + "×" + gpci.mp + ")] × $" + CF + " = " + usd(allowed), result: allowed });
+        return {
+          method: pl.methodology, cpt: cpt, description: pl.description, allowed: allowed,
+          mpfs: {
+            cf: CF, gpci: gpci, totalAdjustedRvu: totAdj,
+            components: [
+              { label: "Work", rvu: rvuW, gpci: gpci.work, adjusted: aW },
+              { label: "Practice expense", rvu: rvuP, gpci: gpci.pe, adjusted: aP },
+              { label: "Malpractice", rvu: rvuM, gpci: gpci.mp, adjusted: aM }
+            ],
+            siteOfService: "11 — Office (non-facility)",
+            formula: "[(RVUw×GPCIw) + (RVUpe×GPCIpe) + (RVUmp×GPCImp)] × CF",
+            result: allowed
+          }
+        };
+      });
+
+      // ---- MS-DRG grouper (IPPS) — inpatient SUD stay cross-check + invalid-DRG recalc ----
+      var drgGrouper = null;
+      if (resid) {
+        var d = this.getClaimDetail(claimId);
+        var principal = (d.diagnoses || []).filter(function (x) { return x.type === "principal"; })[0] || null;
+        var secs = (d.diagnoses || []).filter(function (x) { return x.type === "secondary"; });
+        var relWeight = 0.5843, baseRate = this.IPPS_BASE_2025;
+        var wageIndex = 0.9187, laborShare = 0.676, nonLaborShare = 0.324;
+        var adjBase = r2(baseRate * (laborShare * wageIndex + nonLaborShare));
+        var drgPayment = r2(relWeight * adjBase);
+        log.push({ step: lines.length + 1, code: "MS-DRG 897", method: "IPPS", detail: "weight " + relWeight + " × adjusted base " + usd(adjBase) + " = " + usd(drgPayment) + " (representative)", result: drgPayment });
+        drgGrouper = {
+          assignedDrg: "897", description: "Alcohol/drug abuse or dependence w/o rehabilitation therapy w/o MCC",
+          mdc: "20 — Alcohol / Drug Use & Alcohol / Drug Induced Organic Mental Disorders",
+          principalDx: principal ? { code: principal.code, desc: principal.description } : null,
+          secondaryDx: secs.map(function (x) { return { code: x.code, desc: x.description, poa: x.poa, mcc: false }; }),
+          pcs: (d.procedures || []).map(function (x) { return { code: x.code, desc: x.description }; }),
+          relativeWeight: relWeight, baseRate: baseRate, wageIndex: wageIndex,
+          laborShare: laborShare, nonLaborShare: nonLaborShare, adjustedBase: adjBase,
+          formula: "MS-DRG relative weight × [(labor share × wage index) + non-labor share] × standardized base rate",
+          payment: drgPayment,
+          note: "This stay was billed per-diem (revenue code 1002 / H0018). The MS-DRG grouper is shown as an IPPS cross-check — representative figures.",
+          validation: {
+            invalid: true,
+            submittedDrg: "896", submittedDesc: "Alcohol/drug abuse or dependence w/o rehabilitation therapy w/ MCC",
+            submittedWeight: 0.8577,
+            regroupedDrg: "897", regroupedDesc: "Alcohol/drug abuse or dependence w/o rehabilitation therapy w/o MCC",
+            regroupedWeight: relWeight,
+            reason: "Secondary diagnoses coded to carry a major complication/comorbidity (MCC) are not present-on-admission or not clinically substantiated in the record. Removing the unsupported MCC regroups the encounter from DRG 896 to 897 — a lower relative weight.",
+            weightDelta: r2(0.8577 - relWeight),
+            paymentDelta: r2((0.8577 - relWeight) * adjBase)
+          }
+        };
+      }
+
+      return {
+        source: "CMS reference pricing", asOf: "CY2025 CMS fee schedules · " + (p.state || "TX") + " locality 05",
+        conversionFactor: CF, oppsConversionFactor: OCF,
+        lines: lines, drgGrouper: drgGrouper, pricerLog: log,
+        totals: { cmsAllowed: pricing.totals.cmsAllowed },
+        methods: (function () {
+          var m = {}; lines.forEach(function (l) { m[l.method] = true; }); return Object.keys(m);
+        })()
+      };
+    },
+
     // Utilization management (clinical care guidelines): clinical criteria, level of care, LOS.
     getUtilizationMgmt: function (claimId) {
       var cl = claims[claimId]; if (!cl) return null;

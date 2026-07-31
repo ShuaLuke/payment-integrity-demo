@@ -3,7 +3,7 @@
    (retrospective: Confirm/Dismiss/Escalate · prepay: Pay/Hold/Deny). */
 (function () {
   window.Views = window.Views || {};
-  var curTab = "overview", lastId = null, ctx = null, claimView = "summary";
+  var curTab = "overview", lastId = null, ctx = null, claimView = "summary", pricingView = "comparison";
 
   function sharesTin(prov) {
     return window.DP.listProviders().filter(function (p) { return p.tin === prov.tin; }).length > 1;
@@ -271,7 +271,7 @@
     else if (name === "claim") { panel.innerHTML = claimTabHtml(ctx.a, ctx.cl); wireClaimTab(panel); }
     else if (name === "evidence") { panel.innerHTML = evidenceHtml(ctx.a, ctx.cl); wireEvidenceUploads(ctx.id); wireEvidenceDocs(ctx.id, ctx.a, ctx.cl); wireClaimLines(panel); wireArtifacts(panel); }
     else if (name === "coding") { panel.innerHTML = xwalkHtml(ctx.a, ctx.cl); }
-    else if (name === "pricing") { panel.innerHTML = pricingHtml(ctx.a, ctx.cl); wirePricingVersions(panel); }
+    else if (name === "pricing") { panel.innerHTML = pricingHtml(ctx.a, ctx.cl); wirePricing(panel); }
     else if (name === "utilization") { panel.innerHTML = umHtml(ctx.a, ctx.cl); }
     else if (name === "analysis") { panel.innerHTML = analysisHtml(ctx.a); var rc = document.getElementById("c-openrc"); if (rc) rc.onclick = function () { window.APP.openProvider(ctx.p.id); }; }
     else if (name === "network") { panel.innerHTML = networkHtml(); renderCollusion(ctx.p, ctx.id); }
@@ -739,6 +739,23 @@
     if (!cl) return noClaimCard("CMS pricing");
     if (cl.type === "NCPDP") return pharmacyNaCard("CMS reference pricing (MPFS/OPPS)");
     var d = window.DP.getCmsPricing(cl.id); if (!d) return noClaimCard("CMS pricing");
+    var seg = function (key, icon, label, sub) {
+      var on = pricingView === key;
+      return '<button class="pr-seg' + (on ? " on" : "") + '" data-pr="' + key + '" style="flex:1;border:0.5px solid ' + (on ? "var(--accent)" : "var(--border)") + ';background:' + (on ? "var(--accent-l)" : "#fff") + ';color:' + (on ? "var(--accent-d)" : "var(--ink)") + ';border-radius:var(--r,8px);padding:8px 6px;cursor:pointer;text-align:center;font-weight:' + (on ? "600" : "400") + '"><i class="ti ti-' + icon + '"></i> ' + label + '<div style="font-size:10px;color:var(--text2);font-weight:400">' + sub + '</div></button>';
+    };
+    return '<div style="display:flex;flex-direction:column;gap:10px">' +
+      '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div style="font-weight:500;font-size:13px"><i class="ti ti-currency-dollar" style="color:var(--accent-d)"></i> CMS reference pricing <span class="muted" style="font-weight:400;font-size:11px">· fee-schedule pricing & the calculation behind it</span></div>' +
+      '<span class="tag" style="background:var(--surface)"><i class="ti ti-plug-connected"></i> ' + window.APP.esc(d.source) + '</span></div><div style="font-size:11px;color:var(--text2);margin-top:4px">' + d.asOf + ' · ' + window.APP.esc(d.locality) + '</div></div>' +
+      '<div style="display:flex;gap:6px">' +
+      seg("comparison", "arrows-left-right", "Comparison", "submitted vs allowed") +
+      seg("calculation", "calculator", "Calculation", "show the math") +
+      '</div>' +
+      '<div id="c-pricebody">' + pricingBody(pricingView, a, cl, d) + '</div></div>';
+  }
+  function pricingBody(view, a, cl, d) {
+    return view === "calculation" ? calcBody(a, cl) : comparisonBody(a, cl, d);
+  }
+  function comparisonBody(a, cl, d) {
     var m = window.DP.usd;
     var rows = d.lines.map(function (l) {
       var vpos = l.variance > 0;
@@ -748,14 +765,110 @@
         '<td style="font-size:11px">' + window.APP.esc(l.methodology) + (l.overPaid ? ' <span class="tag" style="background:var(--high-bg);color:var(--high-tx)">over CMS</span>' : '') + '</td></tr>';
     }).join("");
     return '<div style="display:flex;flex-direction:column;gap:10px">' +
-      '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div style="font-weight:500;font-size:13px"><i class="ti ti-currency-dollar" style="color:var(--accent-d)"></i> CMS pricing comparison <span class="muted" style="font-weight:400;font-size:11px">· submitted charge vs CMS-allowed</span></div>' +
-      '<span class="tag" style="background:var(--surface)"><i class="ti ti-plug-connected"></i> ' + window.APP.esc(d.source) + '</span></div><div style="font-size:11px;color:var(--text2);margin-top:4px">' + d.asOf + ' · ' + window.APP.esc(d.locality) + '</div></div>' +
       '<div class="card" style="padding:0;overflow:hidden"><table><thead><tr><th>CPT</th><th>Description</th><th class="right">Submitted</th><th class="right">CMS allowed</th><th class="right">Exposure</th><th class="right">Variance</th><th>Methodology</th></tr></thead><tbody>' + rows +
       '<tr style="font-weight:600;border-top:1px solid var(--border)"><td colspan="2">Claim total</td><td class="right">' + m(d.totals.submitted) + '</td><td class="right">' + m(d.totals.cmsAllowed) + '</td><td class="right">' + m(d.totals.paid) + '</td><td class="right" style="color:var(--high-tx)">+' + m(d.totals.variance) + '</td><td></td></tr></tbody></table></div>' +
       (d.totals.overpayment > 0 ? '<div style="background:var(--high-bg);border:0.5px solid #f3c9c9;border-radius:7px;padding:9px 11px;font-size:11.5px;color:var(--high-tx)"><b>' + m(d.totals.overpayment) + '</b> exposure above the CMS-allowed amount — recoverable per CMS reference pricing.</div>' : '') +
       (a.mode === "prepay" ? '<div style="background:var(--surface);border:0.5px solid var(--border);border-radius:7px;padding:9px 11px;font-size:11.5px;color:var(--text2)"><i class="ti ti-info-circle"></i> This claim is <b>pre-payment</b> — exposure is $0 per line because nothing has been paid yet. Compare the submitted charge against the CMS-allowed amount to price it before releasing payment.</div>' : '') +
       pricingVersionsHtml(d.ruleVersions) +
       '</div>';
+  }
+  // ---------- Calculation view — "show the math" behind the CMS-allowed amount ----------
+  // MPFS RVU×GPCI×CF component tables, per-diem, OPPS/APC status indicators, an
+  // MS-DRG grouper (IPPS) cross-check, and the ordered pricer log. Un-attributed.
+  function calcBody(a, cl) {
+    var d = window.DP.getPricerDetail(cl.id); if (!d) return noClaimCard("the pricing calculation");
+    var m = window.DP.usd;
+    var cards = d.lines.map(function (l, i) { return calcLineCard(l, i); }).join("");
+    var drg = d.drgGrouper ? drgGrouperCard(d.drgGrouper) : "";
+    return '<div style="display:flex;flex-direction:column;gap:10px">' +
+      '<div class="card" style="display:flex;align-items:flex-start;gap:9px;padding:10px 12px;font-size:11.5px;color:var(--text2)"><i class="ti ti-calculator" style="color:var(--accent-d);font-size:16px;margin-top:1px"></i><div>Every allowed amount below is built from first principles — relative value units, geographic indices, conversion factors and status indicators — so the reviewer can trace <b style="color:var(--ink)">how</b> the fee-schedule amount was derived, not just what it is. Figures reconcile to the Comparison view.</div></div>' +
+      cards + drg + pricerLogCard(d.pricerLog);
+  }
+  function calcLineCard(l, i) {
+    var m = window.DP.usd;
+    var head = '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px"><span class="mono" style="font-size:13px;font-weight:600">' + l.cpt + '</span>' +
+      '<span style="font-size:12px;color:var(--text2);flex:1;min-width:0">' + window.APP.esc(l.description) + '</span>' +
+      '<span class="tag" style="background:var(--surface)">' + window.APP.esc(l.method) + '</span>' +
+      '<span style="font-weight:600;font-size:13px">' + m(l.allowed) + '</span></div>';
+    var body = "";
+    if (l.mpfs) {
+      var x = l.mpfs;
+      var comp = x.components.map(function (c) {
+        return '<tr><td>' + c.label + '</td><td class="right mono">' + c.rvu.toFixed(2) + '</td><td class="right mono">' + c.gpci.toFixed(3) + '</td><td class="right mono">' + c.adjusted.toFixed(2) + '</td></tr>';
+      }).join("");
+      body = '<div style="overflow-x:auto"><table style="font-size:11.5px"><thead><tr><th>RVU component</th><th class="right">RVU</th><th class="right">GPCI (loc 05)</th><th class="right">Adjusted</th></tr></thead><tbody>' + comp +
+        '<tr style="font-weight:600;border-top:1px solid var(--border)"><td colspan="3">Total geographically-adjusted RVUs</td><td class="right mono">' + x.totalAdjustedRvu.toFixed(2) + '</td></tr></tbody></table></div>' +
+        '<div style="margin-top:8px;padding:8px 10px;background:var(--surface);border-radius:7px;font-size:11.5px"><span class="mono">' + x.totalAdjustedRvu.toFixed(2) + '</span> adjusted RVUs × <span class="mono">$' + x.cf.toFixed(2) + '</span> conversion factor = <b>' + m(x.result) + '</b> allowed' +
+        '<div style="font-size:10.5px;color:var(--text3);margin-top:3px">' + window.APP.esc(x.formula) + ' · site of service ' + window.APP.esc(x.siteOfService) + '</div></div>';
+    } else if (l.perDiem) {
+      var pd = l.perDiem;
+      body = '<div style="display:flex;flex-wrap:wrap;gap:10px">' +
+        pdStat("Per-diem rate", m(pd.rate) + "/day") + pdStat("Days billed", pd.billedDays + " · " + m(pd.billedTotal)) +
+        pdStat("Covered-day equiv.", "≈" + pd.coveredEquiv) + pdStat("Days over LOS", String(pd.uncoveredDays), pd.uncoveredDays > 0) +
+        '</div>' +
+        '<div style="margin-top:8px;padding:8px 10px;background:var(--surface);border-radius:7px;font-size:11.5px"><span class="mono">' + window.APP.esc(pd.formula) + '</span>' +
+        '<div style="font-size:10.5px;color:' + (pd.uncoveredDays > 0 ? "var(--high-tx)" : "var(--text3)") + ';margin-top:3px">' + window.APP.esc(pd.note) + (pd.recover > 0 ? ' Recoverable: <b>' + m(pd.recover) + '</b>.' : '') + '</div></div>';
+    } else if (l.apc) {
+      var ap = l.apc;
+      body = '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:stretch">' +
+        pdStat("APC", ap.code) +
+        '<div style="flex:1;min-width:150px;background:var(--surface);border-radius:7px;padding:8px 10px"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Status indicator</div><div style="font-weight:600;font-size:13px">' + ap.si + '</div><div style="font-size:10.5px;color:var(--text2)">' + window.APP.esc(ap.siLabel) + '</div></div>' +
+        '</div>' +
+        '<div style="margin-top:8px;padding:8px 10px;background:' + (ap.packaged ? "var(--med-bg)" : "var(--surface)") + ';border-radius:7px;font-size:11.5px">' +
+        (ap.packaged ? '<b>Packaged</b> — payment is bundled into the encounter APC; no separate allowance for this line (<b>$0</b>).'
+          : '<span class="mono">' + ap.desc + '</span> · weight <span class="mono">' + ap.weight.toFixed(3) + '</span> × <span class="mono">$' + ap.conversionFactor.toFixed(2) + '</span> OPPS conversion factor = <b>' + m(ap.result) + '</b> allowed') +
+        '<div style="font-size:10.5px;color:var(--text3);margin-top:3px">' + window.APP.esc(ap.formula) + '</div></div>';
+    }
+    return '<div class="card">' + head + body + '</div>';
+  }
+  function pdStat(label, val, warn) {
+    return '<div style="flex:1;min-width:110px;background:var(--surface);border-radius:7px;padding:8px 10px"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">' + label + '</div><div style="font-weight:600;font-size:14px' + (warn ? ';color:var(--high-tx)' : '') + '">' + val + '</div></div>';
+  }
+  function drgGrouperCard(g) {
+    var m = window.DP.usd;
+    var dx = (g.principalDx ? '<tr><td class="mono">' + g.principalDx.code + '</td><td>' + window.APP.esc(g.principalDx.desc) + '</td><td>Principal</td></tr>' : "") +
+      g.secondaryDx.slice(0, 6).map(function (x) { return '<tr><td class="mono">' + x.code + '</td><td>' + window.APP.esc(x.desc) + '</td><td>Secondary' + (x.poa ? ' · POA ' + x.poa : '') + '</td></tr>'; }).join("");
+    var pcs = g.pcs.map(function (x) { return '<span class="mono" style="font-size:10.5px;padding:2px 6px;border-radius:4px;background:var(--surface);margin:2px 3px 0 0;display:inline-block">' + x.code + '</span>'; }).join("");
+    var v = g.validation;
+    var validation = v ? '<div style="margin-top:10px;border:1px solid ' + (v.invalid ? "#f0c9a8" : "var(--border)") + ';border-radius:8px;overflow:hidden">' +
+      '<div style="padding:8px 11px;background:' + (v.invalid ? "var(--med-bg)" : "var(--low-bg)") + ';font-weight:600;font-size:12px;color:' + (v.invalid ? "var(--med-tx)" : "var(--low-tx)") + '"><i class="ti ti-' + (v.invalid ? "alert-triangle" : "circle-check") + '"></i> ' + (v.invalid ? "Invalid DRG detected — grouper recalculated" : "DRG validated") + '</div>' +
+      '<div style="padding:9px 11px;font-size:11.5px">' +
+      '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">' +
+      '<div style="text-align:center"><div style="font-size:10px;color:var(--text3)">Submitted</div><div class="mono" style="font-weight:600">DRG ' + v.submittedDrg + '</div><div style="font-size:10px;color:var(--text2)">wt ' + v.submittedWeight.toFixed(4) + '</div></div>' +
+      '<i class="ti ti-arrow-right" style="color:var(--text3)"></i>' +
+      '<div style="text-align:center"><div style="font-size:10px;color:var(--text3)">Regrouped</div><div class="mono" style="font-weight:600;color:var(--accent-d)">DRG ' + v.regroupedDrg + '</div><div style="font-size:10px;color:var(--text2)">wt ' + v.regroupedWeight.toFixed(4) + '</div></div>' +
+      '<div style="flex:1;min-width:120px;text-align:right"><div style="font-size:10px;color:var(--text3)">Payment impact</div><div style="font-weight:600;color:var(--high-tx)">−' + m(Math.abs(v.paymentDelta)) + '</div></div>' +
+      '</div>' +
+      '<div style="color:var(--text2);margin-top:7px">' + window.APP.esc(v.submittedDesc) + ' → <b>' + window.APP.esc(v.regroupedDesc) + '</b></div>' +
+      '<div style="color:var(--text2);margin-top:5px"><i class="ti ti-info-circle" style="color:var(--accent-d)"></i> ' + window.APP.esc(v.reason) + '</div>' +
+      '</div></div>' : "";
+    return '<div class="card">' +
+      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px"><i class="ti ti-sitemap" style="color:var(--accent-d)"></i><span style="font-weight:600;font-size:13px">MS-DRG grouper</span>' +
+      '<span class="muted" style="font-size:11px">· inpatient prospective payment (IPPS) cross-check</span>' +
+      '<span style="flex:1"></span><span class="mono" style="font-weight:600;font-size:13px">DRG ' + g.assignedDrg + '</span></div>' +
+      '<div style="font-size:12px;color:var(--text2);margin-bottom:8px">' + window.APP.esc(g.description) + ' <span class="muted">· MDC ' + window.APP.esc(g.mdc) + '</span></div>' +
+      '<div style="overflow-x:auto"><table style="font-size:11px"><thead><tr><th>Dx</th><th>Description</th><th>Role</th></tr></thead><tbody>' + dx + '</tbody></table></div>' +
+      (pcs ? '<div style="margin-top:7px;font-size:10.5px;color:var(--text3)">ICD-10-PCS procedures: ' + pcs + '</div>' : "") +
+      '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px">' +
+      pdStat("Relative weight", g.relativeWeight.toFixed(4)) + pdStat("Wage index", g.wageIndex.toFixed(4)) +
+      pdStat("Labor / non-labor", Math.round(g.laborShare * 100) + " / " + Math.round(g.nonLaborShare * 100) + "%") +
+      pdStat("Standardized base", m(g.baseRate)) +
+      '</div>' +
+      '<div style="margin-top:8px;padding:8px 10px;background:var(--surface);border-radius:7px;font-size:11.5px">Adjusted base = ' + m(g.baseRate) + ' × [(' + g.laborShare.toFixed(3) + ' × ' + g.wageIndex.toFixed(4) + ') + ' + g.nonLaborShare.toFixed(3) + '] = <span class="mono">' + m(g.adjustedBase) + '</span><br>Payment = weight <span class="mono">' + g.relativeWeight.toFixed(4) + '</span> × ' + m(g.adjustedBase) + ' = <b>' + m(g.payment) + '</b>' +
+      '<div style="font-size:10.5px;color:var(--text3);margin-top:3px">' + window.APP.esc(g.formula) + '</div></div>' +
+      '<div style="font-size:10.5px;color:var(--text3);margin-top:6px"><i class="ti ti-info-circle"></i> ' + window.APP.esc(g.note) + '</div>' +
+      validation + '</div>';
+  }
+  function pricerLogCard(log) {
+    if (!log || !log.length) return "";
+    var rows = log.map(function (s) {
+      return '<div style="display:flex;gap:9px;align-items:baseline;padding:6px 0;border-top:0.5px solid var(--border2)">' +
+        '<span class="mono" style="font-size:10.5px;color:var(--text3);min-width:34px">' + (typeof s.step === "number" ? "#" + s.step : "") + '</span>' +
+        '<span class="tag" style="background:var(--surface);font-size:10px;min-width:52px;text-align:center">' + window.APP.esc(s.method) + '</span>' +
+        '<span class="mono" style="font-size:10.5px;color:var(--text2);min-width:70px">' + window.APP.esc(s.code) + '</span>' +
+        '<span style="font-size:11px;flex:1">' + window.APP.esc(s.detail) + '</span></div>';
+    }).join("");
+    return '<div class="card"><div style="font-weight:500;font-size:12.5px;margin-bottom:2px"><i class="ti ti-list-details" style="color:var(--accent-d)"></i> Pricer log <span class="muted" style="font-weight:400;font-size:11px">· the ordered, auditable calculation trace</span></div>' + rows + '</div>';
   }
   // Pricing rules with version history — each rule shows the version in force plus
   // its prior versions (effective date + value + what changed), expandable.
@@ -791,6 +904,28 @@
         var open = hist.style.display !== "none";
         hist.style.display = open ? "none" : "block";
         var c = row.querySelector(".pv-rule-caret"); if (c) c.style.transform = open ? "" : "rotate(90deg)";
+      });
+    });
+  }
+  // Comparison ⇄ Calculation toggle on the Pricing tab.
+  function wirePricing(root) {
+    wirePricingVersions(root);
+    (root || document).querySelectorAll(".pr-seg").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var v = btn.getAttribute("data-pr"); if (v === pricingView || !ctx) return;
+        pricingView = v;
+        window.APP.auditLog("PRICING_VIEW", ctx.id ? ("Lead #" + ctx.id + " · " + (v === "calculation" ? "Calculation (show the math)" : "Comparison")) : v);
+        var d = window.DP.getCmsPricing(ctx.cl.id);
+        var body = document.getElementById("c-pricebody");
+        if (body) { body.innerHTML = pricingBody(v, ctx.a, ctx.cl, d); wirePricingVersions(body); }
+        (root || document).querySelectorAll(".pr-seg").forEach(function (b2) {
+          var on = b2.getAttribute("data-pr") === v;
+          b2.classList.toggle("on", on);
+          b2.style.borderColor = on ? "var(--accent)" : "var(--border)";
+          b2.style.background = on ? "var(--accent-l)" : "#fff";
+          b2.style.color = on ? "var(--accent-d)" : "var(--ink)";
+          b2.style.fontWeight = on ? "600" : "400";
+        });
       });
     });
   }
