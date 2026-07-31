@@ -84,7 +84,7 @@
   };
   function trendChart(tr) {
     if (!tr.length) return "";
-    var W = 900, H = 180, pl = 8, pr = 8, pt = 12, pb = 24, iw = W - pl - pr, ih = H - pt - pb, n = tr.length;
+    var W = 900, H = 180, pl = 22, pr = 22, pt = 12, pb = 24, iw = W - pl - pr, ih = H - pt - pb, n = tr.length;
     var maxExp = Math.max.apply(null, tr.map(function (t) { return t.exposure; }));
     var maxCnt = Math.max.apply(null, tr.map(function (t) { return t.flagged; }));
     var x = function (i) { return pl + (n === 1 ? iw / 2 : i * iw / (n - 1)); };
