@@ -206,7 +206,7 @@
   }
 
   window.COPILOT = {
-    open: function () { if (!open) toggle(); },
+    open: function (m) { if (!open) toggle(); if (m) setMode(m); },
     close: function () { if (open) toggle(); },
     isOpen: function () { return open; }, ask: ask,
     summarize: function (id) {
