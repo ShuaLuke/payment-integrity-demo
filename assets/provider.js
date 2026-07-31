@@ -327,6 +327,154 @@
 
     getModels: function () { return D.models; },
 
+    // ---- Emerging-rule discovery (Element 3.2.ii/iii) ----------------------
+    // A pattern the models keep surfacing becomes a candidate RULE: proposed
+    // logic, the data it needs, a suggested trigger, the expected output, and a
+    // REPLAY over recent claims estimating the impact — then a human approves,
+    // returns, or rejects it (HIL governance) before it can be promoted. All
+    // deterministic/synthetic (no data.js regen). Mirrors the rule-detail shape
+    // (logic / inputs / output) so an approved candidate drops straight into the
+    // Rules Library and the release pipeline.
+    getRuleCandidates: function () {
+      return [
+        {
+          id: "cand_em_l5", name: "E/M level-5 over-representation → recode review",
+          fraudType: "Upcoding", severity: "High", confidence: 88, status: "under-review",
+          reviewer: "Dana Whitmore", discoveredAt: "2026-07-24",
+          sourcePattern: { modelId: "model_em_peer", model: "E/M Peer-Group Profile", type: "Anomaly Detection",
+            finding: "A cohort of internal-medicine providers bills 99215 (level 5) at a 90% share — > 3σ above the specialty peer mean of 11% — sustained across 11 consecutive months, not a one-quarter blip." },
+          logic: {
+            summary: "When a provider's level-5 established-office-visit share exceeds three standard deviations above the specialty peer mean over a rolling window, route the level-5 claims for documentation/recode review.",
+            criteria: [
+              { when: "Rendering specialty = Internal Medicine (or peer group of record)", then: "Load the specialty peer distribution for 99211–99215" },
+              { when: "99215 share ≥ peer mean + 3σ across a rolling 6-month window", then: "Flag the provider cohort" },
+              { when: "Pattern persists ≥ 6 of the trailing 12 months", then: "Emit recode-review candidate for each level-5 line" }
+            ],
+            pseudocode: "share = count(99215) / count(99211..99215)\nif share >= peer.mean + 3*peer.sigma\n   and months_persisted >= 6:\n     for line in claim.lines where line.cpt == '99215':\n        emit REVIEW(line, target='99213', basis='peer+doc')"
+          },
+          inputs: [
+            { field: "Procedure code / level", source: "837P · SV101-1 (HC qualifier)", example: "99215" },
+            { field: "Rendering specialty / taxonomy", source: "Provider registry · taxonomy", example: "207R00000X" },
+            { field: "Peer distribution", source: "Analytics · specialty benchmark", example: "mean 11% · σ 4%" },
+            { field: "Date of service", source: "837P · DTP*472", example: "2025-03-11" }
+          ],
+          trigger: "Post-pay retrospective · monthly provider-cohort scan",
+          output: { signal: "Recode-review candidate", emits: "REVIEW · target 99213 · CARC 45 basis", disposition: "Route level-5 lines to documentation review; recover the level-of-service differential where unsupported", downstream: "Lead queue → case, with the recovery basis pre-computed" },
+          impact: { window: "trailing 12 months", claimsMatched: 1240,
+            dispositions: [{ label: "Flag for recode review", count: 1240, tone: "med" }],
+            exposure: 512480 }
+        },
+        {
+          id: "cand_res_los", name: "Residential stay beyond authorized LOS → recover unauthorized days",
+          fraudType: "Length-of-stay abuse", severity: "Critical", confidence: 87, status: "approved",
+          reviewer: "Karen Boyd", discoveredAt: "2026-07-19",
+          sourcePattern: { modelId: "model_los", model: "Residential LOS & Network", type: "Anomaly Detection",
+            finding: "Clusters of residential (H0018) stays bill 24–27 per-diem days against a 14-day authorization, with shared patients/registration across facilities in a holding-company chain." },
+          logic: {
+            summary: "When residential per-diem days billed exceed the authorized/continued-stay-approved length of stay, deny the days beyond authorization and set the recovery basis to those days × the per-diem rate.",
+            criteria: [
+              { when: "Bill contains H0018 residential per-diem units", then: "Read the prior-authorization approved days" },
+              { when: "Units billed > approved days AND no continued-stay approval on file", then: "Compute unauthorized days = units − approved" },
+              { when: "Unauthorized days > 0", then: "Deny those days; emit recovery = unauthorized days × per-diem rate" }
+            ],
+            pseudocode: "auth = priorAuth.approvedDays  # e.g. 14\nover = units - auth\nif over > 0 and not continuedStayApproved:\n   emit DENY(days=over, amount=over*perDiemRate, carc='16', rarc='N130')"
+          },
+          inputs: [
+            { field: "Per-diem units (days)", source: "837I · SV205 units", example: "24" },
+            { field: "Revenue code", source: "837I · SV2 rev code", example: "1002" },
+            { field: "Authorized days", source: "UM / prior-auth record", example: "14" },
+            { field: "Continued-stay review", source: "Clinical criteria · care guideline", example: "not met (day 15+)" }
+          ],
+          trigger: "Prepay edit + post-pay retrospective",
+          output: { signal: "Unauthorized-days recovery", emits: "DENY · CARC 16 · RARC N130", disposition: "Deny days beyond authorization; recover per-diem × unauthorized days", downstream: "Release pipeline (approved) · case recovery basis" },
+          impact: { window: "trailing 90 days", claimsMatched: 52,
+            dispositions: [{ label: "Deny days over authorization", count: 52, tone: "high" }],
+            exposure: 486200 }
+        },
+        {
+          id: "cand_mod59", name: "Modifier-59 override rate spike → prepay unbundling edit",
+          fraudType: "Unbundling", severity: "High", confidence: 84, status: "draft",
+          reviewer: null, discoveredAt: "2026-07-28",
+          sourcePattern: { modelId: "model_mod", model: "Modifier Abuse Pattern", type: "Anomaly Detection",
+            finding: "A provider applies modifier 59 / X{EPSU} to NCCI column-2 codes at 6× the peer override rate — overrides concentrated on the 43235/43239 endoscopy pair." },
+          logic: {
+            summary: "When a provider's modifier-59 override rate on NCCI PTP edits exceeds the peer benchmark, pend the overridden lines pre-payment for documentation of a distinct procedural service.",
+            criteria: [
+              { when: "Line carries an NCCI PTP edit with modifier indicator 1", then: "Check for a 59 / X{EPSU} override" },
+              { when: "Provider 59-override rate ≥ peer mean + 3σ", then: "Do not auto-honor the override" },
+              { when: "Override present without distinct-service documentation", then: "Pend the column-2 line; deny as bundled if undocumented" }
+            ],
+            pseudocode: "if ptp.indicator == 1 and line.hasOverride(['59','XE','XS','XP','XU']):\n   if provider.overrideRate >= peer.mean + 3*peer.sigma:\n      emit PEND(line, need='distinct-service doc', elseDeny='bundled', carc='97')"
+          },
+          inputs: [
+            { field: "CPT + modifiers", source: "837P · SV101-1..5", example: "43235-59" },
+            { field: "NCCI PTP edit + indicator", source: "NCCI edit file", example: "43239→43235 · ind 1" },
+            { field: "Provider override rate", source: "Analytics · modifier benchmark", example: "48% vs peer 8%" },
+            { field: "Supporting documentation", source: "Records / provider portal", example: "not on file" }
+          ],
+          trigger: "Prepay · at adjudication (before payment)",
+          output: { signal: "Unbundling prepay edit", emits: "PEND → DENY (bundled) · CARC 97 · RARC N19", disposition: "Pend for documentation; deny the column-2 line as bundled if undocumented", downstream: "Prepay hold queue; releases to pay on documented distinct service" },
+          impact: { window: "trailing 6 months", claimsMatched: 210,
+            dispositions: [{ label: "Pend for documentation", count: 210, tone: "med" }, { label: "Deny if undocumented", count: 156, tone: "high" }],
+            exposure: 233900 }
+        },
+        {
+          id: "cand_daw1_nondispense", name: "Brand DAW-1, generic available, no pickup → non-dispense pend",
+          fraudType: "Pharmacy / non-dispense", severity: "High", confidence: 81, status: "draft",
+          reviewer: null, discoveredAt: "2026-07-27",
+          sourcePattern: { modelId: "model_freq", model: "Pharmacy dispensing-pattern monitor", type: "Anomaly Detection",
+            finding: "Brand drugs billed with DAW 1 (dispense-as-written) when an A-rated generic is available, with no corresponding pickup/refill-adherence signal for the quantity billed." },
+          logic: {
+            summary: "When a brand NDC is billed with DAW 1 while an A-rated generic equivalent exists and there is no dispensing/pickup record for the billed quantity, pend the claim for pharmacy verification before payment.",
+            criteria: [
+              { when: "NDC is brand and DAW code = 1", then: "Check the generic-equivalence (orange-book) table" },
+              { when: "An A-rated generic exists AND no documented medical necessity", then: "Flag DAW misuse" },
+              { when: "No pickup / adherence record for the billed days-supply", then: "Pend as potential non-dispense" }
+            ],
+            pseudocode: "if ndc.isBrand and claim.daw == 1 and generic.available(ndc)\n   and not medicalNecessity and not pickupRecord(qty):\n     emit PEND(reason='DAW-misuse/non-dispense', carc='16', rarc='M123')"
+          },
+          inputs: [
+            { field: "NDC + DAW code", source: "NCPDP D.0 · 407-D7 / 408-D8", example: "00000-0000-00 · DAW 1" },
+            { field: "Generic equivalence", source: "Orange Book reference", example: "A-rated generic available" },
+            { field: "Quantity / days supply", source: "NCPDP D.0 · 442-E7 / 405-D5", example: "90 · 30d" },
+            { field: "Pickup / adherence signal", source: "Dispensing / refill record", example: "none on file" }
+          ],
+          trigger: "Prepay · pharmacy point-of-sale edit",
+          output: { signal: "DAW-misuse / non-dispense", emits: "PEND · CARC 16 · RARC M123", disposition: "Pend for pharmacy verification; deny if non-dispense confirmed", downstream: "Pharmacy verification queue" },
+          impact: { window: "trailing 90 days", claimsMatched: 86,
+            dispositions: [{ label: "Pend for pharmacy verification", count: 86, tone: "med" }],
+            exposure: 74300 }
+        },
+        {
+          id: "cand_identity_shared", name: "One member ID across ≥6 providers in 21 days → identity review",
+          fraudType: "Identity / eligibility", severity: "Critical", confidence: 79, status: "under-review",
+          reviewer: "Dana Whitmore", discoveredAt: "2026-07-26",
+          sourcePattern: { modelId: "model_los", model: "Beneficiary identity graph", type: "Anomaly Detection",
+            finding: "A single member ID appears on claims from ≥ 6 distinct providers within a 21-day window across ≥ 3 states — a velocity/geography pattern inconsistent with one veteran's care." },
+          logic: {
+            summary: "When one member ID is billed by an improbable number of distinct providers across multiple states in a short window, route the beneficiary's claims to identity/eligibility review before further payment.",
+            criteria: [
+              { when: "Group claims by member ID over a rolling 21-day window", then: "Count distinct billing providers and states" },
+              { when: "Distinct providers ≥ 6 AND distinct states ≥ 3", then: "Flag the member-ID cluster" },
+              { when: "Velocity inconsistent with continuity-of-care", then: "Emit identity-review candidate for the cluster" }
+            ],
+            pseudocode: "g = claims.groupBy(memberId, window='21d')\nif g.distinct(provider) >= 6 and g.distinct(state) >= 3:\n   emit REVIEW(memberId, type='identity/eligibility', hold=true)"
+          },
+          inputs: [
+            { field: "Member ID", source: "837 · subscriber 2010BA NM109", example: "MBR-148697" },
+            { field: "Billing provider NPI", source: "837 · 2010AA NM109", example: "1326579229" },
+            { field: "Provider state", source: "Provider registry", example: "TX / CA / NV" },
+            { field: "Date of service", source: "837 · DTP*472", example: "2025-03-11" }
+          ],
+          trigger: "Prepay + post-pay · nightly beneficiary-graph scan",
+          output: { signal: "Identity / eligibility review", emits: "REVIEW · hold · route to eligibility", disposition: "Hold and route the member-ID cluster to identity/eligibility review", downstream: "Identity review queue; cross-links the provider network" },
+          impact: { window: "trailing 21 days", claimsMatched: 34,
+            dispositions: [{ label: "Route to identity review", count: 34, tone: "high" }],
+            exposure: 129600 }
+        }
+      ];
+    },
+
     // ---- CI/CD & release management (Round 6 Phase E) ---------------------
     // Simulated release pipeline for the app + rule-promotion history through the
     // controlled environments (dev → test → pre-prod → prod). Static / deterministic
