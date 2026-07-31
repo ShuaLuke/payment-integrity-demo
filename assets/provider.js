@@ -475,6 +475,167 @@
       ];
     },
 
+    // ---- AI model registry (Element 3.1.i/ii) ------------------------------
+    // The models behind PIVOT's analytics, as a governed catalog: type, version,
+    // status, the healthcare task each performs, how it was trained, its feature
+    // DRIVER TABLE (each input + the calculation methodology behind it), the data
+    // period it learned from, and its performance. Superset of getModels() — the
+    // four production anomaly models keep their ids/names. Static/deterministic.
+    MODEL_TYPE_ORDER: ["Anomaly Detection", "Predictive (supervised)", "Clustering (unsupervised)", "Natural Language Processing", "Ensemble"],
+    getModelRegistry: function () {
+      var f = function (name, methodology, weight) { return { name: name, methodology: methodology, weight: weight }; };
+      return [
+        // ---------- Anomaly Detection (the four production models) ----------
+        {
+          id: "model_em_peer", name: "E/M Peer-Group Profile", type: "Anomaly Detection", version: "v2.1", status: "production",
+          healthcareTask: "Detect E/M up-coding — providers whose evaluation-and-management level mix deviates from specialty peers.",
+          trainingMethod: "Unsupervised · robust z-scoring against specialty peer cohorts", dataPeriod: "2023-01 → 2025-06 (30 mo)", lastTrained: "2026-06-18",
+          performance: { flagRate: "1.7%", precision: "0.84", recall: "0.79", auc: "0.91" }, prepayEnabled: false,
+          features: [
+            f("Level-5 share", "count(99215) ÷ count(99211..99215), per provider per month"),
+            f("Peer deviation (σ)", "(provider share − peer mean) ÷ peer σ, specialty-matched"),
+            f("Persistence", "consecutive months share ≥ mean + 3σ over trailing 12"),
+            f("Volume weight", "log(claim volume) — damps low-volume noise")
+          ],
+          versions: [{ version: "v2.1", date: "2026-06-18", change: "Specialty peer cohorts refreshed to CY2025 taxonomy" }, { version: "v2.0", date: "2026-01-12", change: "Switched mean/σ to robust (median/MAD) estimators" }]
+        },
+        {
+          id: "model_freq", name: "Per-Patient Frequency", type: "Anomaly Detection", version: "v1.6", status: "production",
+          healthcareTask: "Detect over-utilization — procedure frequency far above per-patient norms.",
+          trainingMethod: "Unsupervised · Poisson rate model per code × cohort", dataPeriod: "2023-01 → 2025-06", lastTrained: "2026-05-30",
+          performance: { flagRate: "0.9%", precision: "0.71", recall: "0.83", auc: "0.88" }, prepayEnabled: true,
+          features: [
+            f("Per-patient rate", "units of code ÷ distinct patients ÷ period"),
+            f("Expected rate", "cohort Poisson λ for the code + diagnosis"),
+            f("Rate ratio", "observed ÷ expected, capped and log-scaled"),
+            f("Clinical-standing offset", "down-weights standing orders (e.g. ESRD dialysis M/W/F)")
+          ],
+          versions: [{ version: "v1.6", date: "2026-05-30", change: "Added standing-order offset to cut ESRD false positives" }]
+        },
+        {
+          id: "model_mod", name: "Modifier Abuse Pattern", type: "Anomaly Detection", version: "v1.3", status: "production",
+          healthcareTask: "Detect unbundling — abnormal modifier-59 / X{EPSU} override rates vs peers.",
+          trainingMethod: "Unsupervised · peer-relative override-rate scoring", dataPeriod: "2023-06 → 2025-06", lastTrained: "2026-06-02",
+          performance: { flagRate: "1.1%", precision: "0.77", recall: "0.74", auc: "0.86" }, prepayEnabled: true,
+          features: [
+            f("59-override rate", "lines with 59/X{EPSU} on a PTP edit ÷ eligible lines"),
+            f("Peer deviation (σ)", "provider override rate vs specialty peer mean/σ"),
+            f("PTP-pair concentration", "Herfindahl index over which code pairs are overridden"),
+            f("Documentation-support rate", "prior overrides upheld on records review")
+          ],
+          versions: [{ version: "v1.3", date: "2026-06-02", change: "Weighted by NCCI modifier indicator (0 vs 1)" }]
+        },
+        {
+          id: "model_los", name: "Residential LOS & Network", type: "Anomaly Detection", version: "v1.4", status: "production",
+          healthcareTask: "Detect residential length-of-stay abuse + shared-patient clusters across facilities.",
+          trainingMethod: "Unsupervised · threshold-clustering + bipartite patient-sharing graph", dataPeriod: "2023-01 → 2025-06", lastTrained: "2026-06-10",
+          performance: { flagRate: "0.6%", precision: "0.82", recall: "0.80", auc: "0.90" }, prepayEnabled: true,
+          features: [
+            f("Days-over-authorization", "per-diem units billed − prior-auth approved days"),
+            f("Just-under-threshold density", "share of stays clustered just below review thresholds"),
+            f("Shared-patient edges", "count of members appearing at ≥2 facilities in a window"),
+            f("Common-registration signal", "shared address / phone / ownership across facilities")
+          ],
+          versions: [{ version: "v1.4", date: "2026-06-10", change: "Added common-registration signal to the network layer" }]
+        },
+        {
+          id: "model_pharmacy_daw", name: "Pharmacy Non-Dispense Detector", type: "Anomaly Detection", version: "v0.9", status: "training",
+          healthcareTask: "Detect DAW-1 brand billing with no dispensing/pickup signal for the billed quantity.",
+          trainingMethod: "Unsupervised · adherence-gap scoring on NCPDP claims", dataPeriod: "2024-01 → 2025-06", lastTrained: "2026-07-20",
+          performance: { flagRate: "0.4%", precision: "0.68", recall: "0.72", auc: "0.83" }, prepayEnabled: false,
+          features: [
+            f("DAW-1 brand rate", "share of brand fills with DAW 1 where an A-rated generic exists"),
+            f("Adherence gap", "billed days-supply ÷ observed refill/pickup cadence"),
+            f("Quantity anomaly", "z-score of billed quantity vs drug/day norms"),
+            f("Generic-availability flag", "Orange Book A-rating for the NDC")
+          ],
+          versions: [{ version: "v0.9", date: "2026-07-20", change: "Initial training build — pending QA before promotion" }]
+        },
+        // ---------- Predictive (supervised) ----------
+        {
+          id: "model_drg_predict", name: "DRG Prediction", type: "Predictive (supervised)", version: "v1.2", status: "production",
+          healthcareTask: "Predict the expected MS-DRG from coded diagnoses/procedures to catch mis-grouping (e.g. unsupported MCC).",
+          trainingMethod: "Supervised · gradient-boosted trees on grouped inpatient claims", dataPeriod: "2022-10 → 2025-06", lastTrained: "2026-06-14",
+          performance: { topOneAccuracy: "0.93", precision: "0.90", recall: "0.88", auc: "0.95" }, prepayEnabled: true,
+          features: [
+            f("Principal diagnosis", "ICD-10-CM principal → DRG base category (MDC)"),
+            f("Secondary dx / CC-MCC", "presence + POA of complication/comorbidity codes"),
+            f("ICD-10-PCS procedures", "procedure cluster embeddings"),
+            f("Discharge status / LOS", "disposition + length of stay features")
+          ],
+          versions: [{ version: "v1.2", date: "2026-06-14", change: "Retrained on FFY2025 MS-DRG definitions" }]
+        },
+        {
+          id: "model_fraud_sim", name: "Known-Scheme Similarity", type: "Predictive (supervised)", version: "v2.0", status: "production",
+          healthcareTask: "Score a provider/claim's similarity to previously adjudicated FWA schemes.",
+          trainingMethod: "Supervised · gradient boosting on labeled closed cases (confirmed vs cleared)", dataPeriod: "2021-01 → 2025-06", lastTrained: "2026-06-20",
+          performance: { flagRate: "1.3%", precision: "0.86", recall: "0.81", auc: "0.93" }, prepayEnabled: false,
+          features: [
+            f("Scheme fingerprint distance", "distance to centroids of confirmed-fraud case clusters"),
+            f("Billing-pattern vector", "code mix, modifier mix, POS mix embedding"),
+            f("Network exposure", "graph proximity to sanctioned / excluded entities"),
+            f("Temporal burst", "claim velocity spikes vs the provider's own baseline")
+          ],
+          versions: [{ version: "v2.0", date: "2026-06-20", change: "Rebuilt on expanded labeled case set (+1,940 closed cases)" }]
+        },
+        // ---------- Clustering (unsupervised) ----------
+        {
+          id: "model_dx_cluster", name: "Diagnosis-Cohort Clustering", type: "Clustering (unsupervised)", version: "v1.1", status: "production",
+          healthcareTask: "Cluster providers by diagnosis/procedure mix to surface outliers against their true peer group.",
+          trainingMethod: "Unsupervised · k-means (k=48) on TF-IDF code-mix vectors", dataPeriod: "2023-01 → 2025-06", lastTrained: "2026-05-22",
+          performance: { silhouette: "0.61", clusters: "48", flagRate: "2.0%", coverage: "0.97" }, prepayEnabled: false,
+          features: [
+            f("Code-mix vector", "TF-IDF over the provider's CPT/HCPCS distribution"),
+            f("Diagnosis profile", "ICD-10-CM chapter distribution"),
+            f("Cluster distance", "distance from the assigned k-means centroid"),
+            f("Silhouette / fit", "how well the provider fits its nearest cluster")
+          ],
+          versions: [{ version: "v1.1", date: "2026-05-22", change: "Re-fit centroids; k tuned 40 → 48 by silhouette" }]
+        },
+        // ---------- Natural Language Processing ----------
+        {
+          id: "model_doc_nlp", name: "Documentation–Coding Consistency", type: "Natural Language Processing", version: "v0.8", status: "candidate",
+          healthcareTask: "Read the clinical record and check whether documentation supports the coded service level.",
+          trainingMethod: "Fine-tuned clinical language model on note ↔ code pairs", dataPeriod: "2024-01 → 2025-06", lastTrained: "2026-07-15",
+          performance: { agreement: "0.87", precision: "0.83", recall: "0.80", auc: "0.89" }, prepayEnabled: false,
+          features: [
+            f("Documented complexity", "extracted history/exam/MDM elements → supported E/M level"),
+            f("Code-vs-note gap", "billed level − documentation-supported level"),
+            f("Missing-element flags", "required elements absent from the note"),
+            f("Confidence / abstention", "model self-confidence; abstains to human review when low")
+          ],
+          versions: [{ version: "v0.8", date: "2026-07-15", change: "Candidate build — in shadow evaluation, not enforcing" }]
+        },
+        {
+          id: "model_pattern_summ", name: "Pattern Summarization (xAI)", type: "Natural Language Processing", version: "v1.0", status: "production",
+          healthcareTask: "Generate the plain-language explanation of why a lead was flagged (the xAI narrative).",
+          trainingMethod: "Retrieval-grounded generation over the firing rules + model drivers", dataPeriod: "grounded (no training on claims)", lastTrained: "2026-06-25",
+          performance: { faithfulness: "0.95", groundedness: "0.97", humanRating: "4.5 / 5" }, prepayEnabled: false,
+          features: [
+            f("Driver retrieval", "top contributing features + fired rules for the lead"),
+            f("Evidence grounding", "cites claim lines, edits and thresholds — no free invention"),
+            f("Readability control", "reviewer-grade plain-language generation"),
+            f("Hallucination guard", "answers only from retrieved evidence; abstains otherwise")
+          ],
+          versions: [{ version: "v1.0", date: "2026-06-25", change: "Groundedness guard added; faithfulness 0.95" }]
+        },
+        // ---------- Ensemble ----------
+        {
+          id: "model_risk_ensemble", name: "Provider Risk Ensemble", type: "Ensemble", version: "v2.2", status: "production",
+          healthcareTask: "Combine the anomaly, predictive and network models into the single provider risk score.",
+          trainingMethod: "Ensemble · stacked logistic meta-learner over member-model scores", dataPeriod: "2022-01 → 2025-06", lastTrained: "2026-06-28",
+          performance: { flagRate: "1.5%", precision: "0.88", recall: "0.85", auc: "0.94" }, prepayEnabled: true,
+          features: [
+            f("Member-model scores", "calibrated outputs of the anomaly + predictive models"),
+            f("Network risk", "graph exposure to excluded/sanctioned/collusive entities"),
+            f("Exposure magnitude", "dollar exposure of the underlying flagged claims"),
+            f("Meta-learner weights", "stacked logistic regression combining the signals")
+          ],
+          versions: [{ version: "v2.2", date: "2026-06-28", change: "Re-calibrated weights after DRG-prediction model added" }, { version: "v2.1", date: "2026-03-05", change: "Isotonic calibration of member-model scores" }]
+        }
+      ];
+    },
+
     // ---- CI/CD & release management (Round 6 Phase E) ---------------------
     // Simulated release pipeline for the app + rule-promotion history through the
     // controlled environments (dev → test → pre-prod → prod). Static / deterministic
