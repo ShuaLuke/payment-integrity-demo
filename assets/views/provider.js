@@ -103,7 +103,8 @@
         // licensure & credentials (OIG LEIE exclusion, DEA, PECOS, board cert)
         licensureCard(id) +
 
-        // TrackLight-style external profile / secondary scoring
+        // risk intelligence (categorized external/OSINT dossier) + secondary scoring
+        riskIntelPanel(id) +
         secondaryPanel(id) +
 
         // case story + relationships + disposition
@@ -613,7 +614,56 @@
     return head + '<table style="width:100%"><thead><tr><th>CPT</th><th>Description</th><th>Mod</th><th class="right">Units</th><th class="right">Billed</th><th class="right">Exposure</th><th>Status</th></tr></thead><tbody>' + rows + '</tbody></table>';
   }
 
-  // ---- TrackLight-style external profile / secondary scoring ----
+  // ---- Risk intelligence — categorized external/OSINT dossier (un-attributed) ----
+  function riskIntelPanel(id) {
+    var r = window.DP.getRiskIntel(id); if (!r) return "";
+    var esc = window.APP.esc;
+    var SEV = {
+      critical: ["var(--high-bg)", "var(--high-tx)", "alert-octagon"], high: ["#fbe6cf", "#9a5b12", "alert-triangle"],
+      medium: ["var(--med-bg)", "var(--med-tx)", "alert-circle"], low: ["var(--surface)", "var(--text2)", "info-circle"],
+      info: ["var(--low-bg)", "var(--low-tx)", "circle-check"]
+    };
+    var CAT_ICON = { Exclusion: "ban", Sanction: "gavel", License: "certificate", Ownership: "building-community", "Adverse media": "news", Network: "affiliate", Legal: "scale", Geographic: "map-pin", Identity: "user-search", Clear: "circle-check" };
+    var sevPill = function (s) { var c = SEV[s] || SEV.low; return '<span class="tag" style="background:' + c[0] + ';color:' + c[1] + '"><i class="ti ti-' + c[2] + '"></i> ' + s + '</span>'; };
+    var band = r.band === "high" ? "rh" : r.band === "medium" ? "rm" : "rl";
+
+    // findings grouped by category
+    var cats = Object.keys(r.categories);
+    var findingsHtml = r.findings.map(function (f) {
+      var c = SEV[f.severity] || SEV.low;
+      return '<div style="display:flex;gap:9px;padding:9px 0;border-top:0.5px solid var(--border2)">' +
+        '<i class="ti ti-' + (CAT_ICON[f.category] || "point") + '" style="color:' + c[1] + ';font-size:16px;margin-top:1px;flex:none"></i>' +
+        '<div style="flex:1;min-width:0"><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap"><span style="font-weight:600;font-size:12px">' + esc(f.title) + '</span>' + sevPill(f.severity) + '<span class="tag" style="background:var(--surface);font-size:10px">' + esc(f.category) + '</span></div>' +
+        '<div style="font-size:11.5px;color:var(--text2);line-height:1.55;margin-top:3px">' + esc(f.description) + '</div>' +
+        '<div style="font-size:10.5px;color:var(--text3);margin-top:3px"><i class="ti ti-database"></i> ' + esc(f.source) + ' · <span class="mono">' + esc(f.date) + '</span></div></div></div>';
+    }).join("");
+
+    // chronological feed (compact)
+    var feedHtml = r.feed.map(function (f) {
+      var c = SEV[f.severity] || SEV.low;
+      return '<div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;border-top:0.5px solid var(--border2)">' +
+        '<span class="mono" style="font-size:10.5px;color:var(--text3);min-width:74px">' + esc(f.date) + '</span>' +
+        '<span style="width:7px;height:7px;border-radius:50%;background:' + c[1] + ';flex:none"></span>' +
+        '<span style="font-size:11px;flex:1">' + esc(f.title) + '</span></div>';
+    }).join("");
+
+    var sevChips = ["critical", "high", "medium", "low"].filter(function (s) { return r.severityCounts[s]; }).map(function (s) { var c = SEV[s]; return '<span class="tag" style="background:' + c[0] + ';color:' + c[1] + '">' + r.severityCounts[s] + ' ' + s + '</span>'; }).join(" ");
+
+    return '<div class="card">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px">' +
+      '<div style="font-weight:500;font-size:13px"><i class="ti ti-shield-search" style="color:var(--accent-d)"></i> Risk intelligence <span class="muted" style="font-weight:400;font-size:11px">· external &amp; OSINT corroboration, by category (synthetic)</span></div>' +
+      '<span class="chip ' + band + '"><span class="s">' + r.score + '</span> external risk</span></div>' +
+      '<div style="background:var(--accent-l);border-radius:8px;padding:10px 12px;font-size:11.5px;color:var(--ink);line-height:1.6;display:flex;gap:8px"><i class="ti ti-robot" style="color:var(--accent-d);font-size:16px;flex:none;margin-top:1px"></i><div><b>AI summary.</b> ' + esc(r.summary) + '</div></div>' +
+      '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">' + sevChips + '<span class="tag" style="background:var(--surface)">' + r.findingCount + ' findings · ' + cats.length + ' categories</span></div>' +
+      '<div style="display:grid;grid-template-columns:1.7fr 1fr;gap:14px;margin-top:10px">' +
+      '<div><div style="font-size:10.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Findings by category</div>' + findingsHtml + '</div>' +
+      '<div><div style="font-size:10.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Chronological feed</div>' + feedHtml + '</div>' +
+      '</div>' +
+      '<div style="font-size:10.5px;color:var(--text3);margin-top:8px"><i class="ti ti-info-circle"></i> ' + esc(r.note) + '</div>' +
+      '</div>';
+  }
+
+  // ---- external profile / secondary scoring (business + officer detail) ----
   function secondaryPanel(id) {
     var s = window.DP.getSecondaryProfile(id); if (!s) return "";
     var b = s.business, o = s.officer;
@@ -627,7 +677,7 @@
     };
     return '<div class="card">' +
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:10px;flex-wrap:wrap">' +
-      '<div style="font-weight:500;font-size:13px"><i class="ti ti-world-search" style="color:var(--accent-d)"></i> External profile &amp; secondary scoring <span class="muted" style="font-weight:400;font-size:11px">· TrackLight-style corroboration from outside the claims data (synthetic)</span></div>' +
+      '<div style="font-weight:500;font-size:13px"><i class="ti ti-world-search" style="color:var(--accent-d)"></i> External profile &amp; secondary scoring <span class="muted" style="font-weight:400;font-size:11px">· registry &amp; individual detail behind the risk intelligence (synthetic)</span></div>' +
       '<span class="chip ' + band + '"><span class="s">' + s.score + '</span> secondary risk</span></div>' +
       '<div style="display:flex;gap:16px;flex-wrap:wrap">' +
       '<div style="flex:1;min-width:250px">' +
@@ -654,7 +704,7 @@
         '<div style="margin-top:6px">' + osintList(o.osint) + '</div>'
         : '<div style="font-size:11.5px;font-weight:600;margin-bottom:1px"><i class="ti ti-user-search"></i> Individual / officer</div><div class="muted" style="font-size:11px;padding:8px 0">No named officer on the business registration — individual OSINT enrichment not applicable.</div>') +
       '</div></div>' +
-      '<div style="font-size:10.5px;color:var(--text3);margin-top:8px"><i class="ti ti-info-circle"></i> Synthetic external data for the demo. Secondary scoring corroborates the claims-based flag with registry, litigation and OSINT signals — the DataProvider seam accepts a real TrackLight / LexisNexis feed.</div>' +
+      '<div style="font-size:10.5px;color:var(--text3);margin-top:8px"><i class="ti ti-info-circle"></i> Synthetic external data for the demo. Secondary scoring corroborates the claims-based flag with registry, litigation and OSINT signals — the DataProvider seam accepts a real external-intelligence feed.</div>' +
       '</div>';
   }
 

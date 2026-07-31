@@ -803,7 +803,7 @@
     },
 
     getPrecedent: function (pid) { return (D.precedents || []).find(function (p) { return p.id === pid; }) || null; },
-    // ---- business entities (TrackLight-style): providers grouped by a shared
+    // ---- business entities: providers grouped by a shared
     // business registration (holding company) or a shared TIN (one billing entity). ----
     listBusinesses: function (opts) {
       opts = opts || {};
@@ -898,7 +898,7 @@
     },
     getCase: function (providerId, mode) { return this.listCases({ all: true, mode: mode || "all" }).find(function (c) { return c.providerId === providerId || (c.providerIds && c.providerIds.indexOf(providerId) >= 0); }) || null; },
 
-    // ---- TrackLight-style secondary scoring / external enrichment --------------
+    // ---- secondary scoring / external enrichment --------------
     // Synthetic external-data profile (business registry + individual/officer OSINT)
     // used to corroborate a claims-based flag with outside signals. Deterministic
     // per provider. Seam: a real feed can populate p.secondaryProfile to override.
@@ -948,6 +948,83 @@
           ssdiMatch: false,
           osint: offOsint
         } : null
+      };
+    },
+
+    // ---- Risk intelligence (Element 3.2.i) — deeper external/OSINT profile ----
+    // A categorized risk-intelligence dossier corroborating the claims-based flag
+    // with outside signals: findings by category (exclusion, sanction, license,
+    // ownership, adverse media, network, legal, geographic, identity), each with
+    // severity / source / date; an overall risk score; a plain-language summary;
+    // and a chronological findings feed. Un-attributed (no partner/vendor name) —
+    // sources are generic capability labels. Derived from the existing signals
+    // (LEIE, licensure, secondary profile, ring/chain) — deterministic, no regen.
+    RISK_SOURCES: {
+      exclusion: "Federal exclusions list", sanction: "Federal award-management registry",
+      license: "State licensing board", ownership: "Corporate registry & beneficial ownership",
+      media: "Adverse-media monitoring", network: "Provider network graph",
+      legal: "Litigation & court records", geographic: "Provider address intelligence",
+      identity: "Public-records / identity graph"
+    },
+    getRiskIntel: function (id) {
+      var p = providers[id]; if (!p) return null;
+      var self = this, sec = this.getSecondaryProfile(id), excl = this.LEIE_EXCLUSIONS[id] || null;
+      var ring = D.providers.filter(function (x) { return x.tin === p.tin; }).length > 1;
+      var chain = p.role === "chain";
+      var S = this.RISK_SOURCES, seed = 0; for (var i = 0; i < id.length; i++) seed = (seed * 31 + id.charCodeAt(i) + 3) >>> 0;
+      var rnd = function () { seed = (seed * 1103515245 + 12345) >>> 0; return seed / 4294967296; };
+      var dt = function (yLo, yHi) { var y = yLo + Math.floor(rnd() * (yHi - yLo + 1)); var m = 1 + Math.floor(rnd() * 12); var d = 1 + Math.floor(rnd() * 27); return y + "-" + String(m).padStart(2, "0") + "-" + String(d).padStart(2, "0"); };
+      var F = [], add = function (cat, key, title, sev, date, desc) { F.push({ category: cat, title: title, severity: sev, source: S[key], date: date, description: desc }); };
+      var st = p.state || "TX";
+
+      if (excl) {
+        add("Exclusion", "exclusion", "OIG LEIE exclusion — active", "critical", excl.since, "Listed on the federal List of Excluded Individuals/Entities under " + excl.basis + " (" + excl.reason.toLowerCase() + "). Any claim with a date of service during the exclusion is recoverable in full" + (excl.reinstatement ? "; earliest reinstatement " + excl.reinstatement + "." : "; no reinstatement date on file."));
+        add("Sanction", "sanction", "Federal award exclusion (debarment)", "high", dt(2023, 2024), "Active exclusion record in the federal award-management registry — ineligible for federal awards and payments while listed.");
+        add("License", "license", "State license revoked / suspended", "high", dt(2023, 2024), "Primary state professional license shows a revocation/suspension action, consistent with the exclusion basis.");
+        add("Adverse media", "media", "Adverse press — enforcement action", "high", dt(2023, 2025), "News monitoring surfaced coverage of an enforcement/settlement action naming the entity or a principal.");
+      }
+      if (chain) {
+        add("Ownership", "ownership", "Common ownership across facilities", "high", dt(2018, 2022), "Beneficial-ownership records tie this facility to " + (sec.business.openCorporatesRelated || 3) + " affiliated facilities under a shared holding company and registered agent.");
+        add("Network", "network", "Shared-patient cluster across the chain", "high", dt(2025, 2026), "Network analysis shows members appearing at multiple facilities in the chain within short windows — a coordinated-utilization signal.");
+        add("Geographic", "geographic", "Principal address is a commercial mail-drop", "medium", dt(2019, 2023), "The registered principal address resolves to a commercial mail-receiving agency (CMRA), not a treatment site.");
+        add("License", "license", "Multi-state licensure — verify scope", "medium", dt(2022, 2025), "Principal holds licenses in multiple states; confirm each covers the services billed at this facility.");
+      }
+      if (ring && !chain) {
+        add("Network", "network", "Shared-TIN provider ring", "high", dt(2024, 2026), "Two or more billing NPIs share this Tax ID and co-bill overlapping members — a provider-ring pattern.");
+        add("Ownership", "ownership", "Co-registration with an unrelated biller", "medium", dt(2020, 2024), "The suite/address matches an unrelated billing company on state filings — possible shell/pass-through billing.");
+        add("Identity", "identity", "Officer linked to the partner provider", "medium", dt(2019, 2023), "Public-records graph links the named officer to the co-located partner provider through prior filings.");
+      }
+      if (!excl && (p.riskScore || 0) >= 78 && !chain && !ring) {
+        add("License", "license", "Credential friction — verify standing", "medium", dt(2024, 2026), "One or more credentials (license / DEA / board certification) show a lapse or pending status; confirm active standing for the dates billed.");
+        add("Adverse media", "media", "Thin external footprint", "low", dt(2023, 2025), "Limited web presence and stale contact records — an integrity soft-signal, not adverse on its own.");
+      }
+      if (sec.business.liens || sec.business.judgments || sec.business.courtDockets) {
+        add("Legal", "legal", "Civil liens / judgments / dockets on file", (sec.business.judgments ? "medium" : "low"), dt(2021, 2025), (sec.business.liens || 0) + " lien(s), " + (sec.business.judgments || 0) + " judgment(s) and " + (sec.business.courtDockets || 0) + " court docket(s) associated with the business entity.");
+      }
+      if (!F.length) add("Clear", "identity", "No adverse external findings", "info", dt(2025, 2026), "External screening across exclusions, sanctions, licensure, ownership, media, litigation and network signals returned no adverse records.");
+
+      // overall score: anchor on the secondary score, lift for critical/high findings
+      var sevW = { critical: 26, high: 15, medium: 7, low: 3, info: 0 };
+      var lift = F.reduce(function (a, f) { return a + (sevW[f.severity] || 0); }, 0);
+      var score = Math.max(0, Math.min(99, Math.round((sec.score || 30) * 0.5 + lift)));
+      var band = score >= 75 ? "high" : score >= 45 ? "medium" : "low";
+      var counts = {}; F.forEach(function (f) { counts[f.severity] = (counts[f.severity] || 0) + 1; });
+
+      // plain-language AI summary
+      var top = F.filter(function (f) { return f.severity === "critical" || f.severity === "high"; });
+      var summary;
+      if (excl) summary = p.name + " carries a CRITICAL external risk profile driven by an active federal exclusion; claims paid during the exclusion period are recoverable in full and the entity should be referred for administrative action. Corroborating sanction, licensure and adverse-media signals reinforce the finding.";
+      else if (chain) summary = p.name + " shows a HIGH external risk profile centered on common ownership and shared-patient movement across affiliated facilities — a chain pattern that concentrates length-of-stay and utilization exposure. Address and licensure signals warrant verification before further payment.";
+      else if (ring) summary = p.name + " shows an ELEVATED external risk profile: a shared-TIN provider ring with co-registration and identity links to a co-located biller — consistent with coordinated or pass-through billing.";
+      else if (top.length) summary = p.name + " shows a MODERATE external risk profile — credential and footprint signals suggest verifying active standing for the dates billed, but no exclusion or sanction is present.";
+      else summary = p.name + " shows a LOW external risk profile — external screening returned no adverse exclusion, sanction, licensure, ownership or litigation records.";
+
+      var feed = F.slice().sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; });
+      return {
+        score: score, band: band, tier: sec.tier, findingCount: F.length, severityCounts: counts,
+        summary: summary, findings: F, feed: feed,
+        categories: (function () { var c = {}; F.forEach(function (f) { c[f.category] = (c[f.category] || 0) + 1; }); return c; })(),
+        note: "Synthetic external intelligence for the demo — sources are shown as capability categories. The DataProvider seam accepts a real external-intelligence feed."
       };
     },
 
