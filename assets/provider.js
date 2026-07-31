@@ -636,6 +636,70 @@
       ];
     },
 
+    // ---- Code libraries (Element 1.1.iv / 1.2) -----------------------------
+    // The reference code sets PIVOT reads a claim against — each with its code
+    // system, edition, update cycle, effective date, an approximate published
+    // size, and sample entries. Entries reuse the maps already in the DP (ICD10,
+    // ICD10PCS, CARC/RARC, modifiers) so nothing is duplicated or regenerated.
+    CPT_DESC: {
+      "99211": "Office/outpatient visit, established, level 1", "99212": "Office/outpatient visit, established, level 2",
+      "99213": "Office/outpatient visit, established, level 3", "99214": "Office/outpatient visit, established, level 4",
+      "99215": "Office/outpatient visit, established, level 5", "99283": "Emergency department visit, level 3",
+      "99284": "Emergency department visit, level 4", "93000": "Electrocardiogram, complete (with interpretation)",
+      "71046": "Radiologic exam, chest, 2 views", "70551": "MRI, brain (including brain stem), without contrast",
+      "43235": "Esophagogastroduodenoscopy (EGD), diagnostic", "43239": "EGD with biopsy, single/multiple",
+      "90935": "Hemodialysis procedure with single physician evaluation", "20610": "Arthrocentesis, major joint/bursa",
+      "97110": "Therapeutic exercise, each 15 minutes", "97140": "Manual therapy techniques, each 15 minutes",
+      "H0018": "Behavioral health, short-term residential, per diem (HCPCS)", "E1390": "Oxygen concentrator, single delivery (HCPCS)",
+      "D0120": "Periodic oral evaluation, established patient (CDT)", "D1110": "Prophylaxis, adult (CDT)"
+    },
+    REVENUE_DESC: {
+      "0250": "Pharmacy — general", "0300": "Laboratory — general", "0350": "CT scan — general",
+      "0450": "Emergency room — general", "0636": "Drugs requiring detailed coding",
+      "0900": "Behavioral health treatment/services — general", "1002": "Behavioral health — residential treatment (per diem)"
+    },
+    TOB_DESC: {
+      "111": "Hospital · inpatient · admit-through-discharge claim", "131": "Hospital · outpatient · admit-through-discharge claim",
+      "851": "Critical access hospital · admit-through-discharge", "861": "Special facility · residential · admit-through-discharge",
+      "721": "Clinic · ESRD (renal dialysis) · admit-through-discharge"
+    },
+    TAXONOMY_DESC: {
+      "207R00000X": "Internal Medicine — physician", "207RC0000X": "Cardiovascular Disease — physician",
+      "2084N0400X": "Psychiatry & Neurology — Neurology", "324500000X": "Substance Abuse Rehabilitation Facility",
+      "282N00000X": "General Acute Care Hospital", "2472R0900X": "Independent Diagnostic Testing Facility"
+    },
+    MOD_EXTRA: { "XE": "Separate encounter", "XP": "Separate practitioner" },
+    getCodeLibraries: function () {
+      return [
+        { id: "cpt", name: "CPT / HCPCS Level II", system: "AMA CPT® + CMS HCPCS", edition: "CY2025", cycle: "Annual (Jan) + quarterly HCPCS updates", effective: "2025-01-01", approxCount: "~10,900", icon: "code" },
+        { id: "icd10cm", name: "ICD-10-CM diagnoses", system: "CDC/CMS ICD-10-CM", edition: "FY2025", cycle: "Annual (Oct 1) + April addenda", effective: "2024-10-01", approxCount: "~73,000", icon: "stethoscope" },
+        { id: "icd10pcs", name: "ICD-10-PCS procedures", system: "CMS ICD-10-PCS", edition: "FY2025", cycle: "Annual (Oct 1)", effective: "2024-10-01", approxCount: "~78,200", icon: "medical-cross" },
+        { id: "revenue", name: "Revenue codes (UB-04)", system: "NUBC UB-04", edition: "2025", cycle: "As published by the NUBC", effective: "2025-01-01", approxCount: "~800", icon: "receipt" },
+        { id: "tob", name: "Type of bill (UB-04)", system: "NUBC UB-04", edition: "2025", cycle: "As published by the NUBC", effective: "2025-01-01", approxCount: "~120", icon: "file-invoice" },
+        { id: "modifiers", name: "CPT / HCPCS modifiers", system: "AMA CPT® + CMS NCCI", edition: "CY2025", cycle: "Annual + quarterly NCCI", effective: "2025-01-01", approxCount: "~360", icon: "adjustments-alt" },
+        { id: "carc", name: "Claim Adjustment Reason Codes", system: "X12 / WPC (CARC)", edition: "2025", cycle: "Triannual (X12)", effective: "2025-03-01", approxCount: "~400", icon: "arrows-diff" },
+        { id: "rarc", name: "Remittance Advice Remark Codes", system: "CMS / WPC (RARC)", edition: "2025", cycle: "Triannual (X12)", effective: "2025-03-01", approxCount: "~1,100", icon: "message-report" },
+        { id: "taxonomy", name: "Provider taxonomy (NUCC)", system: "NUCC Health Care Provider Taxonomy", edition: "2025", cycle: "Semi-annual (Jan / Jul)", effective: "2025-01-01", approxCount: "~870", icon: "id-badge" }
+      ];
+    },
+    getCodeLibrary: function (id) {
+      var self = this, meta = this.getCodeLibraries().filter(function (l) { return l.id === id; })[0];
+      if (!meta) return null;
+      var fromMap = function (m, cat) { return Object.keys(m).map(function (k) { var v = m[k]; return typeof v === "string" ? { code: k, description: v, category: cat } : { code: k, description: v.label || v.name || k, category: cat || v.group }; }); };
+      var entries = [];
+      if (id === "cpt") entries = fromMap(this.CPT_DESC);
+      else if (id === "icd10cm") entries = fromMap(this.ICD10);
+      else if (id === "icd10pcs") entries = fromMap(this.ICD10PCS);
+      else if (id === "revenue") entries = fromMap(this.REVENUE_DESC);
+      else if (id === "tob") entries = fromMap(this.TOB_DESC);
+      else if (id === "taxonomy") entries = fromMap(this.TAXONOMY_DESC);
+      else if (id === "modifiers") entries = Object.keys(this.CPT_XWALK.mod).map(function (k) { var d = self.CPT_XWALK.mod[k]; return { code: k, description: d.name, category: d.note }; }).concat(Object.keys(this.MOD_EXTRA).map(function (k) { return { code: k, description: self.MOD_EXTRA[k], category: "NCCI-specific subset of modifier 59" }; }));
+      else if (id === "carc") entries = Object.keys(this.CARC_CATALOG).map(function (k) { var d = self.CARC_CATALOG[k]; return { code: k, description: d.label, category: d.group + " · " + d.kind }; });
+      else if (id === "rarc") entries = fromMap(this.RARC_CATALOG);
+      entries.sort(function (a, b) { return String(a.code).localeCompare(String(b.code), undefined, { numeric: true }); });
+      return { meta: meta, entries: entries, sampleNote: "Sample entries — the full " + meta.name + " set (" + meta.approxCount + " codes) is loaded in production; a representative slice is shown here." };
+    },
+
     // ---- CI/CD & release management (Round 6 Phase E) ---------------------
     // Simulated release pipeline for the app + rule-promotion history through the
     // controlled environments (dev → test → pre-prod → prod). Static / deterministic
