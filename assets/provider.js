@@ -700,6 +700,44 @@
       return { meta: meta, entries: entries, sampleNote: "Sample entries — the full " + meta.name + " set (" + meta.approxCount + " codes) is loaded in production; a representative slice is shown here." };
     },
 
+    // ---- EDI dashboard (Element 1.1.i/iii/iv) ------------------------------
+    // Transaction-set volumes, acknowledgment stats and status by X12 set —
+    // the intake health of the claims pipeline. Static/deterministic (no regen).
+    getEdiDashboard: function () {
+      var set = function (code, name, dir, vol, accepted, rejected, pending, ackHrs) {
+        return { code: code, name: name, direction: dir, volume: vol, accepted: accepted, rejected: rejected, pending: pending, acceptRate: Math.round((accepted / vol) * 1000) / 10, ackHrs: ackHrs };
+      };
+      var sets = [
+        set("837P", "Professional claim", "inbound", 48210, 47180, 612, 418, 1.4),
+        set("837I", "Institutional claim", "inbound", 12640, 12190, 351, 99, 1.8),
+        set("837D", "Dental claim", "inbound", 3120, 3038, 61, 21, 1.5),
+        set("835", "Remittance advice", "outbound", 57340, 57340, 0, 0, 0.6),
+        set("834", "Benefit enrollment", "inbound", 2210, 2189, 12, 9, 3.2),
+        set("270/271", "Eligibility inquiry/response", "both", 61870, 61540, 44, 286, 0.3),
+        set("276/277", "Claim status inquiry/response", "both", 18450, 18280, 31, 139, 0.5),
+        set("999", "Functional acknowledgment", "outbound", 66180, 66180, 0, 0, 0.2)
+      ];
+      var inbound = sets.filter(function (s) { return s.direction !== "outbound"; });
+      var totalVol = sets.reduce(function (a, s) { return a + s.volume; }, 0);
+      var totalRej = sets.reduce(function (a, s) { return a + s.rejected; }, 0);
+      var totalAcc = inbound.reduce(function (a, s) { return a + s.accepted; }, 0);
+      var inVol = inbound.reduce(function (a, s) { return a + s.volume; }, 0);
+      // 14-day inbound-claim volume trend (deterministic, for a sparkline)
+      var trend = [6100, 6320, 5980, 6410, 6550, 6180, 3210, 2980, 6480, 6720, 6600, 6390, 6510, 6240];
+      var rejReasons = [
+        { code: "IK3/IK4 · segment", label: "Invalid/missing segment or element", pct: 34 },
+        { code: "AK9 · rejected", label: "Functional group rejected (structure)", pct: 22 },
+        { code: "277CA · A3", label: "Returned as unprocessable — payer/member mismatch", pct: 19 },
+        { code: "277CA · A7", label: "Invalid provider identifier (NPI)", pct: 14 },
+        { code: "999 · IK5", label: "Implementation-guide non-compliance", pct: 11 }
+      ];
+      return {
+        asOf: "trailing 30 days", standard: "X12 005010 · HIPAA / CAQH CORE",
+        totals: { transactions: totalVol, inboundClaims: inVol, acceptRate: Math.round((totalAcc / inVol) * 1000) / 10, rejected: totalRej, avgAckHrs: 0.9, ta1Errors: 3 },
+        sets: sets, trend: trend, rejReasons: rejReasons
+      };
+    },
+
     // ---- CI/CD & release management (Round 6 Phase E) ---------------------
     // Simulated release pipeline for the app + rule-promotion history through the
     // controlled environments (dev → test → pre-prod → prod). Static / deterministic
