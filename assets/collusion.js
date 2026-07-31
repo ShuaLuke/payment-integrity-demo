@@ -198,12 +198,14 @@
       tip.html(h).style("opacity", 1).style("left", Math.min(e.offsetX + 12, W - 150) + "px").style("top", (e.offsetY - 6) + "px");
     }).on("mouseout", function () { tip.style("opacity", 0); });
 
-    sim.on("tick", function () {
+    function ticked() {
       lk.attr("x1", function (d) { return d.source.x; }).attr("y1", function (d) { return d.source.y; }).attr("x2", function (d) { return d.target.x; }).attr("y2", function (d) { return d.target.y; });
       lt.attr("x", function (d) { return (d.source.x + d.target.x) / 2; }).attr("y", function (d) { return (d.source.y + d.target.y) / 2 - 3; });
       nodeG.attr("transform", function (d) { return "translate(" + Math.max(rad(d), Math.min(W - rad(d), d.x)) + "," + Math.max(rad(d) + 6, Math.min(H - rad(d) - 6, d.y)) + ")"; });
-    });
-    for (var i = 0; i < 120; i++) sim.tick(); // settle before first paint so the panel isn't jumpy
+    }
+    sim.on("tick", ticked);
+    for (var i = 0; i < 120; i++) sim.tick(); // settle the layout synchronously
+    ticked();            // paint the settled positions immediately — don't wait on the rAF timer
     sim.alpha(0.3).restart();
   }
 
