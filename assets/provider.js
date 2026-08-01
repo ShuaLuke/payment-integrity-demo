@@ -857,6 +857,59 @@
     // Simulated release pipeline for the app + rule-promotion history through the
     // controlled environments (dev → test → pre-prod → prod). Static / deterministic
     // (no data regen). All personas synthetic. Fixed timestamps (no Date.now).
+    // ---- Payer Setup (Element 1.1.iv · Slide 8) ----------------------------
+    // Configuration surface: service categories, reference codes, providers,
+    // networks and fee schedules that feed the deterministic processing paths.
+    getPayerSetup: function () {
+      return {
+        serviceCategories: [
+          { name: "Professional / physician", codeRange: "CPT 99xxx, 1xxxx–6xxxx", pricer: "MPFS", status: "Active" },
+          { name: "Institutional — inpatient", codeRange: "TOB 11x · MS-DRG", pricer: "IPPS", status: "Active" },
+          { name: "Institutional — outpatient", codeRange: "TOB 13x · APC", pricer: "OPPS", status: "Active" },
+          { name: "Pharmacy", codeRange: "NDC · NCPDP D.0", pricer: "NADAC / ASP", status: "Active" },
+          { name: "DME", codeRange: "HCPCS E/K", pricer: "DMEPOS", status: "Active" }
+        ],
+        referenceCodes: [
+          { set: "CPT / HCPCS", edition: "CY2025", cycle: "Annual + quarterly" },
+          { set: "ICD-10-CM / PCS", edition: "FY2025", cycle: "Annual (Oct 1)" },
+          { set: "Revenue / TOB / value / condition", edition: "2025", cycle: "As published (NUBC)" },
+          { set: "NCCI edits", edition: "v31.1", cycle: "Quarterly" }
+        ],
+        networks: [
+          { name: "VA Community Care Network — Region 1", type: "In-network", providers: "42,180", status: "Active" },
+          { name: "VA Community Care Network — Region 2", type: "In-network", providers: "38,905", status: "Active" },
+          { name: "Direct-care referral network", type: "In-network", providers: "5,120", status: "Active" }
+        ],
+        feeSchedules: [
+          { name: "CMAC (VA CCN allowance)", version: "2025 · v3.1", effective: "2025-01-15" },
+          { name: "MPFS locality 05", version: "CY2025", effective: "2025-01-01" },
+          { name: "OPPS APC weights", version: "CY2025", effective: "2025-01-01" },
+          { name: "ASP drug pricing", version: "2026 Q3", effective: "2026-07-01" }
+        ]
+      };
+    },
+    // ---- Customer Care 360 member view (Element 1.1.iv · Slide 10) ----------
+    getMember360: function (vetId) {
+      var ve = veterans[vetId] || veterans["V0001"]; if (!ve) return null;
+      var vid = ve.id;
+      var mClaims = D.claims.filter(function (c) { return c.veteranId === vid; }).slice(0, 8).map(function (c) {
+        return { id: c.id, number: c.claimNumber, type: c.type, dos: c.dateOfService, status: c.claimStatus || "Paid", paid: c.paidAmount || c.allowedAmount || 0 };
+      });
+      var seed = 0; for (var i = 0; i < vid.length; i++) seed = (seed * 31 + vid.charCodeAt(i)) >>> 0;
+      var rnd = function () { seed = (seed * 1103515245 + 12345) >>> 0; return seed / 4294967296; };
+      var teams = ["PACT Team Gold — Audie L. Murphy VAMC", "PACT Team Blue — Kerrville VA Clinic", "PACT Team Green — Austin VA Clinic"];
+      return {
+        profile: { name: ve.name, memberId: ve.memberId, dob: ve.dob, sex: ve.sex, city: ve.city, state: ve.state, enrollment: "Enrolled · Priority Group 3" },
+        pact: { team: teams[Math.floor(rnd() * teams.length)], pcp: ["Dr. A. Morgan", "Dr. L. Chen", "Dr. R. Patel"][Math.floor(rnd() * 3)], rn: "RN Case Manager on file" },
+        lineOfBusiness: "VA Community Care (VACCN)",
+        claims: mClaims,
+        priorAuths: [
+          { id: "A" + (10000 + Math.floor(rnd() * 89999)), service: "Outpatient specialty referral", status: "Approved", valid: "2025-01-01 – 2025-12-31" },
+          { id: "A" + (10000 + Math.floor(rnd() * 89999)), service: "Physical therapy — 12 visits", status: "Approved", valid: "2025-03-01 – 2025-09-01" }
+        ]
+      };
+    },
+
     // ---- CMS content release repository + effective-dated pricing (Element 2.2) --
     // Distinct from the app CI/CD pipeline: this tracks CMS regulatory/pricing
     // CONTENT releases (fee schedules, pricers, edits) and effective-dated content.
