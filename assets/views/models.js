@@ -6,6 +6,7 @@
   window.Views = window.Views || {};
   var selectedId = null;
   var wiz = null;   // create-model wizard state, or null for the registry
+  var feat = null;  // feature-creation panel state ("open" | "created" | null)
   var LIBRARY_COUNT = 54;
   var MODEL_TYPES = [
     { id: "predictive", name: "Predictive Analysis", sub: "Logistic Regression — supervised", icon: "trending-up", supervised: true },
@@ -38,6 +39,7 @@
   window.Views.models = {
     render: function (mount) {
       if (wiz) { mount.innerHTML = wizardHtml(); wireWizard(mount); return; }
+      if (feat) { mount.innerHTML = featureHtml(); wireFeature(mount); return; }
       var models = window.DP.getModelRegistry();
       var order = window.DP.MODEL_TYPE_ORDER;
       if (!selectedId || !models.some(function (m) { return m.id === selectedId; })) selectedId = models[0].id;
@@ -68,7 +70,7 @@
       mount.innerHTML =
         '<div style="display:flex;flex-direction:column;gap:10px">' +
         '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div style="font-weight:600;font-size:14px"><i class="ti ti-robot" style="color:var(--accent-d)"></i> Model registry <span class="muted" style="font-weight:400;font-size:11.5px">· the AI / ML models behind the analytics</span></div>' +
-        '<div style="display:flex;gap:8px;align-items:center"><span class="tag" style="background:var(--surface)"><i class="ti ti-shield-check"></i> Governed &amp; versioned</span><button id="mdl-new" class="btn primary" style="font-size:12px"><i class="ti ti-plus"></i> New model</button></div></div>' +
+        '<div style="display:flex;gap:8px;align-items:center"><span class="tag" style="background:var(--surface)"><i class="ti ti-shield-check"></i> Governed &amp; versioned</span><button id="mdl-feat" class="btn" style="font-size:12px"><i class="ti ti-adjustments-plus"></i> New feature</button><button id="mdl-new" class="btn primary" style="font-size:12px"><i class="ti ti-plus"></i> New model</button></div></div>' +
         '<div style="font-size:11.5px;color:var(--text2);margin-top:6px">The library is pre-populated with <b>' + LIBRARY_COUNT + ' ML models</b> ready to be retrained on the VA\'s data, organized by model or service type (' + models.length + ' shown here in detail). Every model is catalogued with its type, version, status, healthcare task, training method, feature driver table, data period and measured performance — explainable and auditable.</div>' +
         '<div style="margin-top:9px;display:flex;gap:8px;flex-wrap:wrap">' + chip("robot", LIBRARY_COUNT + " in the library") + chips + '</div></div>' +
         '<div style="display:grid;grid-template-columns:300px 1fr;gap:10px;align-items:start">' +
@@ -80,8 +82,38 @@
         b.addEventListener("click", function () { selectedId = b.getAttribute("data-id"); window.Views.models.render(mount); });
       });
       var nb = mount.querySelector("#mdl-new"); if (nb) nb.onclick = function () { wiz = { step: 0, type: null, dataset: null, columns: [], trained: false }; window.Views.models.render(mount); };
+      var fb = mount.querySelector("#mdl-feat"); if (fb) fb.onclick = function () { feat = "open"; window.Views.models.render(mount); };
     }
   };
+
+  // ---- feature discovery / creation (dual-classification example) ----
+  function featureHtml() {
+    var f = window.DP.getFeatureLibrary(), esc = window.APP.esc, ex = f.example;
+    var codeChips = function (arr) { return arr.map(function (c) { return '<span class="mono" style="font-size:10.5px;padding:2px 6px;border-radius:4px;background:var(--surface);margin:2px 3px 0 0;display:inline-block">' + esc(c) + '</span>'; }).join(""); };
+    var recs = f.recommended.map(function (r) {
+      return '<div style="display:flex;gap:8px;padding:6px 0;border-top:0.5px solid var(--border2);font-size:11.5px"><i class="ti ti-' + (r.priorProcedure ? "history-toggle" : "point") + '" style="color:' + (r.priorProcedure ? "var(--accent-d)" : "var(--text3)") + ';margin-top:1px"></i><div style="flex:1"><b>' + esc(r.name) + '</b>' + (r.priorProcedure ? ' <span class="tag" style="background:var(--accent-l);color:var(--accent-d);font-size:9.5px">prior-procedure</span>' : '') + '<div style="font-size:10.5px;color:var(--text2)">' + esc(r.methodology) + '</div></div></div>';
+    }).join("");
+    var created = feat === "created";
+    return '<div style="display:flex;flex-direction:column;gap:10px">' +
+      '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div style="font-weight:600;font-size:14px"><i class="ti ti-adjustments-plus" style="color:var(--accent-d)"></i> Create a feature</div><button id="feat-cancel" class="btn" style="font-size:12px"><i class="ti ti-x"></i> ' + (created ? "Done" : "Cancel") + '</button></div>' +
+      '<div style="font-size:11.5px;color:var(--text2);margin-top:6px"><i class="ti ti-bulb" style="color:var(--accent-d)"></i> ' + esc(ex.trigger) + ' <b>' + esc(ex.policy) + '</b></div></div>' +
+      (created ? '<div class="card" style="text-align:center;padding:16px"><i class="ti ti-circle-check" style="color:var(--low-tx);font-size:30px"></i><div style="font-weight:600;font-size:13px;margin-top:6px">Feature created &amp; attached to the model</div><div style="font-size:11.5px;color:var(--text2);margin-top:2px">The dual-classification feature now flags class-A orthotics with no prior class-B sleep study — closing the avenue for fraud.</div></div>' : "") +
+      '<div class="card"><div style="font-weight:600;font-size:12.5px;margin-bottom:6px"><i class="ti ti-arrows-split-2" style="color:var(--accent-d)"></i> ' + esc(ex.type) + '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center">' +
+      '<div style="border:1px solid var(--border);border-radius:8px;padding:9px 11px"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Class A</div><div style="font-weight:600;font-size:12px">' + esc(ex.classA.label) + '</div><div style="margin-top:3px">' + codeChips(ex.classA.codes) + '</div><div style="font-size:10px;color:var(--text3);margin-top:3px">' + esc(ex.classA.system) + '</div></div>' +
+      '<div style="text-align:center;color:var(--accent-d)"><i class="ti ti-arrow-right"></i><div style="font-size:9.5px;color:var(--text3)">requires</div></div>' +
+      '<div style="border:1px solid var(--border);border-radius:8px;padding:9px 11px"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Class B</div><div style="font-weight:600;font-size:12px">' + esc(ex.classB.label) + '</div><div style="margin-top:3px">' + codeChips(ex.classB.codes) + '</div><div style="font-size:10px;color:var(--text3);margin-top:3px">' + esc(ex.classB.system) + '</div></div>' +
+      '</div>' +
+      '<div style="background:var(--surface);border-radius:7px;padding:8px 10px;font-size:11.5px;margin-top:9px"><i class="ti ti-info-circle" style="color:var(--accent-d)"></i> ' + esc(ex.measure) + '</div>' +
+      (created ? "" : '<div style="margin-top:10px;text-align:right"><button id="feat-create" class="btn primary" style="font-size:12px"><i class="ti ti-check"></i> Create feature</button></div>') + '</div>' +
+      '<div class="card"><div style="font-weight:600;font-size:12.5px;margin-bottom:2px"><i class="ti ti-list-check" style="color:var(--accent-d)"></i> Recommended features <span class="muted" style="font-weight:400;font-size:11px">· ' + esc(f.note) + '</span></div>' + recs + '</div>' +
+      '<div style="font-size:10.5px;color:var(--text3)"><i class="ti ti-sparkles"></i> Demonstration feature-creation flow — deterministic.</div></div>';
+  }
+  function wireFeature(mount) {
+    var re = function () { window.Views.models.render(mount); };
+    var c = mount.querySelector("#feat-cancel"); if (c) c.onclick = function () { feat = null; re(); };
+    var cr = mount.querySelector("#feat-create"); if (cr) cr.onclick = function () { feat = "created"; window.APP.auditLog("FEATURE_CREATED", "Dual-classification feature: dental orthotics require a prior sleep study"); re(); };
+  }
 
   // ---- create-model wizard (scripted, deterministic) ----
   function wizardHtml() {

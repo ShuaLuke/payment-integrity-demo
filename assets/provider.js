@@ -492,6 +492,35 @@
       });
     },
 
+    // ---- feature discovery / creation (Element 3.2.ii) ---------------------
+    // When a running model surfaces an anomaly, users can create a new FEATURE to
+    // capture it. The flagship example: a K-means model on Sleep Apnea surfaces
+    // anomalous expensive dental orthotics; a dual-classification feature ties the
+    // orthotic HCPCS to a required prior sleep-study procedure. Deterministic.
+    getFeatureLibrary: function () {
+      return {
+        totalRecommended: 88,
+        note: "The solution recommends up to 88 features/metrics as the best fit for a dual-classification feature; several measure whether a prior procedure was performed.",
+        example: {
+          trigger: "K-means model on Sleep Apnea diagnoses began flagging anomalous claims for expensive dental orthotics.",
+          policy: "New policy: these orthotics may not be prescribed without a prior sleep study.",
+          type: "Dual-classification feature",
+          classA: { label: "Expensive dental orthotics", codes: ["E0486", "D5911", "D5912"], system: "HCPCS / CDT" },
+          classB: { label: "Prior sleep study (required)", codes: ["95810", "95811", "G0398"], system: "CPT / HCPCS" },
+          measure: "Flags a class-A orthotic when no class-B sleep study is found in the member's prior claim history — closing the avenue for fraud.",
+          priorProcedure: true
+        },
+        recommended: [
+          { name: "Prior procedure performed", methodology: "Boolean — was a required predecessor procedure billed in the lookback window", priorProcedure: true },
+          { name: "Days since prior procedure", methodology: "Interval between the required predecessor and the current service", priorProcedure: true },
+          { name: "Dual-classification match", methodology: "Class-A code present AND class-B code absent in history", priorProcedure: true },
+          { name: "Provider specialty mismatch", methodology: "Billed procedure outside the provider's taxonomy scope", priorProcedure: false },
+          { name: "Unit-per-day z-score", methodology: "Standardized units vs code/day norm", priorProcedure: false },
+          { name: "Peer-cost percentile", methodology: "Line cost vs specialty peer distribution", priorProcedure: false }
+        ]
+      };
+    },
+
     // ---- PEND-activity analysis (Element 3.2.ii) ---------------------------
     // Which rules fire, how often, and with what downstream disposition — surfacing
     // rule gaps, redundant pends, and automation opportunities. Deterministic.
