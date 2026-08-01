@@ -623,7 +623,7 @@
       medium: ["var(--med-bg)", "var(--med-tx)", "alert-circle"], low: ["var(--surface)", "var(--text2)", "info-circle"],
       info: ["var(--low-bg)", "var(--low-tx)", "circle-check"]
     };
-    var CAT_ICON = { Exclusion: "ban", Sanction: "gavel", License: "certificate", Ownership: "building-community", "Adverse media": "news", Network: "affiliate", Legal: "scale", Geographic: "map-pin", Identity: "user-search", Clear: "circle-check" };
+    var CAT_ICON = { Exclusion: "ban", Sanction: "gavel", License: "certificate", Ownership: "building-community", "Adverse media": "news", Network: "affiliate", Legal: "scale", Geographic: "map-pin", Identity: "user-search", Clear: "circle-check", "Provider enrollment": "id-badge", Revocations: "circle-minus", "Criminal & legal": "scale", "OSINT risk": "world-search", "Derogatory findings": "flag", "Case review": "folder-search" };
     var sevPill = function (s) { var c = SEV[s] || SEV.low; return '<span class="tag" style="background:' + c[0] + ';color:' + c[1] + '"><i class="ti ti-' + c[2] + '"></i> ' + s + '</span>'; };
     var band = r.band === "high" ? "rh" : r.band === "medium" ? "rm" : "rl";
 
@@ -654,7 +654,9 @@
       '<div style="font-weight:500;font-size:13px"><i class="ti ti-shield-search" style="color:var(--accent-d)"></i> Risk intelligence <span class="muted" style="font-weight:400;font-size:11px">· external &amp; OSINT corroboration, by category (synthetic)</span></div>' +
       '<span class="chip ' + band + '"><span class="s">' + r.score + '</span> external risk</span></div>' +
       '<div style="background:var(--accent-l);border-radius:8px;padding:10px 12px;font-size:11.5px;color:var(--ink);line-height:1.6;display:flex;gap:8px"><i class="ti ti-robot" style="color:var(--accent-d);font-size:16px;flex:none;margin-top:1px"></i><div><b>AI summary.</b> ' + esc(r.summary) + '</div></div>' +
-      '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">' + sevChips + '<span class="tag" style="background:var(--surface)">' + r.findingCount + ' findings · ' + cats.length + ' categories</span></div>' +
+      '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">' + sevChips + '<span class="tag" style="background:var(--surface)">' + r.findingCount + ' findings · ' + cats.length + ' categories</span>' + (r.recordCount ? '<span class="tag" style="background:var(--surface)"><i class="ti ti-database"></i> ' + esc(r.recordCount) + '</span>' : '') + '</div>' +
+      (r.approach ? '<div style="font-size:10.5px;color:var(--text3);margin-top:5px"><i class="ti ti-arrows-diff"></i> ' + esc(r.approach) + '</div>' : '') +
+      (r.dimensions ? '<div style="margin-top:6px;display:flex;gap:4px;flex-wrap:wrap">' + r.dimensions.map(function (dm) { return '<span class="tag" style="background:var(--surface);font-size:9.5px;color:var(--text3)">' + esc(dm) + '</span>'; }).join("") + '</div>' : '') +
       '<div style="display:grid;grid-template-columns:1.7fr 1fr;gap:14px;margin-top:10px">' +
       '<div><div style="font-size:10.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Findings by category</div>' + findingsHtml + '</div>' +
       '<div><div style="font-size:10.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Chronological feed</div>' + feedHtml + '</div>' +

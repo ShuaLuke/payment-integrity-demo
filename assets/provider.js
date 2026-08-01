@@ -669,6 +669,17 @@
       "282N00000X": "General Acute Care Hospital", "2472R0900X": "Independent Diagnostic Testing Facility"
     },
     MOD_EXTRA: { "XE": "Separate encounter", "XP": "Separate practitioner" },
+    VALUE_CODE_DESC: {
+      "01": "Most common semi-private room rate", "05": "Professional component included in charges",
+      "14": "No-fault including auto/other", "24": "New technology add-on payment",
+      "80": "Covered days", "81": "Non-covered days", "A2": "Home health inpatient deductible", "D3": "Estimated responsibility — payer"
+    },
+    CONDITION_CODE_DESC: {
+      "01": "Military service related", "02": "Condition is employment related",
+      "04": "Information only bill", "20": "Beneficiary requested billing",
+      "44": "Inpatient admission changed to outpatient", "A6": "Pneumococcal/influenza vaccine",
+      "C1": "Approved as billed (medical review)", "D9": "Any other change (claim adjustment)", "W2": "Duplicate of original bill"
+    },
     getCodeLibraries: function () {
       return [
         { id: "cpt", name: "CPT / HCPCS Level II", system: "AMA CPT® + CMS HCPCS", edition: "CY2025", cycle: "Annual (Jan) + quarterly HCPCS updates", effective: "2025-01-01", approxCount: "~10,900", icon: "code" },
@@ -676,6 +687,8 @@
         { id: "icd10pcs", name: "ICD-10-PCS procedures", system: "CMS ICD-10-PCS", edition: "FY2025", cycle: "Annual (Oct 1)", effective: "2024-10-01", approxCount: "~78,200", icon: "medical-cross" },
         { id: "revenue", name: "Revenue codes (UB-04)", system: "NUBC UB-04", edition: "2025", cycle: "As published by the NUBC", effective: "2025-01-01", approxCount: "~800", icon: "receipt" },
         { id: "tob", name: "Type of bill (UB-04)", system: "NUBC UB-04", edition: "2025", cycle: "As published by the NUBC", effective: "2025-01-01", approxCount: "~120", icon: "file-invoice" },
+        { id: "value", name: "Value codes (UB-04)", system: "NUBC UB-04", edition: "2025", cycle: "As published by the NUBC", effective: "2025-01-01", approxCount: "~180", icon: "coin" },
+        { id: "condition", name: "Condition codes (UB-04)", system: "NUBC UB-04", edition: "2025", cycle: "As published by the NUBC", effective: "2025-01-01", approxCount: "~110", icon: "clipboard-list" },
         { id: "modifiers", name: "CPT / HCPCS modifiers", system: "AMA CPT® + CMS NCCI", edition: "CY2025", cycle: "Annual + quarterly NCCI", effective: "2025-01-01", approxCount: "~360", icon: "adjustments-alt" },
         { id: "carc", name: "Claim Adjustment Reason Codes", system: "X12 / WPC (CARC)", edition: "2025", cycle: "Triannual (X12)", effective: "2025-03-01", approxCount: "~400", icon: "arrows-diff" },
         { id: "rarc", name: "Remittance Advice Remark Codes", system: "CMS / WPC (RARC)", edition: "2025", cycle: "Triannual (X12)", effective: "2025-03-01", approxCount: "~1,100", icon: "message-report" },
@@ -692,6 +705,8 @@
       else if (id === "icd10pcs") entries = fromMap(this.ICD10PCS);
       else if (id === "revenue") entries = fromMap(this.REVENUE_DESC);
       else if (id === "tob") entries = fromMap(this.TOB_DESC);
+      else if (id === "value") entries = fromMap(this.VALUE_CODE_DESC);
+      else if (id === "condition") entries = fromMap(this.CONDITION_CODE_DESC);
       else if (id === "taxonomy") entries = fromMap(this.TAXONOMY_DESC);
       else if (id === "modifiers") entries = Object.keys(this.CPT_XWALK.mod).map(function (k) { var d = self.CPT_XWALK.mod[k]; return { code: k, description: d.name, category: d.note }; }).concat(Object.keys(this.MOD_EXTRA).map(function (k) { return { code: k, description: self.MOD_EXTRA[k], category: "NCCI-specific subset of modifier 59" }; }));
       else if (id === "carc") entries = Object.keys(this.CARC_CATALOG).map(function (k) { var d = self.CARC_CATALOG[k]; return { code: k, description: d.label, category: d.group + " · " + d.kind }; });
@@ -1002,8 +1017,12 @@
       license: "State licensing board", ownership: "Corporate registry & beneficial ownership",
       media: "Adverse-media monitoring", network: "Provider network graph",
       legal: "Litigation & court records", geographic: "Provider address intelligence",
-      identity: "Public-records / identity graph"
+      identity: "Public-records / identity graph", enrollment: "Provider enrollment (PECOS)",
+      revocation: "Enrollment revocation list", criminal: "Criminal & legal records",
+      osint: "Open-source intelligence", derogatory: "Derogatory-findings index", caseReview: "Prior case-review history"
     },
+    // The dimensions screened across (shown in the panel framing).
+    RISK_DIMENSIONS: ["Provider enrollment", "Exclusions", "Revocations", "Licensing", "Sanctions", "Business registrations & ownership", "Criminal & legal history", "Network analysis", "Open-source intelligence risk", "Geographic analysis", "Adverse news", "Derogatory findings", "Case-review details", "AI summaries"],
     getRiskIntel: function (id) {
       var p = providers[id]; if (!p) return null;
       var self = this, sec = this.getSecondaryProfile(id), excl = this.LEIE_EXCLUSIONS[id] || null;
@@ -1015,22 +1034,30 @@
       var F = [], add = function (cat, key, title, sev, date, desc) { F.push({ category: cat, title: title, severity: sev, source: S[key], date: date, description: desc }); };
       var st = p.state || "TX";
 
+      // Provider enrollment (screened on every provider)
+      add("Provider enrollment", "enrollment", excl ? "PECOS enrollment deactivated" : "PECOS enrollment on file", excl ? "high" : "info", dt(2022, 2025), excl ? "Medicare/PECOS enrollment shows a deactivation tied to the exclusion action." : "Medicare/PECOS enrollment is active for the billed specialty and location.");
       if (excl) {
         add("Exclusion", "exclusion", "OIG LEIE exclusion — active", "critical", excl.since, "Listed on the federal List of Excluded Individuals/Entities under " + excl.basis + " (" + excl.reason.toLowerCase() + "). Any claim with a date of service during the exclusion is recoverable in full" + (excl.reinstatement ? "; earliest reinstatement " + excl.reinstatement + "." : "; no reinstatement date on file."));
         add("Sanction", "sanction", "Federal award exclusion (debarment)", "high", dt(2023, 2024), "Active exclusion record in the federal award-management registry — ineligible for federal awards and payments while listed.");
         add("License", "license", "State license revoked / suspended", "high", dt(2023, 2024), "Primary state professional license shows a revocation/suspension action, consistent with the exclusion basis.");
+        add("Revocations", "revocation", "Medicare enrollment revocation", "high", dt(2023, 2024), "Provider appears on the enrollment-revocation list; billing privileges were revoked with a re-enrollment bar.");
+        add("Criminal & legal", "criminal", "Health-care fraud conviction on record", "critical", dt(2022, 2023), "Public criminal-records screening surfaced a felony health-care-fraud conviction associated with a principal.");
         add("Adverse media", "media", "Adverse press — enforcement action", "high", dt(2023, 2025), "News monitoring surfaced coverage of an enforcement/settlement action naming the entity or a principal.");
+        add("Derogatory findings", "derogatory", "Multiple derogatory findings aggregated", "high", dt(2023, 2025), "The derogatory-findings index aggregates exclusion, revocation and conviction signals into a sustained high-risk indicator.");
+        add("Case review", "caseReview", "Prior payment-integrity case on file", "medium", dt(2022, 2024), "This entity was the subject of a prior adjudicated payment-integrity case — relevant precedent for the current review.");
       }
       if (chain) {
         add("Ownership", "ownership", "Common ownership across facilities", "high", dt(2018, 2022), "Beneficial-ownership records tie this facility to " + (sec.business.openCorporatesRelated || 3) + " affiliated facilities under a shared holding company and registered agent.");
         add("Network", "network", "Shared-patient cluster across the chain", "high", dt(2025, 2026), "Network analysis shows members appearing at multiple facilities in the chain within short windows — a coordinated-utilization signal.");
         add("Geographic", "geographic", "Principal address is a commercial mail-drop", "medium", dt(2019, 2023), "The registered principal address resolves to a commercial mail-receiving agency (CMRA), not a treatment site.");
         add("License", "license", "Multi-state licensure — verify scope", "medium", dt(2022, 2025), "Principal holds licenses in multiple states; confirm each covers the services billed at this facility.");
+        add("OSINT risk", "osint", "Undisclosed family ownership across affiliates", "high", dt(2019, 2024), "Open-source intelligence links the principal's family members to affiliated facilities not disclosed on ownership filings — a concealment pattern.");
+        add("Derogatory findings", "derogatory", "Elevated derogatory-findings score", "medium", dt(2023, 2025), "Aggregated ownership-concealment and utilization signals raise the derogatory-findings score above the peer threshold.");
       }
       if (ring && !chain) {
         add("Network", "network", "Shared-TIN provider ring", "high", dt(2024, 2026), "Two or more billing NPIs share this Tax ID and co-bill overlapping members — a provider-ring pattern.");
         add("Ownership", "ownership", "Co-registration with an unrelated biller", "medium", dt(2020, 2024), "The suite/address matches an unrelated billing company on state filings — possible shell/pass-through billing.");
-        add("Identity", "identity", "Officer linked to the partner provider", "medium", dt(2019, 2023), "Public-records graph links the named officer to the co-located partner provider through prior filings.");
+        add("OSINT risk", "osint", "Officer linked to the partner provider", "medium", dt(2019, 2023), "Open-source and public-records graphs link the named officer to the co-located partner provider through prior filings.");
       }
       if (!excl && (p.riskScore || 0) >= 78 && !chain && !ring) {
         add("License", "license", "Credential friction — verify standing", "medium", dt(2024, 2026), "One or more credentials (license / DEA / board certification) show a lapse or pending status; confirm active standing for the dates billed.");
@@ -1062,6 +1089,8 @@
         score: score, band: band, tier: sec.tier, findingCount: F.length, severityCounts: counts,
         summary: summary, findings: F, feed: feed,
         categories: (function () { var c = {}; F.forEach(function (f) { c[f.category] = (c[f.category] || 0) + 1; }); return c; })(),
+        dimensions: this.RISK_DIMENSIONS, recordCount: "1B+ public records",
+        approach: "Screened top-down (exclusion / revocation / provider master files) and bottom-up (from high-risk claim behavior surfaced by the models).",
         note: "Synthetic external intelligence for the demo — sources are shown as capability categories. The DataProvider seam accepts a real external-intelligence feed."
       };
     },
