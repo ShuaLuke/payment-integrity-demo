@@ -816,7 +816,7 @@
       body = '<div style="overflow-x:auto"><table style="font-size:11.5px"><thead><tr><th>RVU component</th><th class="right">RVU</th><th class="right">GPCI (loc 05)</th><th class="right">Adjusted</th></tr></thead><tbody>' + comp +
         '<tr style="font-weight:600;border-top:1px solid var(--border)"><td colspan="3">Total geographically-adjusted RVUs</td><td class="right mono">' + x.totalAdjustedRvu.toFixed(2) + '</td></tr></tbody></table></div>' +
         '<div style="margin-top:8px;padding:8px 10px;background:var(--surface);border-radius:7px;font-size:11.5px"><span class="mono">' + x.totalAdjustedRvu.toFixed(2) + '</span> adjusted RVUs × <span class="mono">$' + x.cf.toFixed(2) + '</span> conversion factor = <b>' + m(x.result) + '</b> allowed' +
-        '<div style="font-size:10.5px;color:var(--text3);margin-top:3px">' + window.APP.esc(x.formula) + ' · site of service ' + window.APP.esc(x.siteOfService) + '</div></div>';
+        '<div style="font-size:10.5px;color:var(--text3);margin-top:3px">' + window.APP.esc(x.formula) + ' · site of service ' + window.APP.esc(x.siteOfService) + ' · modifiers ' + ((x.modifiers && x.modifiers.length) ? '<span class="mono">' + window.APP.esc(x.modifiers.join(", ")) + '</span>' : 'none (1.00×)') + '</div></div>';
     } else if (l.perDiem) {
       var pd = l.perDiem;
       body = '<div style="display:flex;flex-wrap:wrap;gap:10px">' +

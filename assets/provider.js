@@ -318,8 +318,14 @@
           output: { signal: rule.detectionLevel === "Claim-level" ? "flag" : "flag + score", emits: rule.code + "_FLAG", disposition: "Route to " + (rule.detectionLevel === "Network-level" ? "network" : rule.detectionLevel === "Provider-pattern" ? "provider-pattern" : "claim") + " review", downstream: "Lead created (" + rule.fraudType + ")" }
         };
       }
+      // applicable claim type + output process code (derived from the rule's dimensions)
+      var claimTypeMap = { "Institutional": "837I (UB-04)", "Professional": "837P (CMS-1500)", "Pharmacy": "NCPDP D.0", "Provider": "837P / 837I", "Beneficiary": "837P / 837I / NCPDP" };
+      var applicableClaimType = claimTypeMap[rule.entityType] || "837P / 837I";
+      var opc = { flag: "PEND-01", "flag + score": "PEND-02" };
+      var outputProcessCode = (spec.output && /deny|recover|bundled/i.test((spec.output.disposition || "") + (spec.output.emits || ""))) ? "DENY-01" : (opc[spec.output && spec.output.signal] || "PEND-01");
       return {
         id: rule.id, code: rule.code, name: rule.name, version: rule.version, effectiveDate: rule.effectiveDate, environment: rule.environment,
+        effectiveDates: rule.effectiveDate + " → current", applicableClaimType: applicableClaimType, outputProcessCode: outputProcessCode,
         regulatorySource: rule.regulatorySource, entityType: rule.entityType, fraudType: rule.fraudType, detectionLevel: rule.detectionLevel, severity: rule.severity,
         logic: spec.logic, inputs: spec.inputs, output: spec.output
       };
@@ -1622,13 +1628,14 @@
           method: pl.methodology, cpt: cpt, description: pl.description, allowed: allowed,
           mpfs: {
             cf: CF, gpci: gpci, totalAdjustedRvu: totAdj,
+            modifiers: raw.modifiers || [],
             components: [
               { label: "Work", rvu: rvuW, gpci: gpci.work, adjusted: aW },
               { label: "Practice expense", rvu: rvuP, gpci: gpci.pe, adjusted: aP },
               { label: "Malpractice", rvu: rvuM, gpci: gpci.mp, adjusted: aM }
             ],
             siteOfService: "11 — Office (non-facility)",
-            formula: "[(RVUw×GPCIw) + (RVUpe×GPCIpe) + (RVUmp×GPCImp)] × CF",
+            formula: "[(RVUw×GPCIw) + (RVUpe×GPCIpe) + (RVUmp×GPCImp)] × CF × modifier adjustment",
             result: allowed
           }
         };

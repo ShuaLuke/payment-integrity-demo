@@ -37,8 +37,17 @@
     var outputInner = kv("Signal", '<span class="tag" style="background:var(--accent-l);color:var(--accent-d)">' + esc(o.signal) + '</span>') +
       kv("Emits", '<span class="mono" style="color:var(--high-tx)">' + esc(o.emits) + '</span>') +
       kv("Disposition", esc(o.disposition)) +
+      kv("Output process code", '<span class="mono" style="color:var(--accent-d)">' + esc(d.outputProcessCode || "—") + '</span>') +
       kv("Feeds", '<span style="color:var(--text2)">' + esc(o.downstream) + '</span>');
+    // rule setup properties (description, effective dates, applicable claim type, ...)
+    var propsInner = kv("Description", esc(d.name)) +
+      kv("Effective dates", '<span class="mono">' + esc(d.effectiveDates || d.effectiveDate) + '</span>') +
+      kv("Applicable claim type", esc(d.applicableClaimType || "—")) +
+      kv("Version / environment", '<span class="mono">' + esc(d.version) + '</span> · ' + esc(d.environment)) +
+      kv("Regulatory source", esc(d.regulatorySource)) +
+      kv("Severity", esc(d.severity));
     return '<div style="display:grid;grid-template-columns:1fr;gap:0">' +
+      block("adjustments", "Rule setup", "how the rule is configured", propsInner) +
       block("binary-tree", "Decision logic", "criteria the rule evaluates", logicInner) +
       block("database-import", "Required data inputs", "claim fields → 837 / NCPDP segments + external references", inputsInner) +
       block("logout", "Output structure", "what the rule emits and where it goes", outputInner) +
