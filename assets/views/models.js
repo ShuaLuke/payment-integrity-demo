@@ -82,7 +82,13 @@
         b.addEventListener("click", function () { selectedId = b.getAttribute("data-id"); window.Views.models.render(mount); });
       });
       var nb = mount.querySelector("#mdl-new"); if (nb) nb.onclick = function () { wiz = { step: 0, type: null, dataset: null, columns: [], trained: false }; window.Views.models.render(mount); };
-      var fb = mount.querySelector("#mdl-feat"); if (fb) fb.onclick = function () { feat = "open"; window.Views.models.render(mount); };
+      var fb = mount.querySelector("#mdl-feat"); if (fb) fb.onclick = function () { feat = "open"; wiz = null; window.Views.models.render(mount); };
+    },
+    // reset any open wizard/feature panel and open the requested one (used by the guided demo)
+    demoOpen: function (what) {
+      if (what === "feature") { feat = "open"; wiz = null; }
+      else { wiz = { step: 0, type: null, dataset: null, columns: [], trained: false }; feat = null; }
+      window.APP.nav("models");
     }
   };
 
