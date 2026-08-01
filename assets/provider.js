@@ -754,6 +754,38 @@
       return { meta: meta, entries: entries, sampleNote: "Sample entries — the full " + meta.name + " set (" + meta.approxCount + " codes) is loaded in production; a representative slice is shown here." };
     },
 
+    // ---- CMS pricing methodologies registry (Element 2.1.i) ----------------
+    // The pricing methodologies the platform supports, and how the right one is
+    // selected for a claim. Static/deterministic. Un-attributed.
+    getPricingMethodologies: function () {
+      var M = function (name, claimType, basis, status, note) { return { name: name, claimType: claimType, basis: basis, status: status, note: note }; };
+      return {
+        selectionFactors: [
+          "Date of service (selects the effective fee schedule / pricer version)",
+          "Provider & facility attributes (type, specialty, CCN participation)",
+          "Geographic locality / CBSA wage index",
+          "Site of service (facility vs non-facility)",
+          "Applicable fee schedule or contracted rate (CMAC)"
+        ],
+        methodologies: [
+          M("IPPS — MS-DRG", "837I inpatient", "MS-DRG relative weight × wage-adjusted base + capital + DSH + IME", "active", "Acute inpatient prospective payment."),
+          M("OPPS — APC", "837I outpatient", "APC payment rate × wage/locality; status-indicator driven", "active", "Hospital outpatient prospective payment."),
+          M("MPFS", "837P professional", "Σ(RVU × GPCI) × conversion factor × modifiers", "active", "Medicare Physician Fee Schedule."),
+          M("DMEPOS fee schedule", "837P / DME", "DMEPOS fee-schedule amount × locality", "active", "Durable medical equipment, prosthetics, orthotics & supplies."),
+          M("Ambulance fee schedule", "837P", "Base rate + mileage × geographic adjustment", "active", "Ground/air ambulance transport."),
+          M("Clinical laboratory fee schedule", "837P", "CLFS amount per test (NLA where applicable)", "active", "Clinical diagnostic laboratory."),
+          M("ASP drug pricing", "837P / 837I", "ASP + 6% (quarterly file), per HCPCS/NDC", "active", "Part B drug pricing — quarterly ASP."),
+          M("IRF PPS", "837I", "CMG relative weight × IRF base rate", "active", "Inpatient rehabilitation facility."),
+          M("LTCH PPS", "837I", "MS-LTC-DRG × LTCH standard rate", "active", "Long-term care hospital."),
+          M("IPF PPS", "837I", "Per-diem base × patient/facility adjustments", "active", "Inpatient psychiatric facility."),
+          M("SNF PPS (PDPM)", "837I", "PDPM case-mix per-diem components", "active", "Skilled nursing facility."),
+          M("ASC payment", "837I / 837P", "ASC rate (APC-derived) × wage index", "active", "Ambulatory surgical center."),
+          M("ESRD PPS", "837I", "Per-treatment base × case-mix + adjustments", "active", "End-stage renal disease / dialysis."),
+          M("Home Health PPS (PDGM)", "837I", "30-day period payment × case-mix (PDGM)", "active", "Home health.")
+        ]
+      };
+    },
+
     // ---- EDI dashboard (Element 1.1.i/iii/iv) ------------------------------
     // Transaction-set volumes, acknowledgment stats and status by X12 set —
     // the intake health of the claims pipeline. Static/deterministic (no regen).
