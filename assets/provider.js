@@ -1217,6 +1217,18 @@
       var cl = claims[claimId]; if (!cl) return null;
       if (cl.type === "NCPDP") return null;
       var p = providers[cl.providerId] || {}, inst = cl.type === "837I";
+      // Inpatient DRG-priced claims are priced at the CLAIM (DRG) level, not per CPT line.
+      if (cl.inpatientSurgical) {
+        var corrected = 28595.58, submitted = Math.round(cl.billedAmount * 100) / 100;
+        var pl = { cpt: "MS-DRG " + (cl.correctedDrg || "026"), description: "Inpatient prospective payment (IPPS) — regrouped from DRG " + (cl.submittedDrg || "030"), modifiers: [], submittedCharge: submitted, cmsAllowed: corrected, paid: cl.paidAmount || corrected, variance: Math.round((submitted - corrected) * 100) / 100, variancePct: Math.round(((submitted - corrected) / corrected) * 100), overPaid: (cl.paidAmount || 0) > corrected + 0.5, methodology: "IPPS / MS-DRG", flagged: true };
+        return {
+          source: "CMS reference pricing", asOf: "FFY2025 IPPS", locality: (p.state || "TX") + " · CBSA wage index",
+          lines: [pl],
+          totals: { submitted: pl.submittedCharge, cmsAllowed: corrected, paid: pl.paid, variance: pl.variance, overpayment: Math.round(Math.max(0, (cl.paidAmount || 0) - corrected) * 100) / 100 },
+          rulesApplied: ["MS-DRG grouper (v42)", "IPPS operating + capital", "CBSA wage-index adjustment", "DSH / IME add-ons", "Medicare Code Editor (MCE) — invalid-DRG check"],
+          ruleVersions: this.getPricingRuleVersions(claimId)
+        };
+      }
       var rnd = this._seed(claimId, "cms");
       var method = function (l) {
         if (inst) return l.cpt === "H0018" ? "Per-diem (residential)" : "OPPS / APC";
@@ -1527,6 +1539,10 @@
       var lines = pricing.lines.map(function (pl, idx) {
         var raw = (cl.lines || [])[idx] || {};
         var cpt = pl.cpt, allowed = pl.cmsAllowed; // TARGET the calc must reconcile to
+        // ---- inpatient DRG-priced claim: a single claim-level IPPS line ----
+        if (cl.inpatientSurgical) {
+          return { method: "IPPS / MS-DRG", cpt: pl.cpt, description: pl.description, allowed: allowed, drgLine: true };
+        }
         // ---- residential per-diem (institutional H0018) ----
         if (cpt === "H0018") {
           var billedDays = raw.units || 24;
@@ -1619,10 +1635,56 @@
             paymentDelta: r2((0.8577 - relWeight) * adjBase)
           }
         };
+      } else if (cl.inpatientSurgical) {
+        // ---- inpatient surgical: invalid submitted DRG 030 → regrouped 026 → IPPS $28,595.58 ----
+        var d2 = this.getClaimDetail(claimId);
+        var ve = veterans[cl.veteranId] || {};
+        var birthYear = parseInt(String(ve.dob || "1948").slice(0, 4), 10);
+        var age = 2025 - birthYear;
+        var principal2 = (d2.diagnoses || []).filter(function (x) { return x.type === "principal"; })[0] || null;
+        var secs2 = (d2.diagnoses || []).filter(function (x) { return x.type === "secondary"; });
+        var TARGET = 28595.58;
+        var baseRate2 = this.IPPS_BASE_2025, wageIndex2 = 1.0489, laborShare2 = 0.676, nonLaborShare2 = 0.324;
+        var adjBase2 = r2(baseRate2 * (laborShare2 * wageIndex2 + nonLaborShare2));
+        var relWeight2 = 3.3920;                                  // MS-DRG 026 (representative)
+        var operating = r2(relWeight2 * adjBase2);
+        var dsh = r2(operating * 0.1013);                          // Disproportionate Share Hospital add-on
+        var ime = r2(operating * 0.0587);                          // Indirect Medical Education add-on
+        var capital = r2(TARGET - operating - dsh - ime);          // capital + outlier — reconciling remainder
+        log.push({ step: 1, code: "MCE", method: "Grouper", detail: "Submitted DRG 030 (Spinal Procedures w/o CC/MCC) invalid for coded ICD-10-PCS craniotomy — regrouped to DRG 026", result: null });
+        log.push({ step: 2, code: "MS-DRG 026", method: "IPPS", detail: "operating " + usd(operating) + " (wt " + relWeight2 + " × adj base " + usd(adjBase2) + ") + capital " + usd(capital) + " + DSH " + usd(dsh) + " + IME " + usd(ime) + " = " + usd(TARGET), result: TARGET });
+        drgGrouper = {
+          assignedDrg: "026", description: "Craniotomy & endovascular intracranial procedures w/o CC/MCC",
+          mdc: "01 — Diseases & Disorders of the Nervous System",
+          grouperInputs: { age: age, sex: ve.sex || "—", dischargeStatus: "01 — Discharged to home / self-care (routine)", los: (cl.losDays || 5) + " days" },
+          principalDx: principal2 ? { code: principal2.code, desc: principal2.description } : null,
+          secondaryDx: secs2.map(function (x) { return { code: x.code, desc: x.description, poa: x.poa, mcc: false }; }),
+          pcs: (d2.procedures || []).map(function (x) { return { code: x.code, desc: x.description }; }),
+          relativeWeight: relWeight2, baseRate: baseRate2, wageIndex: wageIndex2,
+          laborShare: laborShare2, nonLaborShare: nonLaborShare2, adjustedBase: adjBase2,
+          components: [
+            { label: "Operating base payment", detail: "relative weight " + relWeight2 + " × adjusted base " + usd(adjBase2), amount: operating },
+            { label: "Capital payment", detail: "capital + outlier component", amount: capital },
+            { label: "DSH — Disproportionate Share Hospital", detail: "extra payment for facilities treating a large share of low-income patients", amount: dsh },
+            { label: "IME — Indirect Medical Education", detail: "extra payment to teaching hospitals", amount: ime }
+          ],
+          formula: "MS-DRG relative weight × [(labor share × wage index) + non-labor share] × base rate, + capital + DSH + IME",
+          payment: TARGET,
+          note: "Inpatient claims are priced at the DRG level under IPPS. Every component is retained in the pricer log so the final reimbursement traces back to the claim inputs and CMS methodology.",
+          validation: {
+            invalid: true,
+            submittedDrg: "030", submittedDesc: "Spinal Procedures w/o CC/MCC",
+            submittedWeight: 1.7126,
+            regroupedDrg: "026", regroupedDesc: "Craniotomy & endovascular intracranial procedures w/o CC/MCC",
+            regroupedWeight: relWeight2,
+            reason: "The submitted MS-DRG 030 (spinal) is not supported by the coded ICD-10-PCS procedures (craniotomy) and diagnoses. The Medicare Code Editor flags the DRG as invalid; the grouper evaluates the diagnosis, procedure and patient data and reassigns the encounter to MS-DRG 026, which is then priced through IPPS.",
+            correctedPayment: TARGET
+          }
+        };
       }
 
       return {
-        source: "CMS reference pricing", asOf: "CY2025 CMS fee schedules · " + (p.state || "TX") + " locality 05",
+        source: "CMS reference pricing", asOf: (cl.inpatientSurgical ? "FFY2025 IPPS" : "CY2025 CMS fee schedules") + " · " + (p.state || "TX") + (cl.inpatientSurgical ? " · CBSA wage index" : " locality 05"),
         conversionFactor: CF, oppsConversionFactor: OCF,
         lines: lines, drgGrouper: drgGrouper, pricerLog: log,
         totals: { cmsAllowed: pricing.totals.cmsAllowed },
@@ -1708,7 +1770,10 @@
       // ESRD / renal comorbidities
       "I12.0": "Hypertensive chronic kidney disease with stage 5 CKD or ESRD", "E11.22": "Type 2 diabetes mellitus with diabetic chronic kidney disease",
       "D63.1": "Anemia in chronic kidney disease", "E83.42": "Hypomagnesemia",
-      "N25.81": "Secondary hyperparathyroidism of renal origin", "Z99.2": "Dependence on renal dialysis"
+      "N25.81": "Secondary hyperparathyroidism of renal origin", "Z99.2": "Dependence on renal dialysis",
+      // Inpatient neurosurgical (DRG-grouper example)
+      "D33.2": "Benign neoplasm of brain, unspecified", "G91.1": "Obstructive hydrocephalus",
+      "G93.6": "Cerebral edema", "R51.9": "Headache, unspecified"
     },
     // Comorbidity pools keyed by the principal's category — the derived secondary Dx.
     COMORBIDITY_POOL: {
@@ -1722,7 +1787,9 @@
       "HZ2ZZZZ": "Detoxification Services for Substance Abuse Treatment",
       "HZ30ZZZ": "Individual Counseling for Substance Abuse Treatment, Cognitive",
       "HZ63ZZZ": "Group Counseling for Substance Abuse Treatment, Interpersonal",
-      "GZ56ZZZ": "Psychotherapy for Mental Health, Interactive"
+      "GZ56ZZZ": "Psychotherapy for Mental Health, Interactive",
+      "00B70ZZ": "Excision of Cerebral Hemisphere, Open Approach",
+      "009600Z": "Drainage of Cerebral Ventricle with Drainage Device, Open Approach"
     },
     // Claim Adjustment Reason Codes (CARC) + Remittance Advice Remark Codes (RARC).
     // Standard X12 835 codes — real code numbers, synthetic amounts.
@@ -1782,6 +1849,8 @@
       for (var s = pool.length - 1; s > 0; s--) { var j = Math.floor(rnd() * (s + 1)); var t = pool[s]; pool[s] = pool[j]; pool[j] = t; }
       var secCount = inst ? 6 + Math.floor(rnd() * 4) : 2 + Math.floor(rnd() * 3);
       var secs = pool.filter(function (c) { return c !== principal; }).slice(0, secCount);
+      // inpatient-surgical claims carry an explicit coded problem list (use it verbatim)
+      if (cl.inpatientSurgical && (cl.diagnosisCodes || []).length > 1) secs = cl.diagnosisCodes.slice(1);
       var poaCodes = ["Y", "Y", "Y", "N", "W", "U"];
       var diagnoses = [];
       if (principal) diagnoses.push({ seq: 1, code: principal, description: this.ICD10[principal] || "Diagnosis " + principal, type: "principal", poa: inst ? "Y" : null });
@@ -1790,7 +1859,7 @@
       // ---- ICD-10-PCS procedures (institutional only) ----
       var procedures = [];
       if (inst) {
-        var pcs = resid ? ["HZ2ZZZZ", "HZ30ZZZ", "HZ63ZZZ"] : ["GZ56ZZZ"];
+        var pcs = cl.pcsCodes ? cl.pcsCodes.slice() : (resid ? ["HZ2ZZZZ", "HZ30ZZZ", "HZ63ZZZ"] : ["GZ56ZZZ"]);
         pcs.forEach(function (code, i) { procedures.push({ seq: i + 1, code: code, description: self.ICD10PCS[code] || code, date: cl.dateOfService }); });
       }
 
@@ -1803,12 +1872,19 @@
       // ---- statement / admit-discharge dates + DRG + discharge status (institutional) ----
       var los = null, admitDate = null, dischargeDate = null, drg = null, dischargeStatus = null;
       if (inst) {
-        var um = this.getUtilizationMgmt(claimId);
-        los = (um && um.lengthOfStay && um.lengthOfStay.actualDays) || (resid ? 27 : 4);
-        admitDate = cl.dateOfService;
-        dischargeDate = this._addDays(admitDate, los);
-        drg = resid ? "896 — Alcohol/drug abuse or dependence w/o rehabilitation therapy w/o MCC" : "897 — Alcohol/drug abuse or dependence w/o rehabilitation therapy";
-        dischargeStatus = "01 — Discharged to home / self-care (routine)";
+        if (cl.inpatientSurgical) {
+          los = cl.losDays || 5;
+          admitDate = cl.dateOfService; dischargeDate = this._addDays(admitDate, los);
+          drg = (cl.submittedDrg || "030") + " — Spinal Procedures w/o CC/MCC (submitted)";
+          dischargeStatus = "01 — Discharged to home / self-care (routine)";
+        } else {
+          var um = this.getUtilizationMgmt(claimId);
+          los = (um && um.lengthOfStay && um.lengthOfStay.actualDays) || (resid ? 27 : 4);
+          admitDate = cl.dateOfService;
+          dischargeDate = this._addDays(admitDate, los);
+          drg = resid ? "896 — Alcohol/drug abuse or dependence w/o rehabilitation therapy w/o MCC" : "897 — Alcohol/drug abuse or dependence w/o rehabilitation therapy";
+          dischargeStatus = "01 — Discharged to home / self-care (routine)";
+        }
       }
 
       // ---- service lines with line-level adjudication ----
@@ -2085,6 +2161,41 @@
           }
         }
       ].forEach(function (a) { if (!D.allegations.some(function (x) { return x.id === a.id; })) D.allegations.push(a); });
+
+      // -- inpatient surgical claim with an INVALID submitted DRG (the MCE / DRG-grouper
+      //    example: submitted 030 Spinal → regrouped 026 Craniotomy → IPPS $28,595.58) --
+      var mceRule = { id: "rule_mce_drg", code: "MCE-DRG", name: "Invalid DRG — inpatient code edit (MCE)", source: "CMS payment rules", category: "Integrity", description: "Medicare Code Edit: the submitted MS-DRG is not supported by the claim's coded ICD-10-CM diagnoses and ICD-10-PCS procedures. The grouper reassigns the encounter to the correct DRG and the claim is repriced under IPPS.", version: "2.0", effectiveDate: "2025-01-01", environment: "Production" };
+      if (!rules[mceRule.id]) { D.rules.push(mceRule); rules[mceRule.id] = mceRule; }
+
+      var drgClaim = {
+        id: "CDRG01", claimNumber: "K774X20K6-06-18", type: "837I", providerId: "PR202", veteranId: "V0006",
+        dateOfService: "2025-06-18", diagnosisCodes: ["D33.2", "G91.1", "G93.6", "E11.9", "I10"],
+        pcsCodes: ["00B70ZZ", "009600Z"], inpatientSurgical: true, submittedDrg: "030", correctedDrg: "026",
+        dischargeStatus: "01", losDays: 5, claimStatus: "Paid", paymentType: "POST", mode: "retrospective",
+        billedAmount: 41230, allowedAmount: 28595.58, paidAmount: 34210, authorizationId: "A00610", paymentId: "P00610",
+        lines: [
+          { lineId: "CDRG01-L1", cpt: "0360T", revenueCode: "0360", units: 1, billed: 24850, allowed: 24850, paid: 24850, description: "Operating room services (revenue 0360)", violatesRuleIds: ["rule_mce_drg"] },
+          { lineId: "CDRG01-L2", cpt: "0110T", revenueCode: "0110", units: 5, billed: 11380, allowed: 11380, paid: 11380, description: "Room & board, private (revenue 0110)", violatesRuleIds: [] },
+          { lineId: "CDRG01-L3", cpt: "0278T", revenueCode: "0278", units: 1, billed: 5000, allowed: 5000, paid: 5000, description: "Medical/surgical supplies — implants (revenue 0278)", violatesRuleIds: [] }
+        ]
+      };
+      if (!claims[drgClaim.id]) { D.claims.push(drgClaim); claims[drgClaim.id] = drgClaim; }
+
+      if (!D.allegations.some(function (x) { return x.id === "20901"; })) D.allegations.push({
+        id: "20901", providerId: "PR202", claimId: "CDRG01", subjectType: "Provider", fwaType: "Invalid DRG (inpatient grouping)",
+        riskScore: 81, confidence: 83, source: "Rules Engine", sourceType: "Rules", claimType: "837I", status: "New", assignee: null,
+        mode: "retrospective", exposurePre: 0, exposurePost: 5614, submittedForRecovery: 0, verifiedRecoupment: 0, narrative: "",
+        ruleIds: ["rule_mce_drg"], modelId: null, createdDate: "2026-07-02",
+        xai: {
+          summary: "Pecos Valley Hospital submitted this inpatient stay under MS-DRG 030 (Spinal Procedures w/o CC/MCC), but the coded ICD-10-PCS procedures (craniotomy) and diagnoses do not support that assignment. The Medicare Code Edit flagged the DRG as invalid; the grouper reassigns the encounter to MS-DRG 026 and reprices it under IPPS to $28,595.58.",
+          factors: [
+            { label: "Submitted DRG", value: "030 — Spinal Procedures w/o CC/MCC" },
+            { label: "Grouper result", value: "Invalid for coded procedures" },
+            { label: "Corrected DRG", value: "026 — Craniotomy w/o CC/MCC" },
+            { label: "Repriced (IPPS)", value: "$28,595.58" }
+          ]
+        }
+      });
     }
   };
 })();

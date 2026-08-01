@@ -825,11 +825,41 @@
     return '<div style="flex:1;min-width:110px;background:var(--surface);border-radius:7px;padding:8px 10px"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">' + label + '</div><div style="font-weight:600;font-size:14px' + (warn ? ';color:var(--high-tx)' : '') + '">' + val + '</div></div>';
   }
   function drgGrouperCard(g) {
-    var m = window.DP.usd;
-    var dx = (g.principalDx ? '<tr><td class="mono">' + g.principalDx.code + '</td><td>' + window.APP.esc(g.principalDx.desc) + '</td><td>Principal</td></tr>' : "") +
-      g.secondaryDx.slice(0, 6).map(function (x) { return '<tr><td class="mono">' + x.code + '</td><td>' + window.APP.esc(x.desc) + '</td><td>Secondary' + (x.poa ? ' · POA ' + x.poa : '') + '</td></tr>'; }).join("");
-    var pcs = g.pcs.map(function (x) { return '<span class="mono" style="font-size:10.5px;padding:2px 6px;border-radius:4px;background:var(--surface);margin:2px 3px 0 0;display:inline-block">' + x.code + '</span>'; }).join("");
+    var esc = window.APP.esc;
+    // DRG amounts carry cents so the total reads to the exact CMS figure (e.g. $28,595.58)
+    var m = function (n) { return "$" + Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+    var dx = (g.principalDx ? '<tr><td class="mono">' + g.principalDx.code + '</td><td>' + esc(g.principalDx.desc) + '</td><td>Principal</td></tr>' : "") +
+      g.secondaryDx.slice(0, 6).map(function (x) { return '<tr><td class="mono">' + x.code + '</td><td>' + esc(x.desc) + '</td><td>Secondary' + (x.poa ? ' · POA ' + x.poa : '') + '</td></tr>'; }).join("");
+    var pcs = g.pcs.map(function (x) { return '<span class="mono" style="font-size:10.5px;padding:2px 6px;border-radius:4px;background:var(--surface);margin:2px 3px 0 0;display:inline-block" title="' + esc(x.desc) + '">' + x.code + '</span>'; }).join("");
+    // grouper inputs (age / sex / discharge status / LOS) — inpatient surgical
+    var inputs = g.grouperInputs ? '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:2px;margin-bottom:8px">' +
+      pdStat("Age", String(g.grouperInputs.age)) + pdStat("Sex", g.grouperInputs.sex) +
+      pdStat("Length of stay", g.grouperInputs.los) + pdStat("Discharge status", g.grouperInputs.dischargeStatus) + '</div>' : "";
+    // payment: either a component breakdown (surgical) or the adjusted-base line (residential)
+    var payHtml;
+    if (g.components && g.components.length) {
+      var rows = g.components.map(function (c) {
+        return '<div style="display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-top:0.5px solid var(--border2);font-size:11.5px"><div style="flex:1"><b>' + esc(c.label) + '</b>' + (c.detail ? '<div style="font-size:10.5px;color:var(--text3)">' + esc(c.detail) + '</div>' : '') + '</div><div class="mono" style="white-space:nowrap;font-weight:500">' + m(c.amount) + '</div></div>';
+      }).join("");
+      payHtml = '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:2px">' +
+        pdStat("Relative weight", g.relativeWeight.toFixed(4)) + pdStat("Wage index", g.wageIndex.toFixed(4)) +
+        pdStat("Labor / non-labor", Math.round(g.laborShare * 100) + " / " + Math.round(g.nonLaborShare * 100) + "%") +
+        pdStat("Standardized base", m(g.baseRate)) + '</div>' +
+        '<div style="margin-top:8px;padding:9px 11px;background:var(--surface);border-radius:7px">' + rows +
+        '<div style="display:flex;justify-content:space-between;gap:10px;padding:7px 0 0;border-top:1px solid var(--border);font-weight:700;font-size:12.5px;margin-top:2px"><span>Total IPPS reimbursement</span><span class="mono">' + m(g.payment) + '</span></div>' +
+        '<div style="font-size:10.5px;color:var(--text3);margin-top:5px">' + esc(g.formula) + '</div></div>';
+    } else {
+      payHtml = '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:2px">' +
+        pdStat("Relative weight", g.relativeWeight.toFixed(4)) + pdStat("Wage index", g.wageIndex.toFixed(4)) +
+        pdStat("Labor / non-labor", Math.round(g.laborShare * 100) + " / " + Math.round(g.nonLaborShare * 100) + "%") +
+        pdStat("Standardized base", m(g.baseRate)) + '</div>' +
+        '<div style="margin-top:8px;padding:8px 10px;background:var(--surface);border-radius:7px;font-size:11.5px">Adjusted base = ' + m(g.baseRate) + ' × [(' + g.laborShare.toFixed(3) + ' × ' + g.wageIndex.toFixed(4) + ') + ' + g.nonLaborShare.toFixed(3) + '] = <span class="mono">' + m(g.adjustedBase) + '</span><br>Payment = weight <span class="mono">' + g.relativeWeight.toFixed(4) + '</span> × ' + m(g.adjustedBase) + ' = <b>' + m(g.payment) + '</b>' +
+        '<div style="font-size:10.5px;color:var(--text3);margin-top:3px">' + esc(g.formula) + '</div></div>';
+    }
     var v = g.validation;
+    var impact = v ? (typeof v.correctedPayment === "number"
+      ? '<div style="flex:1;min-width:120px;text-align:right"><div style="font-size:10px;color:var(--text3)">Repriced (IPPS)</div><div style="font-weight:600;color:var(--accent-d)">' + m(v.correctedPayment) + '</div></div>'
+      : '<div style="flex:1;min-width:120px;text-align:right"><div style="font-size:10px;color:var(--text3)">Payment impact</div><div style="font-weight:600;color:var(--high-tx)">−' + m(Math.abs(v.paymentDelta)) + '</div></div>') : "";
     var validation = v ? '<div style="margin-top:10px;border:1px solid ' + (v.invalid ? "#f0c9a8" : "var(--border)") + ';border-radius:8px;overflow:hidden">' +
       '<div style="padding:8px 11px;background:' + (v.invalid ? "var(--med-bg)" : "var(--low-bg)") + ';font-weight:600;font-size:12px;color:' + (v.invalid ? "var(--med-tx)" : "var(--low-tx)") + '"><i class="ti ti-' + (v.invalid ? "alert-triangle" : "circle-check") + '"></i> ' + (v.invalid ? "Invalid DRG detected — grouper recalculated" : "DRG validated") + '</div>' +
       '<div style="padding:9px 11px;font-size:11.5px">' +
@@ -837,26 +867,22 @@
       '<div style="text-align:center"><div style="font-size:10px;color:var(--text3)">Submitted</div><div class="mono" style="font-weight:600">DRG ' + v.submittedDrg + '</div><div style="font-size:10px;color:var(--text2)">wt ' + v.submittedWeight.toFixed(4) + '</div></div>' +
       '<i class="ti ti-arrow-right" style="color:var(--text3)"></i>' +
       '<div style="text-align:center"><div style="font-size:10px;color:var(--text3)">Regrouped</div><div class="mono" style="font-weight:600;color:var(--accent-d)">DRG ' + v.regroupedDrg + '</div><div style="font-size:10px;color:var(--text2)">wt ' + v.regroupedWeight.toFixed(4) + '</div></div>' +
-      '<div style="flex:1;min-width:120px;text-align:right"><div style="font-size:10px;color:var(--text3)">Payment impact</div><div style="font-weight:600;color:var(--high-tx)">−' + m(Math.abs(v.paymentDelta)) + '</div></div>' +
+      impact +
       '</div>' +
-      '<div style="color:var(--text2);margin-top:7px">' + window.APP.esc(v.submittedDesc) + ' → <b>' + window.APP.esc(v.regroupedDesc) + '</b></div>' +
-      '<div style="color:var(--text2);margin-top:5px"><i class="ti ti-info-circle" style="color:var(--accent-d)"></i> ' + window.APP.esc(v.reason) + '</div>' +
+      '<div style="color:var(--text2);margin-top:7px">' + esc(v.submittedDesc) + ' → <b>' + esc(v.regroupedDesc) + '</b></div>' +
+      '<div style="color:var(--text2);margin-top:5px"><i class="ti ti-info-circle" style="color:var(--accent-d)"></i> ' + esc(v.reason) + '</div>' +
       '</div></div>' : "";
+    var subtitle = g.components ? "inpatient prospective payment (IPPS)" : "inpatient prospective payment (IPPS) cross-check";
     return '<div class="card">' +
       '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px"><i class="ti ti-sitemap" style="color:var(--accent-d)"></i><span style="font-weight:600;font-size:13px">MS-DRG grouper</span>' +
-      '<span class="muted" style="font-size:11px">· inpatient prospective payment (IPPS) cross-check</span>' +
+      '<span class="muted" style="font-size:11px">· ' + subtitle + '</span>' +
       '<span style="flex:1"></span><span class="mono" style="font-weight:600;font-size:13px">DRG ' + g.assignedDrg + '</span></div>' +
-      '<div style="font-size:12px;color:var(--text2);margin-bottom:8px">' + window.APP.esc(g.description) + ' <span class="muted">· MDC ' + window.APP.esc(g.mdc) + '</span></div>' +
+      '<div style="font-size:12px;color:var(--text2);margin-bottom:8px">' + esc(g.description) + ' <span class="muted">· MDC ' + esc(g.mdc) + '</span></div>' +
+      inputs +
       '<div style="overflow-x:auto"><table style="font-size:11px"><thead><tr><th>Dx</th><th>Description</th><th>Role</th></tr></thead><tbody>' + dx + '</tbody></table></div>' +
       (pcs ? '<div style="margin-top:7px;font-size:10.5px;color:var(--text3)">ICD-10-PCS procedures: ' + pcs + '</div>' : "") +
-      '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px">' +
-      pdStat("Relative weight", g.relativeWeight.toFixed(4)) + pdStat("Wage index", g.wageIndex.toFixed(4)) +
-      pdStat("Labor / non-labor", Math.round(g.laborShare * 100) + " / " + Math.round(g.nonLaborShare * 100) + "%") +
-      pdStat("Standardized base", m(g.baseRate)) +
-      '</div>' +
-      '<div style="margin-top:8px;padding:8px 10px;background:var(--surface);border-radius:7px;font-size:11.5px">Adjusted base = ' + m(g.baseRate) + ' × [(' + g.laborShare.toFixed(3) + ' × ' + g.wageIndex.toFixed(4) + ') + ' + g.nonLaborShare.toFixed(3) + '] = <span class="mono">' + m(g.adjustedBase) + '</span><br>Payment = weight <span class="mono">' + g.relativeWeight.toFixed(4) + '</span> × ' + m(g.adjustedBase) + ' = <b>' + m(g.payment) + '</b>' +
-      '<div style="font-size:10.5px;color:var(--text3);margin-top:3px">' + window.APP.esc(g.formula) + '</div></div>' +
-      '<div style="font-size:10.5px;color:var(--text3);margin-top:6px"><i class="ti ti-info-circle"></i> ' + window.APP.esc(g.note) + '</div>' +
+      '<div style="margin-top:10px">' + payHtml + '</div>' +
+      '<div style="font-size:10.5px;color:var(--text3);margin-top:6px"><i class="ti ti-info-circle"></i> ' + esc(g.note) + '</div>' +
       validation + '</div>';
   }
   function pricerLogCard(log) {
