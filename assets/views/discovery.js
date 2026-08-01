@@ -57,6 +57,7 @@
         '<span class="tag" style="background:var(--surface)"><i class="ti ti-shield-check"></i> Human-in-the-loop governance</span></div>' +
         '<div style="font-size:11.5px;color:var(--text2);margin-top:6px">Each candidate carries its source pattern, proposed logic, the data it needs, a suggested trigger, the expected output, and a replay over recent claims estimating impact. A reviewer approves, returns, or rejects it before it can enter the release pipeline.</div>' +
         '<div style="margin-top:9px;display:flex;gap:8px;flex-wrap:wrap">' + summaryChips + '</div></div>' +
+        pendActivityCard() +
         '<div style="display:grid;grid-template-columns:320px 1fr;gap:10px;align-items:start">' +
         '<div class="card" style="padding:0;overflow:hidden"><div style="padding:9px 12px;font-size:10.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;border-bottom:0.5px solid var(--border2)">Candidate pipeline</div>' + listRows + '</div>' +
         '<div id="disc-detail">' + detailHtml(sel) + '</div>' +
@@ -67,6 +68,27 @@
   };
 
   function chipHtml(icon, label) { return '<span class="tag" style="background:var(--surface)"><i class="ti ti-' + icon + '"></i> ' + window.APP.esc(label) + '</span>'; }
+
+  // PEND-activity analysis — which rules fire, how often, disposition → gaps / redundant / automation
+  function pendActivityCard() {
+    var pa = window.DP.getPendActivity && window.DP.getPendActivity(); if (!pa) return "";
+    var esc = window.APP.esc;
+    var rows = pa.rows.map(function (r) {
+      var pct = parseInt(r.overturnRate, 10) || 0;
+      var tone = pct >= 40 ? ["var(--high-bg)", "var(--high-tx)"] : pct >= 15 ? ["var(--med-bg)", "var(--med-tx)"] : ["var(--low-bg)", "var(--low-tx)"];
+      return '<tr><td class="mono" style="font-weight:600">' + esc(r.rule) + '</td><td>' + esc(r.name) + '</td>' +
+        '<td class="right mono">' + r.fired.toLocaleString() + '</td><td class="right mono">' + r.pend.toLocaleString() + '</td>' +
+        '<td><span class="tag" style="background:' + tone[0] + ';color:' + tone[1] + '">' + esc(r.overturnRate) + ' overturn</span></td>' +
+        '<td style="font-size:11px;color:var(--text2)">' + esc(r.disposition) + '</td>' +
+        '<td style="font-size:11px">' + esc(r.flag) + '</td></tr>';
+    }).join("");
+    var KIND = { gap: ["ti-puzzle", "var(--high-tx)", "Rule gap"], redundant: ["ti-copy", "var(--med-tx)", "Redundant pend"], automation: ["ti-robot", "var(--accent-d)", "Automation opportunity"] };
+    var ins = pa.insights.map(function (i) { var k = KIND[i.kind] || ["ti-point", "var(--text2)", ""]; return '<div style="display:flex;gap:7px;padding:5px 0;border-top:0.5px solid var(--border2);font-size:11.5px"><i class="ti ' + k[0] + '" style="color:' + k[1] + ';margin-top:1px"></i><div><b style="color:' + k[1] + '">' + k[2] + '.</b> ' + esc(i.text) + '</div></div>'; }).join("");
+    return '<div class="card"><div style="font-weight:600;font-size:13px;margin-bottom:2px"><i class="ti ti-activity" style="color:var(--accent-d)"></i> PEND-activity analysis <span class="muted" style="font-weight:400;font-size:11px">· which rules fire, how often, and with what disposition (' + esc(pa.window) + ')</span></div>' +
+      '<div style="font-size:11.5px;color:var(--text2);margin:2px 0 7px">The engine mines its own PEND activity to surface rule gaps, redundant pends and automation opportunities — the seed of the rule recommendations below.</div>' +
+      '<div style="overflow-x:auto"><table style="width:100%;font-size:11px"><thead><tr><th>Rule</th><th>Name</th><th class="right">Fired</th><th class="right">Pended</th><th>Overturn</th><th>Disposition</th><th>Signal</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+      '<div style="margin-top:8px">' + ins + '</div></div>';
+  }
 
   function detailHtml(c) {
     if (!c) return '<div class="card muted" style="font-size:12px">Select a candidate.</div>';
@@ -99,6 +121,8 @@
     var o = c.output;
     var kv = function (k, v) { return '<div style="display:flex;gap:8px;padding:3px 0;font-size:11.5px;border-top:0.5px solid var(--border2)"><span style="color:var(--text2);min-width:96px;flex:none">' + k + '</span><span style="flex:1">' + v + '</span></div>'; };
     var outInner = kv("Trigger", '<span class="tag" style="background:var(--accent-l);color:var(--accent-d)"><i class="ti ti-bolt"></i> ' + esc(c.trigger) + '</span>') +
+      (c.providerAttributes ? kv("Provider attributes", esc(c.providerAttributes)) : "") +
+      (c.lookback ? kv("Historical lookback", esc(c.lookback)) : "") +
       kv("Signal", esc(o.signal)) +
       kv("Emits", '<span class="mono" style="color:var(--high-tx)">' + esc(o.emits) + '</span>') +
       kv("Disposition", esc(o.disposition)) +

@@ -478,7 +478,40 @@
             dispositions: [{ label: "Route to identity review", count: 34, tone: "high" }],
             exposure: 129600 }
         }
-      ];
+      ].map(function (c) {
+        // each recommendation also carries provider attributes + a historical lookback
+        var extra = {
+          cand_em_l5: { providerAttributes: "Specialty · taxonomy · claim volume · established-patient panel size", lookback: "Rolling 12 months (min. 6 months of history)" },
+          cand_res_los: { providerAttributes: "Facility type · licensed/staffed beds · prior-auth pattern · chain affiliation", lookback: "Trailing 90 days + auth history" },
+          cand_mod59: { providerAttributes: "Specialty · peer override rate · NCCI-pair concentration · documentation-support rate", lookback: "Trailing 6 months" },
+          cand_daw1_nondispense: { providerAttributes: "Pharmacy type · brand/generic mix · adherence/pickup cadence", lookback: "Trailing 90 days" },
+          cand_identity_shared: { providerAttributes: "Distinct billers · states · velocity · shared-member overlap", lookback: "Rolling 21-day window" }
+        }[c.id] || { providerAttributes: "Specialty · taxonomy · volume", lookback: "Trailing 12 months" };
+        c.providerAttributes = extra.providerAttributes; c.lookback = extra.lookback;
+        return c;
+      });
+    },
+
+    // ---- PEND-activity analysis (Element 3.2.ii) ---------------------------
+    // Which rules fire, how often, and with what downstream disposition — surfacing
+    // rule gaps, redundant pends, and automation opportunities. Deterministic.
+    getPendActivity: function () {
+      return {
+        window: "trailing 90 days",
+        rows: [
+          { rule: "EM-LEVEL", name: "E/M level validation", fired: 4820, pend: 4820, overturnRate: "61%", disposition: "Pend → records; 61% upheld", flag: "High overturn — tighten threshold" },
+          { rule: "NCCI-PTP", name: "NCCI procedure-to-procedure", fired: 3110, pend: 0, overturnRate: "4%", disposition: "Auto-deny (bundled)", flag: "Stable — candidate to keep automated" },
+          { rule: "MOD-59", name: "Modifier-59 / X{EPSU} misuse", fired: 2740, pend: 2610, overturnRate: "38%", disposition: "Pend → documentation", flag: "Redundant with NCCI-PTP on 43235/43239 — consolidate" },
+          { rule: "MUE", name: "Medically unlikely edits", fired: 1290, pend: 40, overturnRate: "2%", disposition: "Auto-adjust units", flag: "Stable" },
+          { rule: "LEIE-EXCL", name: "OIG LEIE exclusion", fired: 61, pend: 0, overturnRate: "0%", disposition: "Auto-deny + refer", flag: "Stable" },
+          { rule: "AUTH-LOS", name: "Residential LOS vs authorization", fired: 512, pend: 512, overturnRate: "12%", disposition: "Pend → continued-stay review", flag: "Automation opportunity — auto-deny days over auth" }
+        ],
+        insights: [
+          { kind: "gap", text: "No rule currently screens beneficiary-identity velocity — a rule gap the models surfaced (see candidate below)." },
+          { kind: "redundant", text: "MOD-59 and NCCI-PTP both fire on the 43235/43239 pair 38% of the time — consolidate to cut redundant pends." },
+          { kind: "automation", text: "AUTH-LOS pends every stay but only 12% overturn — days beyond authorization can be auto-denied, freeing reviewer time." }
+        ]
+      };
     },
 
     // ---- AI model registry (Element 3.1.i/ii) ------------------------------
