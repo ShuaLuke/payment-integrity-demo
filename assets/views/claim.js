@@ -780,9 +780,26 @@
     var m = window.DP.usd;
     var cards = d.lines.map(function (l, i) { return calcLineCard(l, i); }).join("");
     var drg = d.drgGrouper ? drgGrouperCard(d.drgGrouper) : "";
+    var oce = d.oppsOutcomes ? oceOutcomesCard(d.oppsOutcomes) : "";
     return '<div style="display:flex;flex-direction:column;gap:10px">' +
       '<div class="card" style="display:flex;align-items:flex-start;gap:9px;padding:10px 12px;font-size:11.5px;color:var(--text2)"><i class="ti ti-calculator" style="color:var(--accent-d);font-size:16px;margin-top:1px"></i><div>Every allowed amount below is built from first principles — relative value units, geographic indices, conversion factors and status indicators — so the reviewer can trace <b style="color:var(--ink)">how</b> the fee-schedule amount was derived, not just what it is. Figures reconcile to the Comparison view.</div></div>' +
-      cards + drg + pricerLogCard(d.pricerLog);
+      cards + drg + oce + pricerLogCard(d.pricerLog);
+  }
+  // ---- OPPS / OCE outcomes (representative) ----
+  function oceOutcomesCard(o) {
+    var m = window.DP.usd, esc = window.APP.esc;
+    var TONE = { "Separately payable": ["var(--low-bg)", "var(--low-tx)"], "Packaged — bundled into the visit APC": ["var(--med-bg)", "var(--med-tx)"], "Packaged — no separate payment": ["var(--med-bg)", "var(--med-tx)"], "Mutually exclusive — column-2 line denied": ["var(--high-bg)", "var(--high-tx)"], "Non-covered — line denied": ["var(--high-bg)", "var(--high-tx)"] };
+    var rows = o.rows.map(function (r) {
+      var t = TONE[r.disposition] || ["var(--surface)", "var(--text2)"];
+      return '<tr><td class="mono" style="font-weight:600">' + esc(r.code) + '</td><td>' + esc(r.desc) + '</td><td class="mono">' + esc(r.apc) + '</td>' +
+        '<td><span class="mono">' + esc(r.si) + '</span></td>' +
+        '<td><span class="tag" style="background:' + t[0] + ';color:' + t[1] + '">' + esc(r.disposition) + '</span></td>' +
+        '<td class="right mono">' + (r.allowed ? m(r.allowed) : '$0') + '</td></tr>';
+    }).join("");
+    return '<div class="card"><div style="font-weight:600;font-size:12.5px;margin-bottom:2px"><i class="ti ti-checkup-list" style="color:var(--accent-d)"></i> Outpatient code editor (OCE) &amp; APC outcomes <span class="muted" style="font-weight:400;font-size:11px">· coding validation + reimbursement logic together</span></div>' +
+      '<div style="font-size:11px;color:var(--text2);margin:3px 0 6px">' + esc(o.note) + '</div>' +
+      '<div style="overflow-x:auto"><table style="width:100%;font-size:11px"><thead><tr><th>Code</th><th>Description</th><th>APC</th><th>SI</th><th>OCE disposition</th><th class="right">Allowed</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+      '<div style="font-size:10.5px;color:var(--text3);margin-top:6px"><i class="ti ti-info-circle"></i> The status indicator drives whether a line is separately payable, packaged (returns $0), or denied. Representative outpatient outcomes.</div></div>';
   }
   function calcLineCard(l, i) {
     var m = window.DP.usd;
@@ -810,13 +827,16 @@
         '<div style="font-size:10.5px;color:' + (pd.uncoveredDays > 0 ? "var(--high-tx)" : "var(--text3)") + ';margin-top:3px">' + window.APP.esc(pd.note) + (pd.recover > 0 ? ' Recoverable: <b>' + m(pd.recover) + '</b>.' : '') + '</div></div>';
     } else if (l.apc) {
       var ap = l.apc;
+      var mods = (ap.modifiers && ap.modifiers.length) ? ap.modifiers.join(", ") : "—";
       body = '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:stretch">' +
-        pdStat("APC", ap.code) +
+        pdStat("APC", ap.code) + pdStat("Modifier", mods) +
+        pdStat("Payment rate", ap.packaged ? "—" : m(ap.nationalRate)) +
+        pdStat("Wage/locality", ap.wageFactor ? ap.wageFactor.toFixed(3) : "—") +
         '<div style="flex:1;min-width:150px;background:var(--surface);border-radius:7px;padding:8px 10px"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Status indicator</div><div style="font-weight:600;font-size:13px">' + ap.si + '</div><div style="font-size:10.5px;color:var(--text2)">' + window.APP.esc(ap.siLabel) + '</div></div>' +
         '</div>' +
         '<div style="margin-top:8px;padding:8px 10px;background:' + (ap.packaged ? "var(--med-bg)" : "var(--surface)") + ';border-radius:7px;font-size:11.5px">' +
-        (ap.packaged ? '<b>Packaged</b> — payment is bundled into the encounter APC; no separate allowance for this line (<b>$0</b>).'
-          : '<span class="mono">' + ap.desc + '</span> · weight <span class="mono">' + ap.weight.toFixed(3) + '</span> × <span class="mono">$' + ap.conversionFactor.toFixed(2) + '</span> OPPS conversion factor = <b>' + m(ap.result) + '</b> allowed') +
+        (ap.packaged ? '<b>Packaged</b> — payment is bundled into the encounter APC; this line correctly returns a <b>$0</b> allowance rather than a separate payment.'
+          : '<span class="mono">' + window.APP.esc(ap.desc) + '</span> · payment rate <span class="mono">' + m(ap.nationalRate) + '</span> × wage/locality <span class="mono">' + ap.wageFactor.toFixed(3) + '</span> = <b>' + m(ap.result) + '</b> allowed') +
         '<div style="font-size:10.5px;color:var(--text3);margin-top:3px">' + window.APP.esc(ap.formula) + '</div></div>';
     }
     return '<div class="card">' + head + body + '</div>';

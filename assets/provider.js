@@ -1597,13 +1597,16 @@
           var packaged = allowed === 0;                 // only a truly $0-allowance line is packaged
           var opResult = allowed;                        // honor the fee-schedule allowed (reconciles to Comparison)
           var weight = opResult ? r3(opResult / OCF) : 0;
+          var wageFactor = 1.021;                         // CBSA wage/locality adjustment (representative)
+          var nationalRate = opResult ? r2(opResult / wageFactor) : 0;   // pre-wage-adjustment APC payment rate
           log.push({ step: idx + 1, code: cpt, method: "OPPS", detail: "APC " + ap.apc + " (SI " + ap.si + "): " + (packaged ? "packaged — $0 separate payment" : "weight " + weight + " × $" + OCF + " = " + usd(opResult)), result: opResult });
           return {
             method: "OPPS / APC", cpt: cpt, description: pl.description, allowed: opResult,
             apc: {
               code: ap.apc, desc: ap.desc, si: ap.si, siLabel: self.SI_LEGEND[ap.si] || ap.si,
+              modifiers: raw.modifiers || [], nationalRate: nationalRate, wageFactor: wageFactor,
               packaged: packaged, weight: weight, conversionFactor: OCF, result: opResult,
-              formula: packaged ? "Packaged into the encounter APC — no separate payment" : "APC relative weight × OPPS conversion factor ($" + OCF + ")"
+              formula: packaged ? "Packaged into the encounter APC — no separate payment" : "APC payment rate " + usd(nationalRate) + " × wage/locality " + wageFactor.toFixed(3) + " = " + usd(opResult)
             }
           };
         }
@@ -1712,10 +1715,27 @@
         };
       }
 
+      // ---- representative OPPS / OCE outcomes (outpatient claims) --------------
+      // The Outpatient Code Editor validates coding/billing relationships and assigns
+      // APC + status indicator. Shown when the claim carries an OPPS/APC line.
+      var oppsOutcomes = null;
+      if (inst && !cl.inpatientSurgical && lines.some(function (l) { return l.apc; })) {
+        oppsOutcomes = {
+          note: "The Outpatient Code Editor (OCE) validates coding and billing relationships and assigns APC + CMS status indicator per line. Representative outcomes:",
+          rows: [
+            { code: "99284-25", desc: "ED visit, level 4", apc: "5024", si: "V", siLabel: self.SI_LEGEND["V"], disposition: "Separately payable", allowed: 236.14 },
+            { code: "93005", desc: "Electrocardiogram, tracing only", apc: "—", si: "N", siLabel: self.SI_LEGEND["N"], disposition: "Packaged — bundled into the visit APC", allowed: 0 },
+            { code: "36415", desc: "Routine venipuncture", apc: "—", si: "N", siLabel: self.SI_LEGEND["N"], disposition: "Packaged — no separate payment", allowed: 0 },
+            { code: "43239 / 43235", desc: "EGD with biopsy vs diagnostic EGD", apc: "5303", si: "T", siLabel: self.SI_LEGEND["T"], disposition: "Mutually exclusive — column-2 line denied", allowed: 0 },
+            { code: "G0289", desc: "Arthroscopy, add-on (not covered here)", apc: "—", si: "E1", siLabel: "Not paid by Medicare — non-covered service", disposition: "Non-covered — line denied", allowed: 0 }
+          ]
+        };
+      }
+
       return {
         source: "CMS reference pricing", asOf: (cl.inpatientSurgical ? "FFY2025 IPPS" : "CY2025 CMS fee schedules") + " · " + (p.state || "TX") + (cl.inpatientSurgical ? " · CBSA wage index" : " locality 05"),
         conversionFactor: CF, oppsConversionFactor: OCF,
-        lines: lines, drgGrouper: drgGrouper, pricerLog: log,
+        lines: lines, drgGrouper: drgGrouper, oppsOutcomes: oppsOutcomes, pricerLog: log,
         totals: { cmsAllowed: pricing.totals.cmsAllowed },
         methods: (function () {
           var m = {}; lines.forEach(function (l) { m[l.method] = true; }); return Object.keys(m);
