@@ -857,6 +857,36 @@
     // Simulated release pipeline for the app + rule-promotion history through the
     // controlled environments (dev → test → pre-prod → prod). Static / deterministic
     // (no data regen). All personas synthetic. Fixed timestamps (no Date.now).
+    // ---- CMS content release repository + effective-dated pricing (Element 2.2) --
+    // Distinct from the app CI/CD pipeline: this tracks CMS regulatory/pricing
+    // CONTENT releases (fee schedules, pricers, edits) and effective-dated content.
+    getCmsContentReleases: function () {
+      return {
+        releases: [
+          { source: "CY2025 OPPS/APC final rule", pkg: "OPPS-2025-Q1", effective: "2025-01-01", impacted: "OPPS pricer · APC weights · SI table", status: "Live", validation: "Passed — 1,842 test claims", notes: "Annual APC reweighting; 12 new SI assignments." },
+          { source: "MPFS CY2025 final rule", pkg: "MPFS-2025", effective: "2025-01-01", impacted: "MPFS pricer · RVU file · conversion factor", status: "Live", validation: "Passed — 3,190 test claims", notes: "Conversion factor −3.4% ($32.74); RVU updates." },
+          { source: "NCCI edit file v31.1", pkg: "NCCI-2025Q1", effective: "2025-01-01", impacted: "NCCI PTP/MUE edits", status: "Live", validation: "Passed — 940 test claims", notes: "212 PTP pairs added, 47 removed." },
+          { source: "ASP drug pricing file Q3 2026", pkg: "ASP-2026Q3", effective: "2026-07-01", impacted: "ASP drug pricer", status: "Staged — effective 2026-07-01", validation: "In validation — 610 test claims", notes: "Quarterly ASP + 6% refresh." },
+          { source: "IPPS FFY2025 final rule", pkg: "IPPS-FY2025", effective: "2024-10-01", impacted: "MS-DRG grouper · IPPS base · wage index", status: "Live", validation: "Passed — 1,455 test claims", notes: "MS-DRG v42; wage-index update." }
+        ],
+        note: "Each release records the CMS source publication, package number, impacted pricer/rule set, effective date, implementation status, validation results and notes — so it's clear what changed, when, and which components were affected. Prior versions are retained through effective-dated content."
+      };
+    },
+    getAspEffectiveDating: function () {
+      return {
+        code: "J1745", desc: "Infliximab injection, 10 mg (HCPCS)",
+        periods: [
+          { period: "Q2 2026 (Apr 1 – Jun 30)", file: "ASP-2026Q2", rate: 92.34, current: false },
+          { period: "Q3 2026 (Jul 1 – Sep 30)", file: "ASP-2026Q3", rate: 94.87, current: true }
+        ],
+        examples: [
+          { dos: "2026-06-18", selected: "Q2 2026", file: "ASP-2026Q2", rate: 92.34, note: "Earlier date of service continues to use the prior-quarter ASP." },
+          { dos: "2026-07-01", selected: "Q3 2026", file: "ASP-2026Q3", rate: 94.87, note: "July 1 date of service uses the third-quarter ASP file and CMS-published rate." }
+        ],
+        note: "The applicable date of service automatically selects the correct historical or current rate — the prior version is not overwritten, so any past claim reprices exactly as it did on its original date of service."
+      };
+    },
+
     getReleasePipeline: function () {
       var env = function (key, label, appVer, ruleSet, deployedAt, gate, health) { return { key: key, label: label, appVersion: appVer, ruleSet: ruleSet, deployedAt: deployedAt, gate: gate, health: health }; };
       var stage = function (name, status, dur) { return { name: name, status: status, duration: dur }; };

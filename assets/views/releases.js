@@ -82,6 +82,8 @@
         '<div class="card" style="margin-bottom:10px"><div style="font-weight:500;font-size:13px;margin-bottom:2px"><i class="ti ti-versions" style="color:var(--accent-d)"></i> Rule promotion history <span class="muted" style="font-weight:400;font-size:11px">· each rule version promoted through the environments with sign-off</span></div>' +
         promoRows + '</div>' +
 
+        cmsReleasesHtml() + aspEffectiveHtml() +
+
         '<div style="font-size:11px;color:var(--text2)"><i class="ti ti-info-circle"></i> Simulated pipeline for the demo. Rules and the app are version-controlled with rollback; production activation requires VA Change Advisory Board approval. Read-only view.</div>' +
         '</div>';
 
@@ -98,4 +100,31 @@
       });
     }
   };
+
+  // ---- CMS content release repository (Element 2.2.i) ----
+  function cmsReleasesHtml() {
+    var d = window.DP.getCmsContentReleases && window.DP.getCmsContentReleases(); if (!d) return "";
+    var esc = window.APP.esc;
+    var rows = d.releases.map(function (r) {
+      var live = /Live/.test(r.status);
+      return '<tr><td style="font-weight:500">' + esc(r.source) + '</td><td class="mono" style="font-size:10.5px">' + esc(r.pkg) + '</td>' +
+        '<td class="mono" style="font-size:10.5px">' + esc(r.effective) + '</td><td style="font-size:11px;color:var(--text2)">' + esc(r.impacted) + '</td>' +
+        '<td><span class="tag" style="background:' + (live ? "var(--low-bg)" : "var(--med-bg)") + ';color:' + (live ? "var(--low-tx)" : "var(--med-tx)") + '">' + esc(r.status) + '</span></td>' +
+        '<td style="font-size:11px;color:var(--text2)">' + esc(r.validation) + '</td><td style="font-size:11px;color:var(--text2)">' + esc(r.notes) + '</td></tr>';
+    }).join("");
+    return '<div class="card" style="margin-bottom:10px"><div style="font-weight:500;font-size:13px;margin-bottom:2px"><i class="ti ti-book-upload" style="color:var(--accent-d)"></i> CMS content release repository <span class="muted" style="font-weight:400;font-size:11px">· fee schedules, pricers &amp; edits — what changed, when, and which components</span></div>' +
+      '<div style="font-size:11px;color:var(--text2);margin:2px 0 6px">' + esc(d.note) + '</div>' +
+      '<div style="overflow-x:auto"><table style="width:100%;font-size:11px"><thead><tr><th>CMS source publication</th><th>Package</th><th>Effective</th><th>Impacted pricer / rule set</th><th>Status</th><th>Validation</th><th>Notes</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+  }
+  // ---- effective-dated pricing (ASP quarterly example) (Element 2.2.iii) ----
+  function aspEffectiveHtml() {
+    var d = window.DP.getAspEffectiveDating && window.DP.getAspEffectiveDating(); if (!d) return "";
+    var esc = window.APP.esc, m = window.DP.usd;
+    var periods = d.periods.map(function (p) { return '<div style="flex:1;min-width:180px;border:1px solid ' + (p.current ? "var(--accent)" : "var(--border)") + ';border-radius:8px;padding:9px 11px;background:' + (p.current ? "var(--accent-l)" : "#fff") + '"><div style="font-weight:600;font-size:12px">' + esc(p.period) + (p.current ? ' <span class="tag" style="background:var(--accent);color:#fff;font-size:9.5px">current</span>' : '') + '</div><div class="mono" style="font-size:10.5px;color:var(--text3)">' + esc(p.file) + '</div><div style="font-weight:600;font-size:15px;margin-top:3px">' + m(p.rate) + ' <span style="font-size:10.5px;color:var(--text3);font-weight:400">/ 10 mg</span></div></div>'; }).join("");
+    var ex = d.examples.map(function (e) { return '<div style="display:flex;gap:9px;align-items:baseline;padding:6px 0;border-top:0.5px solid var(--border2);font-size:11.5px"><span class="mono" style="min-width:88px;color:var(--text3)">DOS ' + esc(e.dos) + '</span><i class="ti ti-arrow-right" style="color:var(--accent-d)"></i><span style="min-width:150px"><b>' + esc(e.selected) + '</b> · <span class="mono" style="font-size:10.5px">' + esc(e.file) + '</span> · ' + m(e.rate) + '</span><span style="color:var(--text2);flex:1">' + esc(e.note) + '</span></div>'; }).join("");
+    return '<div class="card" style="margin-bottom:10px"><div style="font-weight:500;font-size:13px;margin-bottom:2px"><i class="ti ti-calendar-time" style="color:var(--accent-d)"></i> Effective-dated pricing — quarterly ASP <span class="muted" style="font-weight:400;font-size:11px">· ' + esc(d.code) + ' · ' + esc(d.desc) + '</span></div>' +
+      '<div style="font-size:11px;color:var(--text2);margin:2px 0 8px">' + esc(d.note) + '</div>' +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap">' + periods + '</div>' +
+      '<div style="margin-top:8px">' + ex + '</div></div>';
+  }
 })();
