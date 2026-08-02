@@ -87,6 +87,7 @@
     // reset any open wizard/feature panel and open the requested one (used by the guided demo)
     demoOpen: function (what) {
       if (what === "feature") { feat = "open"; wiz = null; }
+      else if (what === "registry") { wiz = null; feat = null; }
       else { wiz = { step: 0, type: null, dataset: null, columns: [], trained: false }; feat = null; }
       window.APP.nav("models");
     }

@@ -993,7 +993,7 @@
       bannerHtml = '<div style="display:flex;align-items:flex-start;gap:10px;background:var(--accent-l);border:1.5px solid var(--accent);border-radius:8px;padding:11px 13px;font-size:12px;margin-bottom:0">' +
         '<i class="ti ti-link" style="color:var(--accent-d);font-size:17px;flex:none;margin-top:1px"></i>' +
         '<div><div style="font-weight:600;color:var(--accent-d)">Navigated from Rules Library — ' + window.APP.esc(rm.code) + ' · ' + window.APP.esc(rm.name) + '</div>' +
-        '<div style="color:var(--text2);margin-top:2px">This is Lead 20517: <b>Rio Grande Surgical Associates — Unbundling.</b> ' +
+        '<div style="color:var(--text2);margin-top:2px">This is Lead 20517: <b>Rio Grande Surgical Partners — Unbundling.</b> ' +
         'CPT 43235 (diagnostic endoscopy) is billed alongside 43239 (biopsy endoscopy) with modifier 59 to bypass the NCCI bundling edit. ' +
         '43235 is a column-2 component of 43239 — it is not separately payable. ' +
         'The recoverable exposure is shown below. ' +
