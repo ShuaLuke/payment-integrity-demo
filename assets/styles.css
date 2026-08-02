@@ -20,14 +20,14 @@
 }
 *{box-sizing:border-box}
 html,body{margin:0}
-body{font-family:var(--sans);color:var(--text);background:var(--surface);font-size:14px;line-height:1.5}
+body{font-family:var(--sans);color:var(--text);background:var(--surface);font-size:14px;line-height:1.5;padding-top:var(--ribbon-h,0px)}
 .mono{font-family:var(--mono)}
 a{color:var(--accent-d);text-decoration:none}
 button{font-family:var(--sans)}
 
 /* ---- chrome ---- */
 .banner{background:var(--ink2);color:#cfe0f0;font-size:11px;padding:5px 16px;display:flex;align-items:center;gap:7px}
-.topnav{background:var(--ink);display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:52px;position:sticky;top:0;z-index:50}
+.topnav{background:var(--ink);display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:52px;position:sticky;top:var(--ribbon-h,0px);z-index:50}
 .brand{display:flex;align-items:center;gap:8px}
 .brand-name{color:#fff;font-weight:600;font-size:15px;letter-spacing:.5px}
 .navitems{display:flex;gap:4px;margin-left:14px}
