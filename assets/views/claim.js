@@ -435,7 +435,7 @@
 
   // ---------- Evidence ----------
   function evidenceHtml(a, cl) {
-    var ruleIx = {}; (window.DP.getRules() || []).forEach(function (r) { ruleIx[r.id] = r; });
+    var ruleIx = {}; (window.DP.getRuleCatalog() || []).forEach(function (r) { ruleIx[r.id] = r; });
     // Every claim line is shown — flagged AND clean — and each expands for detail.
     // (The whole claim is held while the lead is open, regardless of which lines fired.)
     var prepay = a.mode === "prepay";
@@ -443,7 +443,7 @@
       var flagged = (l.violatesRuleIds || []).length > 0;
       var main = '<tr class="cl-line' + (flagged ? ' flag-row' : '') + '" data-i="' + i + '" style="cursor:pointer">' +
         '<td class="mono">' + l.cpt + '</td><td>' + window.APP.esc(l.description) + '</td>' +
-        '<td>' + (l.modifiers.length ? '<span class="mono" style="background:var(--high-bg);color:var(--high-tx);padding:1px 5px;border-radius:4px">' + l.modifiers.join(",") + '</span>' : '—') + '</td>' +
+        '<td>' + (l.modifiers && l.modifiers.length ? '<span class="mono" style="background:var(--high-bg);color:var(--high-tx);padding:1px 5px;border-radius:4px">' + l.modifiers.join(",") + '</span>' : '—') + '</td>' +
         '<td class="right">' + l.units + '</td><td class="right">$' + l.billed + '</td><td class="right">$' + lineExposure(l, prepay) + '</td>' +
         '<td style="font-size:10.5px;white-space:nowrap">' + (flagged ? '<span style="color:var(--high-tx)"><i class="ti ti-flag"></i> flagged</span>' : '<span style="color:var(--text3)">clean</span>') + ' <i class="ti ti-chevron-down cl-caret" style="color:var(--text3);font-size:13px;vertical-align:middle"></i></td></tr>';
       var ruleNames = (l.violatesRuleIds || []).map(function (rid) { var r = ruleIx[rid]; return r ? r.name + " (" + r.code + ")" : rid; });

@@ -148,7 +148,7 @@
       { id: "rule_aks", code: "AKS-STARK", name: "Anti-kickback / self-referral", source: "Anti-Kickback Statute", category: "Integrity", description: "Referral or financial-arrangement pattern between linked entities indicates a prohibited inducement or self-referral.", version: "1.1", effectiveDate: "2024-10-15", environment: "Production", regulatorySource: "Anti-Kickback Statute", entityType: "Provider", fraudType: "Kickback / self-referral", detectionLevel: "Network-level", severity: "Critical" },
       { id: "rule_dme", code: "DME-NEC", name: "DME medical necessity & delivery", source: "VA CCN policy", category: "Coverage", description: "Durable medical equipment billed without a supporting order, proof of delivery, or documented medical necessity.", version: "1.2", effectiveDate: "2024-09-15", environment: "Production", regulatorySource: "VA CCN policy", entityType: "DME supplier", fraudType: "Medically unnecessary", detectionLevel: "Claim-level", severity: "Medium" },
       { id: "rule_benelig", code: "BEN-ELIG", name: "Beneficiary eligibility & identity", source: "VA CCN policy", category: "Coverage", description: "Service billed for a date the beneficiary was ineligible, deceased, or where identity could not be verified.", version: "1.0", effectiveDate: "2025-02-01", environment: "Production", regulatorySource: "VA CCN policy", entityType: "Beneficiary", fraudType: "Phantom billing", detectionLevel: "Claim-level", severity: "High" },
-      { id: "rule_hh_noa", code: "HH-NOA", name: "Home Health Notice of Admission (NOA)", source: "CMS payment rules", category: "Coding", description: "Home health period billed without a timely-filed Notice of Admission — the NOA must post within 5 calendar days of the start of care or the period incurs a per-day payment reduction.", version: "1.1", effectiveDate: "2025-01-01", environment: "Production", regulatorySource: "CMS payment rules", entityType: "Provider", fraudType: "Workflow", detectionLevel: "Claim-level", severity: "Medium", configLevel: "Contract — Home Health program (from the template default)" },
+      { id: "rule_hh_noa", code: "HH-NOA", name: "Home Health Notice of Admission", source: "CMS payment rules", category: "Coding", description: "Home health period billed without a timely-filed Notice of Admission — the NOA must post within 5 calendar days of the start of care or the period incurs a per-day payment reduction.", version: "1.1", effectiveDate: "2025-01-01", environment: "Production", regulatorySource: "CMS payment rules", entityType: "Provider", fraudType: "Workflow", detectionLevel: "Claim-level", severity: "Medium", configLevel: "Contract — Home Health program (from the template default)" },
       { id: "rule_dup_prof", code: "DUP-PROF", name: "Possible duplicate professional claim edit", source: "CMS payment rules", category: "Duplicate", description: "A professional (837P) line matches a previously adjudicated line on rendering provider, beneficiary, date of service and procedure/modifier — a suspected duplicate held for review before a second payment.", version: "1.4", effectiveDate: "2024-12-01", environment: "Production", regulatorySource: "CMS payment rules", entityType: "Provider", fraudType: "Duplicate billing", detectionLevel: "Claim-level", severity: "Medium", configLevel: "Template — all programs" },
       { id: "rule_ncd", code: "NCD-MEDNEC", name: "NCD medical-necessity edit", source: "CMS payment rules", category: "Coverage", description: "Service billed against a CMS National Coverage Determination without a covered indication — the diagnoses do not meet the NCD's medical-necessity criteria for the procedure.", version: "1.2", effectiveDate: "2024-10-01", environment: "Production", regulatorySource: "CMS payment rules", entityType: "Provider", fraudType: "Medically unnecessary", detectionLevel: "Claim-level", severity: "Medium", configLevel: "Template — national; LCD overrides per MAC jurisdiction" }
     ],
@@ -2485,6 +2485,51 @@
             { label: "Grouper result", value: "Invalid for coded procedures" },
             { label: "Corrected DRG", value: "026 — Craniotomy w/o CC/MCC" },
             { label: "Repriced (IPPS)", value: "$28,595.58" }
+          ]
+        }
+      });
+
+      // -- Home Health Notice of Admission (NOA) example lead: a 30-day home-health
+      //    period billed with no timely NOA → per-day payment reduction (rule_hh_noa).
+      //    Gives the HH-NOA rule a real flagged claim to click through to (Element 1.2.ii). --
+      var hhAgency = {
+        id: "PR250", name: "Rio Verde Home Health Services", npi: "1902847761", tin: "00-7729104",
+        taxonomyCode: "251E00000X", taxonomyLabel: "Home Health Agency",
+        city: "McAllen", state: "TX", peerGroup: "251E00000X", role: "background", flagged: true,
+        claimCount: 9, totalPaid: 0, openAllegations: 1, riskScore: 66, groupScores: [], groupAttributes: {}, history: []
+      };
+      if (!providers[hhAgency.id]) { D.providers.push(hhAgency); providers[hhAgency.id] = hhAgency; }
+
+      var hhClaim = {
+        id: "CHH01", claimNumber: "H551027K3-01-06", type: "837I", providerId: "PR250", veteranId: "V0009",
+        dateOfService: "2026-01-06", diagnosisCodes: ["I50.9", "E11.9", "I10", "Z79.899"],
+        typeOfBill: "0322", statementFrom: "2026-01-06", statementThrough: "2026-02-04",
+        claimStatus: "Paid", paymentType: "POST", mode: "retrospective",
+        billedAmount: 3860, allowedAmount: 3088, paidAmount: 3088, authorizationId: "A00622", paymentId: "P00622",
+        lines: [
+          { lineId: "CHH01-L1", cpt: "G0299", revenueCode: "0551", units: 6, billed: 1710, allowed: 1368, paid: 1368, description: "Skilled nursing — RN visit (revenue 0551)", violatesRuleIds: ["rule_hh_noa"] },
+          { lineId: "CHH01-L2", cpt: "G0151", revenueCode: "0421", units: 4, billed: 1140, allowed: 912, paid: 912, description: "Physical therapy visit (revenue 0421)", violatesRuleIds: [] },
+          { lineId: "CHH01-L3", cpt: "G0156", revenueCode: "0571", units: 5, billed: 1010, allowed: 808, paid: 808, description: "Home health aide visit (revenue 0571)", violatesRuleIds: [] }
+        ]
+      };
+      if (!claims[hhClaim.id]) { D.claims.push(hhClaim); claims[hhClaim.id] = hhClaim; }
+
+      // register the catalog-only NOA rule in the rule map so Evidence resolves it on the lead
+      var hhNoaRule = this.RULE_CATALOG_EXTRA.find(function (r) { return r.id === "rule_hh_noa"; });
+      if (hhNoaRule && !rules["rule_hh_noa"]) rules["rule_hh_noa"] = hhNoaRule;
+
+      if (!D.allegations.some(function (x) { return x.id === "20812"; })) D.allegations.push({
+        id: "20812", providerId: "PR250", claimId: "CHH01", subjectType: "Provider", fwaType: "Late Notice of Admission (home health)",
+        riskScore: 66, confidence: 88, source: "Rules Engine", sourceType: "Rules", claimType: "837I", status: "New", assignee: null,
+        mode: "retrospective", exposurePre: 0, exposurePost: 772, submittedForRecovery: 0, verifiedRecoupment: 0, narrative: "",
+        ruleIds: ["rule_hh_noa"], modelId: null, createdDate: "2026-07-06",
+        xai: {
+          summary: "Rio Verde Home Health Services billed a 30-day home-health period (start of care 2026-01-06) with no Notice of Admission accepted within the required 5 calendar days. The Home Health NOA edit applies a per-day payment reduction from the start of care until the NOA posts — the skilled-nursing line is reduced accordingly.",
+          factors: [
+            { label: "Type of bill", value: "0322 — home health" },
+            { label: "Start of care", value: "2026-01-06" },
+            { label: "NOA on file", value: "None within 5 days" },
+            { label: "Per-day reduction", value: "$772 recoverable" }
           ]
         }
       });

@@ -152,6 +152,18 @@
                 });
                 drill.appendChild(btn);
               }
+              if (id === "rule_hh_noa") {
+                var btnh = document.createElement("button");
+                btnh.className = "btn primary";
+                btnh.style.cssText = "font-size:11px;padding:4px 10px;margin:6px 0 2px";
+                btnh.textContent = "View example Lead 20812";
+                btnh.addEventListener("click", function (e) {
+                  e.stopPropagation();
+                  window.APP.openAllegation("20812");
+                  setTimeout(function () { var ev = document.querySelector('.ctab[data-tab="evidence"]'); if (ev) ev.click(); }, 60);
+                });
+                drill.appendChild(btnh);
+              }
               drill.setAttribute("data-filled", "1");
               window.APP.auditLog("RULE_DRILLDOWN", "Rule " + id);
             }
