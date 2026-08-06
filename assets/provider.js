@@ -147,7 +147,10 @@
       { id: "rule_excl", code: "EXCL-LEIE", name: "OIG LEIE exclusion screening", source: "OIG advisories", category: "Integrity", description: "Rendering or billing provider (or ordering physician) appears on the OIG List of Excluded Individuals/Entities — claims paid during exclusion are recoverable in full.", version: "2.0", effectiveDate: "2025-01-01", environment: "Production", regulatorySource: "OIG advisories", entityType: "Provider", fraudType: "Exclusion violations", detectionLevel: "Provider-pattern", severity: "Critical" },
       { id: "rule_aks", code: "AKS-STARK", name: "Anti-kickback / self-referral", source: "Anti-Kickback Statute", category: "Integrity", description: "Referral or financial-arrangement pattern between linked entities indicates a prohibited inducement or self-referral.", version: "1.1", effectiveDate: "2024-10-15", environment: "Production", regulatorySource: "Anti-Kickback Statute", entityType: "Provider", fraudType: "Kickback / self-referral", detectionLevel: "Network-level", severity: "Critical" },
       { id: "rule_dme", code: "DME-NEC", name: "DME medical necessity & delivery", source: "VA CCN policy", category: "Coverage", description: "Durable medical equipment billed without a supporting order, proof of delivery, or documented medical necessity.", version: "1.2", effectiveDate: "2024-09-15", environment: "Production", regulatorySource: "VA CCN policy", entityType: "DME supplier", fraudType: "Medically unnecessary", detectionLevel: "Claim-level", severity: "Medium" },
-      { id: "rule_benelig", code: "BEN-ELIG", name: "Beneficiary eligibility & identity", source: "VA CCN policy", category: "Coverage", description: "Service billed for a date the beneficiary was ineligible, deceased, or where identity could not be verified.", version: "1.0", effectiveDate: "2025-02-01", environment: "Production", regulatorySource: "VA CCN policy", entityType: "Beneficiary", fraudType: "Phantom billing", detectionLevel: "Claim-level", severity: "High" }
+      { id: "rule_benelig", code: "BEN-ELIG", name: "Beneficiary eligibility & identity", source: "VA CCN policy", category: "Coverage", description: "Service billed for a date the beneficiary was ineligible, deceased, or where identity could not be verified.", version: "1.0", effectiveDate: "2025-02-01", environment: "Production", regulatorySource: "VA CCN policy", entityType: "Beneficiary", fraudType: "Phantom billing", detectionLevel: "Claim-level", severity: "High" },
+      { id: "rule_hh_noa", code: "HH-NOA", name: "Home Health Notice of Admission (NOA)", source: "CMS payment rules", category: "Coding", description: "Home health period billed without a timely-filed Notice of Admission — the NOA must post within 5 calendar days of the start of care or the period incurs a per-day payment reduction.", version: "1.1", effectiveDate: "2025-01-01", environment: "Production", regulatorySource: "CMS payment rules", entityType: "Provider", fraudType: "Workflow", detectionLevel: "Claim-level", severity: "Medium", configLevel: "Contract — Home Health program (from the template default)" },
+      { id: "rule_dup_prof", code: "DUP-PROF", name: "Possible duplicate professional claim edit", source: "CMS payment rules", category: "Duplicate", description: "A professional (837P) line matches a previously adjudicated line on rendering provider, beneficiary, date of service and procedure/modifier — a suspected duplicate held for review before a second payment.", version: "1.4", effectiveDate: "2024-12-01", environment: "Production", regulatorySource: "CMS payment rules", entityType: "Provider", fraudType: "Duplicate billing", detectionLevel: "Claim-level", severity: "Medium", configLevel: "Template — all programs" },
+      { id: "rule_ncd", code: "NCD-MEDNEC", name: "NCD medical-necessity edit", source: "CMS payment rules", category: "Coverage", description: "Service billed against a CMS National Coverage Determination without a covered indication — the diagnoses do not meet the NCD's medical-necessity criteria for the procedure.", version: "1.2", effectiveDate: "2024-10-01", environment: "Production", regulatorySource: "CMS payment rules", entityType: "Provider", fraudType: "Medically unnecessary", detectionLevel: "Claim-level", severity: "Medium", configLevel: "Template — national; LCD overrides per MAC jurisdiction" }
     ],
     ruleTaxonomyFor: function (id) { return this.RULE_TAXONOMY[id] || null; },
     // full catalog: generator rules enriched with taxonomy + the catalog-only rules.
@@ -292,6 +295,61 @@
           { field: "Enrollment / eligibility record", source: "External reference · VA enrollment", example: "single beneficiary" }
         ],
         output: { signal: "flag + score", emits: "BENEFICIARY_IDENTITY_MISUSE", disposition: "Investigate identity misuse / card sharing across the involved providers", downstream: "Lead (Beneficiary subject) · network review" }
+      },
+      rule_hh_noa: {
+        logic: {
+          summary: "Home Health Notice of Admission (NOA) timely-filing edit: a home-health period billed without an NOA accepted within 5 calendar days of the start of care incurs a per-day payment reduction until the NOA posts.",
+          criteria: [
+            { when: "A home-health period (TOB 032x) is submitted", then: "Look up a matching accepted NOA for the beneficiary + start-of-care date" },
+            { when: "No NOA on file, or NOA accepted > 5 calendar days after the start of care", then: "Apply the late-NOA per-day payment reduction from SOC to NOA receipt" },
+            { when: "NOA accepted within 5 days", then: "No reduction — the period prices normally" }
+          ],
+          pseudocode: "noa = find_noa(member, soc_date)\nif not noa or (noa.received - soc_date).days > 5:\n  reduce(period, per_diem_days = days(soc_date, noa.received or bill_date))"
+        },
+        inputs: [
+          { field: "Type of bill", source: "837I · 2300 · CLM05-1", example: "0322" },
+          { field: "Start of care / admission date", source: "837I · 2300 · DTP*435", example: "2026-01-06" },
+          { field: "Notice of Admission receipt", source: "External reference · NOA tracking", example: "none on file" },
+          { field: "Home health period dates", source: "837I · 2300 · DTP*434", example: "2026-01-06 – 02-04" }
+        ],
+        output: { signal: "flag", emits: "HH_NOA_LATE", disposition: "Apply the per-day late-NOA payment reduction until the NOA posts", downstream: "Payment reduction applied · lead (Home health billing)" }
+      },
+      rule_dup_prof: {
+        logic: {
+          summary: "Possible duplicate professional claim: an 837P line matches a previously adjudicated line on rendering provider, beneficiary, date of service, procedure code and modifiers — an exact or suspect duplicate held before a second payment is made.",
+          criteria: [
+            { when: "Rendering NPI + member + DOS + CPT + modifiers match an adjudicated line", then: "Exact duplicate — deny the second line" },
+            { when: "All keys match except billed amount or place of service", then: "Suspect duplicate — route to review" },
+            { when: "Same key across two claims within a short window", then: "Hold the later claim pending review" }
+          ],
+          pseudocode: "key = (rendering_npi, member, dos, cpt, sorted(modifiers))\nif key in adjudicated_lines: deny('exact duplicate')\nelif near_match(key): review('suspect duplicate')"
+        },
+        inputs: [
+          { field: "Rendering provider NPI", source: "837P · 2310B · NM1*82", example: "1…" },
+          { field: "Member ID", source: "837P · 2010BA · NM1*IL", example: "MBR-…" },
+          { field: "Date of service", source: "837P · 2400 · DTP*472", example: "2026-02-11" },
+          { field: "Procedure + modifiers", source: "837P · 2400 · SV1-01", example: "99214" },
+          { field: "Adjudicated-claim history", source: "External reference · claim data store", example: "prior paid line" }
+        ],
+        output: { signal: "flag", emits: "DUP_PROFESSIONAL", disposition: "Deny exact duplicates; hold suspect duplicates for review before a second payment", downstream: "Line adjudication CARC CO-18 (duplicate) · lead (Duplicate billing)" }
+      },
+      rule_ncd: {
+        logic: {
+          summary: "NCD medical-necessity edit: a service governed by a CMS National Coverage Determination is payable only when a covered indication is present — the claim's diagnoses must meet the NCD's medical-necessity criteria for the procedure.",
+          criteria: [
+            { when: "The procedure is governed by an NCD", then: "Load the NCD's covered ICD-10 indication list" },
+            { when: "None of the claim's diagnoses is a covered indication", then: "Deny as not medically necessary under the NCD" },
+            { when: "A covered indication is present but frequency limits are exceeded", then: "Review against the NCD frequency criteria" }
+          ],
+          pseudocode: "ncd = ncd_for(cpt)\nif ncd and not (claim.dx & ncd.covered_dx): deny('NCD not met')\nelif ncd and over_frequency(cpt, ncd): review('NCD frequency')"
+        },
+        inputs: [
+          { field: "Procedure code (HCPCS/CPT)", source: "837 · 2400 · SV1/SV2", example: "G0297" },
+          { field: "Diagnosis codes", source: "837 · 2300 · HI (ABK/ABF)", example: "Z87.891" },
+          { field: "NCD policy + covered indications", source: "External reference · CMS NCD (e.g. 210.14)", example: "covered dx list" },
+          { field: "Frequency / history", source: "Derived · beneficiary claim history", example: "1 / 12 mo" }
+        ],
+        output: { signal: "flag", emits: "NCD_MEDNEC_NOT_MET", disposition: "Deny lines with no covered indication; review frequency exceedances", downstream: "Line adjudication CARC CO-50 (not medically necessary) · lead (Medical necessity)" }
       }
     },
     getRuleDetail: function (ruleId) {
@@ -326,6 +384,7 @@
       return {
         id: rule.id, code: rule.code, name: rule.name, version: rule.version, effectiveDate: rule.effectiveDate, environment: rule.environment,
         effectiveDates: rule.effectiveDate + " → current", applicableClaimType: applicableClaimType, outputProcessCode: outputProcessCode,
+        configScope: rule.configLevel || "Template — all programs; overridable per contract / plan",
         regulatorySource: rule.regulatorySource, entityType: rule.entityType, fraudType: rule.fraudType, detectionLevel: rule.detectionLevel, severity: rule.severity,
         logic: spec.logic, inputs: spec.inputs, output: spec.output
       };

@@ -43,6 +43,7 @@
     var propsInner = kv("Description", esc(d.name)) +
       kv("Effective dates", '<span class="mono">' + esc(d.effectiveDates || d.effectiveDate) + '</span>') +
       kv("Applicable claim type", esc(d.applicableClaimType || "—")) +
+      kv("Configuration level", '<i class="ti ti-adjustments" style="color:var(--accent-d)"></i> ' + esc(d.configScope || "Template — all programs")) +
       kv("Version / environment", '<span class="mono">' + esc(d.version) + '</span> · ' + esc(d.environment)) +
       kv("Regulatory source", esc(d.regulatorySource)) +
       kv("Severity", esc(d.severity));
