@@ -130,7 +130,7 @@
   // `el` is a positioned container.
   function render(el, providerId, opts) {
     opts = opts || {};
-    var s = analyze(providerId);
+    var s = opts.model || analyze(providerId);
     if (!s || !s.isRing) {
       el.innerHTML = '<div style="height:110px;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:11.5px;gap:6px"><i class="ti ti-circle-dashed"></i> No connected providers — nothing to map.</div>';
       return;
@@ -164,6 +164,8 @@
     var V = {};
     vets.forEach(function (v, i) { V[v.id] = { v: v, x: W / 2 - vspan / 2 + vspan * (i + 0.5) / m, y: yVet }; });
     var chain = s.kind === "chain";
+    // labels default from the built-in scenarios; a model can override them
+    var L = labelsFor(s);
 
     var svg = d3.select(el).append("svg").attr("width", "100%").attr("height", H).attr("viewBox", "0 0 " + W + " " + H).attr("preserveAspectRatio", "xMidYMid meet").style("display", "block").style("font-family", "IBM Plex Sans,sans-serif");
     var defs = svg.append("defs");
@@ -171,8 +173,8 @@
 
     // row captions
     var cap = svg.append("g").attr("font-size", 8.5).attr("font-family", "IBM Plex Mono,monospace").attr("letter-spacing", "0.06em").attr("fill", "#8a95a3");
-    cap.append("text").attr("x", 12).attr("y", yBiz - 22).text(chain ? "OWNER" : "BILLING ENTITY");
-    cap.append("text").attr("x", 12).attr("y", yProv - ch / 2 - 8).text(chain ? "FACILITIES · " + s.states.join(" · ") : "PROVIDERS");
+    cap.append("text").attr("x", 12).attr("y", yBiz - 22).text(L.top);
+    cap.append("text").attr("x", 12).attr("y", yProv - ch / 2 - 8).text(L.mid + (s.states.length > 1 ? " · " + s.states.join(" · ") : ""));
     cap.append("text").attr("x", 12).attr("y", yVet - 16).text("SHARED VETERANS · " + m);
 
     var gEdge = svg.append("g"), gNode = svg.append("g");
@@ -181,7 +183,7 @@
     var bizEdges = provs.map(function (p) {
       var t = P[p.id];
       return gEdge.append("path").attr("d", "M" + (W / 2) + "," + (yBiz + 20) + " C" + (W / 2) + "," + (yBiz + 20 + (t.y - ch / 2 - yBiz - 20) * 0.6) + " " + t.x + "," + (yBiz + 30) + " " + t.x + "," + (t.y - ch / 2))
-        .attr("fill", "none").attr("stroke", chain ? "#b5730e" : "#c6362f").attr("stroke-width", chain ? 1.6 : 2.4).attr("stroke-dasharray", chain ? "4,3" : null).attr("opacity", 0.75)
+        .attr("fill", "none").attr("stroke", s.sharedTin ? "#c6362f" : "#b5730e").attr("stroke-width", s.sharedTin ? 2.4 : 1.6).attr("stroke-dasharray", s.sharedTin ? null : "4,3").attr("opacity", 0.75)
         .datum({ prov: p.id });
     });
     // referral arcs between providers (ring)
@@ -211,7 +213,7 @@
     biz.append("rect").attr("width", bw).attr("height", bh).attr("rx", 9).attr("fill", "#10243b");
     biz.append("text").attr("x", 14).attr("y", 17).attr("fill", "#fff").attr("font-size", 12).attr("font-weight", 600).text("⌂  " + trunc(bizName, 38));
     biz.append("text").attr("x", 14).attr("y", 31).attr("fill", "#8fb7c9").attr("font-size", 9.5)
-      .text(chain ? "Holding company" + (s.officer ? " · officer " + s.officer : "") + " · controls " + n : "One billing entity · " + n + " providers bill under it");
+      .text(L.bizSub(n));
 
     // provider cards
     var provNodes = provs.map(function (p) {
@@ -221,11 +223,11 @@
       g.append("rect").attr("width", 4).attr("height", ch - 12).attr("x", 0).attr("y", 6).attr("rx", 2).attr("fill", t.focus ? "#0f6e56" : c);
       g.append("text").attr("x", 11).attr("y", 16).attr("font-size", 11).attr("font-weight", 600).attr("fill", "#10243b").text(trunc(shortName(p.name), Math.floor(cw / 6.6)));
       g.append("text").attr("x", 11).attr("y", 30).attr("font-size", 9.5).attr("fill", "#5f6b7a").attr("font-family", "IBM Plex Mono,monospace").text((p.state || "") + " · TIN " + (p.tin || "—"));
-      if (ch >= 54) g.append("text").attr("x", 11).attr("y", ch - 9).attr("font-size", 9).attr("font-weight", 600).attr("fill", chain ? "#b5730e" : "#c6362f")
-        .text(chain ? "separate TIN" : "shared TIN");
+      if (ch >= 54) g.append("text").attr("x", 11).attr("y", ch - 9).attr("font-size", 9).attr("font-weight", 600).attr("fill", s.sharedTin ? "#c6362f" : "#b5730e")
+        .text(s.sharedTin ? "shared TIN" : "separate TIN");
       g.append("text").attr("x", cw - 9).attr("y", ch - 9).attr("text-anchor", "end").attr("font-size", 9).attr("font-weight", 600).attr("fill", c).text("risk " + p.riskScore);
       if (t.focus) g.append("text").attr("x", cw - 9).attr("y", 16).attr("text-anchor", "end").attr("font-size", 8).attr("font-family", "IBM Plex Mono,monospace").attr("fill", "#0f6e56").text("THIS CASE");
-      if (excluded(p.id)) {
+      if (excluded(p)) {
         var bx = g.append("g").attr("transform", "translate(" + (cw - 84) + "," + (-9) + ")");
         bx.append("rect").attr("width", 80).attr("height", 16).attr("rx", 8).attr("fill", "#c6362f");
         bx.append("text").attr("x", 40).attr("y", 11).attr("text-anchor", "middle").attr("font-size", 8.5).attr("font-weight", 700).attr("fill", "#fff").attr("letter-spacing", "0.04em").text("OIG EXCLUDED");
@@ -241,7 +243,7 @@
       g.append("circle").attr("r", 7).attr("fill", "#e6f1fb").attr("stroke", "#378add").attr("stroke-width", 1.4);
       g.append("text").attr("y", 19).attr("text-anchor", "middle").attr("font-size", 9).attr("fill", "#3d4a58").text(vetShort(v.name));
       g.append("text").attr("y", 30).attr("text-anchor", "middle").attr("font-size", 8.5).attr("font-family", "IBM Plex Mono,monospace").attr("fill", "#378add")
-        .text(visits[v.id].length + " " + (chain ? "facilities" : "providers"));
+        .text(visits[v.id].length + " " + (L.mid === "FACILITIES" ? "facilities" : "providers"));
       return g;
     });
 
@@ -272,9 +274,9 @@
     var all = function (list, key) { var o = {}; list.forEach(function (x) { o[x[key || "id"]] = 1; }); return o; };
     biz.on("mouseover", function (e) {
       focusOn(all(provs), all(vets), true);
-      showTip(e, "<div style='color:#7fe0d6;margin-bottom:2px'>" + (chain ? "Holding company" : "Billing entity") + "</div><b>" + esc(bizName) + "</b><div style='color:#93a7bf'>" +
-        (chain ? "Controls " + n + " facilities in " + s.states.join(", ") + " under separate TINs" + (s.officer ? " · officer " + esc(s.officer) : "") : n + " providers bill under one TIN") + "<br>Click to open the business profile</div>");
-    }).on("mouseout", reset).on("click", function () { if (window.APP && s.business) window.APP.openBusiness(s.business.id); });
+      showTip(e, "<div style='color:#7fe0d6;margin-bottom:2px'>" + esc(L.bizKind) + "</div><b>" + esc(bizName) + "</b><div style='color:#93a7bf'>" +
+        esc(L.bizTip(n)) + (s.synthetic ? "" : "<br>Click to open the business profile") + "</div>");
+    }).on("mouseout", reset).on("click", function () { if (window.APP && s.business && !s.synthetic) window.APP.openBusiness(s.business.id); });
     provNodes.forEach(function (g) {
       var pid = g.datum().prov, p = P[pid].p;
       var vs = {}; vets.forEach(function (v) { if (visits[v.id].indexOf(pid) >= 0) vs[v.id] = 1; });
@@ -282,8 +284,8 @@
       g.on("mouseover", function (e) {
         focusOn(pset, vs, true);
         showTip(e, "<div style='color:#ffb4a8;margin-bottom:2px'>" + (P[pid].focus ? "Provider · this case" : "Provider") + "</div><b>" + esc(p.name) + "</b><div style='color:#93a7bf'>" + esc(p.state || "") + " · NPI " + esc(p.npi || "") + " · TIN " + esc(p.tin || "") +
-          "<br>risk " + p.riskScore + " · " + Object.keys(vs).length + " shared veterans" + (excluded(pid) ? "<br><span style='color:#ffb4a8'>On the OIG LEIE exclusion list</span>" : "") + "<br>Click to open the report card</div>");
-      }).on("mouseout", reset).on("click", function () { if (window.APP) window.APP.openProvider(pid); });
+          "<br>risk " + p.riskScore + " · " + Object.keys(vs).length + " shared veterans" + (excluded(p) ? "<br><span style='color:#ffb4a8'>On the OIG LEIE exclusion list</span>" : "") + (s.synthetic ? "" : "<br>Click to open the report card") + "</div>");
+      }).on("mouseout", reset).on("click", function () { if (window.APP && !s.synthetic) window.APP.openProvider(pid); });
     });
     vetNodes.forEach(function (g) {
       var vid = g.datum().vet, v = V[vid].v, route = visits[vid].filter(function (id) { return P[id]; });
@@ -291,7 +293,7 @@
       var vs = {}; vs[vid] = 1;
       g.on("mouseover", function (e) {
         focusOn(all(route.map(function (id) { return { id: id }; })), vs, false);
-        showTip(e, "<div style='color:#8fc4f2;margin-bottom:2px'>Veteran · cross-billed</div><b>" + esc(v.name) + "</b><div style='color:#93a7bf'>" + esc(v.city || "") + (v.state ? ", " + esc(v.state) : "") +
+        showTip(e, "<div style='color:#8fc4f2;margin-bottom:2px'>Veteran · cross-billed</div><b>" + esc(v.name) + "</b><div style='color:#93a7bf'>" + [v.city, v.state].filter(Boolean).map(esc).join(", ") +
           "<br>Billed by " + route.length + ": " + route.map(function (id) { return esc(shortName(P[id].p.name)) + " (" + esc(P[id].p.state || "") + ")"; }).join(" → ") + "</div>");
       }).on("mouseout", reset);
     });
@@ -304,17 +306,31 @@
     var dot = function (stroke, bg, label) { return '<span class="lg"><span class="dot" style="border-color:' + stroke + ';background:' + bg + '"></span>' + label + '</span>'; };
     var box = function (stroke, label) { return '<span class="lg"><span style="width:14px;height:10px;border:1.5px solid ' + stroke + ';border-radius:3px;background:#fff"></span>' + label + '</span>'; };
     var line = function (color, w, dash, label) { return '<span class="lg"><span style="width:16px;height:0;border-top:' + w + 'px ' + (dash ? "dashed" : "solid") + ' ' + color + '"></span>' + label + '</span>'; };
-    var out = [dot("#10243b", "#10243b", s.kind === "chain" ? "Holding company" : "Billing entity")];
+    var L = labelsFor(s);
+    var out = [dot("#10243b", "#10243b", L.bizKind)];
     if (opts.showFocus !== false) out.push(box("#0f6e56", "Provider in this case"));
     out.push(box("#c6362f", opts.showFocus !== false ? "Linked provider · high risk" : "Provider · high risk"), dot("#378add", "#e6f1fb", "Shared veteran"));
-    out.push(s.kind === "chain" ? line("#b5730e", 1.6, true, "Common ownership") : line("#c6362f", 2.4, false, "Shared TIN"));
+    out.push(s.sharedTin ? line("#c6362f", 2.4, false, L.link) : line("#b5730e", 1.6, true, L.link));
     if (s.referralCount) out.push(line("#0f6e56", 1.8, true, "Referrals"));
     out.push(line("#9fb3c8", 1.1, false, "Billed for veteran"));
     out.push('<span class="lg" style="color:var(--text3)"><i class="ti ti-pointer"></i> Hover to trace a thread</span>');
     return out.join("");
   }
 
-  function excluded(id) { return !!(window.DP && window.DP.LEIE_EXCLUSIONS && window.DP.LEIE_EXCLUSIONS[id]); }
+  function excluded(p) { return !!(p && (p.excluded || (window.DP && window.DP.LEIE_EXCLUSIONS && window.DP.LEIE_EXCLUSIONS[p.id]))); }
+  // Graph wording for a network. Built-in scenarios derive it from `kind`;
+  // synthetic networks (assets/networks.js) pass `labels` on the model.
+  function labelsFor(s) {
+    var chain = s.kind === "chain", o = s.labels || {};
+    return {
+      top: o.top || (chain ? "OWNER" : "BILLING ENTITY"),
+      mid: o.mid || (chain ? "FACILITIES" : "PROVIDERS"),
+      bizKind: o.bizKind || (chain ? "Holding company" : "Billing entity"),
+      link: o.link || (chain ? "Common ownership" : "Shared TIN"),
+      bizSub: o.bizSub || function (n) { return chain ? "Holding company" + (s.officer ? " · officer " + s.officer : "") + " · controls " + n : "One billing entity · " + n + " providers bill under it"; },
+      bizTip: o.bizTip || function (n) { return chain ? "Controls " + n + " facilities in " + s.states.join(", ") + " under separate TINs" + (s.officer ? " · officer " + s.officer : "") : n + " providers bill under one TIN"; }
+    };
+  }
   function trunc(t, n) { t = String(t || ""); return t.length > n ? t.slice(0, Math.max(1, n - 1)) + "…" : t; }
   function vetShort(name) { var p = String(name || "").split(" "); return p.length > 1 ? p[0].charAt(0) + ". " + p[p.length - 1] : name; }
 
