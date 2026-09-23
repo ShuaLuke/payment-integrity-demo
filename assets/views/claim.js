@@ -1362,7 +1362,7 @@
     var graph = document.getElementById("c-collusion-graph"), legend = document.getElementById("c-collusion-legend");
     if (s && s.isRing) {
       window.Collusion.render(graph, p.id, { height: 300 });
-      legend.innerHTML = collusionLegend(s);
+      legend.innerHTML = window.Collusion.legendHtml ? window.Collusion.legendHtml(s) : collusionLegend(s);
     } else { graph.style.display = "none"; legend.style.display = "none"; }
     var full = document.getElementById("c-net-full");
     if (full) full.addEventListener("click", function () { window.APP.auditLog("NETWORK_VIEWED", "Claim #" + id + " · " + p.name); window.APP.nav("network"); });
