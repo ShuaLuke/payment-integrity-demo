@@ -84,9 +84,10 @@
       '<div style="font-size:11px;color:var(--text2);display:flex;align-items:center;gap:6px"><span class="edi-dot"></span> Live · ' + SOURCES.length + ' feeds connected</div></div>' +
       '<div style="display:flex;flex-wrap:wrap">' +
       '<div style="flex:1.5;min-width:420px;overflow-x:auto;padding:0 12px 8px"><table style="width:100%"><thead><tr><th>Source</th><th>Cadence</th><th class="right">24h</th><th class="right">Hits</th><th class="right">Last received</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
-      '<div style="flex:1;min-width:300px;border-left:0.5px solid var(--border2);padding:10px 12px;background:var(--surface)">' +
+      '<div style="flex:1;min-width:300px;border-left:0.5px solid var(--border2);padding:10px 12px;background:var(--surface);display:flex;flex-direction:column">' +
       '<div style="font-size:10.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Incoming records</div>' +
-      '<div id="edi-feed" style="display:flex;flex-direction:column;gap:5px;height:372px;overflow:hidden"></div></div>' +
+      // fills the height of the sources table beside it; rows that don't fit whole are dropped
+      '<div style="flex:1;min-height:372px;position:relative"><div id="edi-feed" style="position:absolute;inset:0;display:flex;flex-direction:column;gap:5px;overflow:hidden"></div></div></div>' +
       '</div></div>';
   }
 
@@ -105,7 +106,9 @@
       '<div style="font-size:10.5px;color:var(--text3);margin-top:8px"><i class="ti ti-refresh"></i> Analyst decisions feed model retraining (human-in-the-loop). Standards-validated intake feeds enrichment (code libraries, external intelligence), the rules and AI models, and case management; outcomes remit via 835.</div></div>';
   }
 
+  var liveRun = 0; // each render gets a run id; an older render's timer stops itself
   function startLive(root) {
+    var run = ++liveRun;
     var S = liveState(), D = window.DP.raw;
     // claim type follows the provider (institutional / dental / professional); the
     // Meridian chain facilities are left to the scripted beats so they never "pass"
@@ -158,7 +161,7 @@
         '<span class="mono" style="font-size:9.5px;font-weight:600;padding:1px 5px;border-radius:4px;background:var(--surface);color:var(--accent-d);min-width:34px;text-align:center">' + ev.src + '</span>' +
         '<span style="flex:1"><span style="color:var(--ink,inherit)">' + window.APP.esc(ev.txt) + '</span><br><span style="font-size:10.5px;padding:0 4px;border-radius:3px;' + tone + '">→ ' + window.APP.esc(ev.out) + '</span></span>';
       feed.insertBefore(row, feed.firstChild);
-      while (feed.children.length > 9) feed.removeChild(feed.lastChild);
+      while (feed.children.length > 1 && feed.scrollHeight > feed.clientHeight + 1) feed.removeChild(feed.lastChild);
     }
 
     function claimEvent() {
@@ -188,11 +191,11 @@
     }
 
     paint();
-    for (var i = 0; i < 6; i++) push(Math.random() < 0.6 ? claimEvent() : otherEvent());
+    for (var i = 0; i < 16; i++) push(Math.random() < 0.6 ? claimEvent() : otherEvent()); // prefill so the stream starts full
     paint();
     var tick = 0;
     var timer = setInterval(function () {
-      if (!document.body.contains(root) || !root.querySelector("#edi-feed")) { clearInterval(timer); return; }
+      if (run !== liveRun || !document.body.contains(root) || !root.querySelector("#edi-feed")) { clearInterval(timer); return; }
       tick++;
       var sc = script.filter(function (x) { return x.at === tick; })[0];
       if (sc) {
