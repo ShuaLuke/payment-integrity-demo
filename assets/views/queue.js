@@ -181,7 +181,7 @@
         '<div style="margin-top:3px"><span class="tag fwa">' + r.fwaType + '</span> ' + window.UI.srcTag(r.source) + '</div></td>' +
         '<td><div style="font-weight:500">' + window.APP.esc(r.providerName) + '</div><div class="mono" style="font-size:10.5px;color:var(--text3)">NPI ' + r.providerNpi + ' · ' + r.providerState + '</div></td>' +
         '<td class="right" style="font-weight:600">' + window.DP.usd(r.exposurePre || 0) + '</td>' +
-        '<td>' + recPill(r.recommendedAction) + '</td>' +
+        '<td>' + recPill(r.recommendedAction, r.id) + '</td>' +
         '<td>' + (dec ? decidedPill(dec.action) : triageBtns(r.id)) + '</td></tr>';
     }).join("") || '<tr><td colspan="6" class="muted" style="padding:16px;text-align:center">No pending claims match this filter.</td></tr>';
     wirePrepay();
@@ -192,6 +192,11 @@
     body.querySelectorAll(".ppbtn").forEach(function (b) {
       b.addEventListener("click", function (e) { e.stopPropagation(); window.APP.prepayDecide(b.getAttribute("data-id"), b.getAttribute("data-act")); window.APP.nav("queue"); });
     });
+    body.querySelectorAll(".pp-rec").forEach(function (b) {
+      b.addEventListener("mouseenter", function () { showRecTip(b); });
+      b.addEventListener("mouseleave", hideRecTip);
+      b.addEventListener("click", function (e) { e.stopPropagation(); hideRecTip(); if (window.COPILOT && window.COPILOT.explain) window.COPILOT.explain(b.getAttribute("data-id")); });
+    });
     body.querySelectorAll(".pprow").forEach(function (tr) { tr.addEventListener("click", function () { window.APP.openAllegation(tr.getAttribute("data-id")); }); });
   }
 
@@ -199,6 +204,37 @@
     return '<div style="display:flex;gap:4px">' + ppBtn(id, "pay", "Pay", "check", "var(--low)") + ppBtn(id, "hold", "Hold", "clock-hour-4", "var(--med)") + ppBtn(id, "deny", "Deny", "ban", "var(--high)") + '</div>';
   }
   function ppBtn(id, act, label, icon, color) { return '<button class="ppbtn" data-id="' + id + '" data-act="' + act + '" style="border:0.5px solid ' + color + ';color:' + color + ';background:#fff;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:3px;font-family:var(--sans)"><i class="ti ti-' + icon + '"></i>' + label + '</button>'; }
-  function recPill(action) { if (!action) return '<span class="muted">—</span>'; var m = { pay: ["Pay", "var(--low-tx)"], hold: ["Hold", "var(--med-tx)"], deny: ["Deny", "var(--high-tx)"] }[action]; return '<span style="font-size:11.5px;font-weight:500;color:' + m[1] + '"><i class="ti ti-sparkles"></i> ' + m[0] + '</span>'; }
+  function recPill(action, id) {
+    if (!action) return '<span class="muted">—</span>';
+    var m = { pay: ["Pay", "var(--low-tx)"], hold: ["Hold", "var(--med-tx)"], deny: ["Deny", "var(--high-tx)"] }[action];
+    return '<button class="pp-rec" data-id="' + id + '" title="" style="border:0.5px dashed transparent;background:none;border-radius:6px;padding:2px 6px;margin-left:-6px;cursor:pointer;font-size:11.5px;font-weight:500;font-family:var(--sans);color:' + m[1] + ';display:inline-flex;align-items:center;gap:4px" onmouseover="this.style.borderColor=\'currentColor\'" onmouseout="this.style.borderColor=\'transparent\'"><i class="ti ti-sparkles"></i> ' + m[0] + ' <i class="ti ti-info-circle" style="font-size:12px;opacity:.7"></i></button>';
+  }
+
+  // Hover card: why the model recommends this action (XAI summary, confidence,
+  // model and rules that fired). Click opens the full explanation in the assistant.
+  function showRecTip(btn) {
+    var a = window.DP.getAllegation(btn.getAttribute("data-id")); if (!a) return;
+    var esc = window.APP.esc, tip = document.getElementById("pp-rec-tip");
+    if (!tip) { tip = document.createElement("div"); tip.id = "pp-rec-tip"; document.body.appendChild(tip); }
+    var label = { pay: "Pay", hold: "Hold", deny: "Deny" }[a.recommendedAction];
+    var tone = { pay: "var(--low-tx)", hold: "var(--med-tx)", deny: "var(--high-tx)" }[a.recommendedAction];
+    var why = (a.xai && a.xai.summary) || (a.fwaType + " pattern at risk " + a.riskScore + "/100.");
+    var fired = (a.rules || []).map(function (r) { return esc(r.name); });
+    tip.style.cssText = "position:fixed;z-index:300;width:320px;background:var(--card);border:0.5px solid var(--border);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.16);padding:11px 13px;font-size:12px;line-height:1.45;pointer-events:none";
+    tip.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-weight:600;color:' + tone + '"><i class="ti ti-sparkles"></i> Why ' + label + '</span>' +
+      '<span style="font-size:10.5px;color:var(--text2)">risk <b>' + a.riskScore + '</b> · confidence <b>' + a.confidence + '%</b></span></div>' +
+      '<div style="color:var(--text)">' + esc(why) + '</div>' +
+      '<div style="margin-top:8px;padding-top:7px;border-top:0.5px solid var(--border2);font-size:11px;color:var(--text2);display:flex;flex-direction:column;gap:2px">' +
+      (a.model ? '<div><i class="ti ti-cpu"></i> Model: <b>' + esc(a.model.name) + '</b></div>' : '') +
+      (fired.length ? '<div><i class="ti ti-list-check"></i> Rules fired: ' + fired.join(", ") + '</div>' : '') +
+      '</div>' +
+      '<div style="margin-top:7px;font-size:11px;color:var(--accent-d);font-weight:500"><i class="ti ti-pointer"></i> Click for the full explanation</div>';
+    var r = btn.getBoundingClientRect(), w = 320, h = tip.offsetHeight;
+    var left = Math.min(window.innerWidth - w - 12, Math.max(12, r.left + r.width / 2 - w / 2));
+    var top = r.bottom + 8 + h > window.innerHeight - 8 ? r.top - h - 8 : r.bottom + 8;
+    tip.style.left = left + "px"; tip.style.top = top + "px";
+  }
+  function hideRecTip() { var t = document.getElementById("pp-rec-tip"); if (t) t.remove(); }
   function decidedPill(action) { var m = { pay: ["Cleared to pay", "var(--low-tx)", "var(--low-bg)", "check"], hold: ["On hold", "var(--med-tx)", "var(--med-bg)", "clock-hour-4"], deny: ["Denied", "var(--high-tx)", "var(--high-bg)", "ban"] }[action]; return '<span class="pill" style="background:' + m[2] + ';color:' + m[1] + '"><i class="ti ti-' + m[3] + '"></i> ' + m[0] + '</span>'; }
 })();

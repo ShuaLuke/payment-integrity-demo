@@ -5,11 +5,13 @@
   var open = false;
   var mode = "chat";   // chat | agents | letters
 
+  var ctxId = null; // set by explain() — a claim in focus without opening its lead page
   function ctx() {
-    var id = (window.APP.state.view === "claim" && window.APP.state.allegationId) ? window.APP.state.allegationId : "20481";
+    var onClaim = window.APP.state.view === "claim" && window.APP.state.allegationId;
+    var id = onClaim ? window.APP.state.allegationId : (ctxId || "20481");
     return window.DP.getAllegation(id);
   }
-  function focused() { return window.APP.state.view === "claim" && window.APP.state.allegationId; }
+  function focused() { return (window.APP.state.view === "claim" && window.APP.state.allegationId) || ctxId; }
 
   function build() {
     var fab = document.createElement("button");
@@ -107,7 +109,8 @@
     var wrap = document.createElement("div"); wrap.style.alignSelf = "stretch";
     wrap.innerHTML = briefHtml(s);
     chat().appendChild(wrap); scroll();
-    var go = wrap.querySelector('[data-act="go"]'); if (go) go.onclick = function () { applyRec(s.recommendation.action); };
+    var go = wrap.querySelector('[data-act="go"]'); if (go) go.onclick = function () { applyRec(s.recommendation.action, a); };
+    return wrap;
   }
   var REC_STYLE = {
     "confirm": { bg: "var(--high-bg)", tx: "var(--high-tx)", icon: "check", cta: "Open decision · pre-fill Confirm" },
@@ -144,8 +147,12 @@
   }
   // Take the analyst to the decision control, pre-selecting the recommended action.
   // The claim view (tabbed) handles switching to the Decision tab + selecting the seg.
-  function applyRec(action) {
+  function applyRec(action, a) {
     if (open) toggle();
+    // from the prepay queue: record the Pay / Hold / Deny decision in place
+    if (a && a.mode === "prepay" && window.APP.state.view !== "claim" && /^(pay|hold|deny)$/.test(action)) {
+      window.APP.prepayDecide(a.id, action); window.APP.nav("queue"); return;
+    }
     if (window.Views && window.Views.claim && window.Views.claim.gotoDecision) { window.Views.claim.gotoDecision(action); return; }
     if (action === "request-records") { var rq = document.getElementById("c-req"); if (rq) { rq.scrollIntoView({ behavior: "smooth", block: "center" }); setTimeout(function () { rq.click(); }, 300); } return; }
     var seg = { "confirm": "c", "confirm-escalate": "c", "dismiss": "d", "escalate": "e" }[action];
@@ -206,8 +213,31 @@
   }
 
   window.COPILOT = {
-    open: function (m) { if (!open) toggle(); if (m) setMode(m); },
-    close: function () { if (open) toggle(); },
+    open: function (m) {
+      var was = open; ctxId = null;
+      if (!was) toggle();
+      if (m) setMode(m, was); else if (was) setMode(mode, true);
+      setCtxLine();
+    },
+    close: function () { if (open) toggle(); ctxId = null; },
+    // Explain a claim's model recommendation without leaving the current screen
+    // (prepay queue): focuses the assistant on it and streams the full brief.
+    explain: function (id) {
+      ctxId = id;
+      if (!open) toggle();
+      setMode("chat", true);
+      var a = window.DP.getAllegation(id);
+      var label = { pay: "Pay", hold: "Hold", deny: "Deny" }[a.recommendedAction] || "this action";
+      addUser("Why does the model recommend " + label + " on claim #" + a.id + "?");
+      thinkThen(function () {
+        var wrap = addBrief(a);
+        // from the queue the action applies in place — say so, and start the reader at the question
+        var go = wrap.querySelector('[data-act="go"]');
+        if (go && a.mode === "prepay" && window.APP.state.view !== "claim") go.innerHTML = '<i class="ti ti-' + ({ pay: "check", hold: "clock-hour-4", deny: "ban" }[a.recommendedAction] || "check") + '"></i> ' + label + ' this claim';
+        var c = chat(), q = wrap.previousElementSibling; c.scrollTop += (q || wrap).getBoundingClientRect().top - c.getBoundingClientRect().top - 8;
+        window.APP.auditLog("AI_RECOMMENDATION_EXPLAINED", "Prepay claim #" + a.id + " · " + label);
+      });
+    },
     isOpen: function () { return open; }, ask: ask,
     summarize: function (id) {
       if (!open) toggle();
