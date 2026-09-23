@@ -17,7 +17,7 @@
   // & updates, in audio order) → ELEMENT 3 (3.1–3.2, healthcare-trained AI models,
   // in audio order) → close. Element 1 order is intentionally left as-is. Each step's
   // `pws` is its section in VA_PIVOT_Script (shown as a chip in the ribbon).
-  var STEPS = [
+  var FULL_STEPS = [
     // ===== ELEMENT 1 · Purpose-built healthcare architecture & rule inventory (1.1–1.2) =====
     // Orientation (1.1.i)
     { t: "Two personas, one workspace", pws: "1.1.i", n: "PIVOT puts program integrity in one workspace. Top-right you switch personas — analyst Dana Whitmore and supervisor Karen Boyd — and the experience adapts to each. Global search spans leads, providers, businesses, rules and healthcare standards. The Prepay / Retrospective toggle moves between stopping a claim before it pays and recovering after. And four areas: Home (each persona's top items), Casework (the staff inbox by risk), Insights (dashboards), and Library (the rules and pricing logic).", a: function () { retro(); closeCopilot(); window.APP.nav("home"); } },
@@ -74,6 +74,36 @@
     { t: "The full loop", pws: "—", n: "That's the loop — the workspace, the core entities, the healthcare standards on the claim, the lead-to-case workflow, and the rulebook behind it — across prepay and retrospective. Every surface exports to CSV, Excel and PDF.", a: function () { retro(); closeCopilot(); window.APP.nav("analytics"); } }
   ];
 
+
+  // Short tour — four capabilities for an executive briefing (~10–12 min):
+  // 1 Ingest → 2 Detect (real time) → 3 Case management → 4 Networks. Reuses the full
+  // tour's screens; `chip` replaces the PWS code. Select with ?tour=short or the
+  // Full / Short toggle in the ribbon.
+  var SHORT_STEPS = [
+    { t: "One workspace for payment integrity", chip: "Overview", n: "Four things in the next ten minutes: we ingest the claims data, spot anomalies as claims come in, help staff manage the work from flag to case, and uncover networks of bad actors. It's one workspace with two personas, analyst and supervisor, and a Prepay / Retrospective toggle that decides whether we stop a payment or recover it.", a: function () { retro(); closeCopilot(); window.APP.nav("home"); } },
+
+    { t: "Ingesting the data", chip: "1 · Ingest", n: "It starts with intake. Insights › EDI shows the claims arriving in standard formats: 837 professional, institutional and dental claims, 835 remittances, 834 enrollment, and 270/271 eligibility. You can see the acceptance and acknowledgment stats, the top rejection reasons, and the pipeline from ingest through validation and enrichment to the models. Bad transactions are rejected at the door, so detection runs on clean, validated data.", a: function () { retro(); closeCopilot(); window.APP.nav("edi"); } },
+    { t: "One claim, normalized", chip: "1 · Ingest", n: "Every claim lands as one normalized record: diagnoses, service lines, line-level adjudication and the remittance. The standards toggle shows the same claim as the X12 837 it arrived on and as the HL7 FHIR record it maps to. The data is standard and nothing is locked in a proprietary format.", a: function () { retro(); window.APP.openAllegation("20481"); tab("claim"); } },
+
+    { t: "Scored before it pays", chip: "2 · Detect", n: "Here's the real-time part. In Prepay mode, the rules and models score each claim as it's submitted, before any money goes out. The analyst's queue is ranked by risk, and each claim gets a decision: Pay, Hold or Deny, with a coded reason. A chain readmission is denied up front, so the improper payment never leaves the agency. Prevent first, recover second.", a: function () { closeCopilot(); window.APP.setRole("analyst"); window.APP.setMode("prepay"); window.APP.nav("queue"); } },
+    { t: "Every flag explains itself", chip: "2 · Detect", n: "Open a flagged claim and the lead file shows the risk score, the confidence, and a plain-language explanation of why it was flagged. Here it's a provider billing top-level office visits far above its peer group. Every alert is a recommendation with its reasoning attached, not a black-box score.", a: function () { retro(); window.APP.openAllegation("20481"); tab("overview"); } },
+    { t: "Down to the claim line", chip: "2 · Detect", n: "Evidence ties each claim line to the exact rule or model that fired. On this residential claim the per-diem line is flagged because the length of stay runs past medical necessity, and because the facility billed more patient-days than its staffed beds can physically hold. That's a finding an investigator can act on.", a: function () { retro(); window.APP.openAllegation("20544"); tab("evidence"); } },
+
+    { t: "From flag to lead", chip: "3 · Case mgmt", n: "Every flag becomes a lead with a tracked lifecycle: Flagged, Assigned, Under review, Decision, Supervisor review, Case. The analyst claims it, requests missing records through a provider portal if needed, and works it in one file with the full audit trail.", a: function () { retro(); closeCopilot(); window.APP.openAllegation("20481"); tab("overview"); } },
+    { t: "AI that does the legwork", chip: "3 · Case mgmt", n: "The Investigative Assistant is agentic. Three specialized agents read the case: one looks at the entity, its network and outside intelligence; one at billing, coding and pricing; one at policy and authorities. Each returns grounded findings with its sources, and the assistant drafts the correspondence. Hours of analyst research compressed into minutes.", a: function () { retro(); window.APP.openAllegation("20481"); if (window.COPILOT) window.COPILOT.open("agents"); } },
+    { t: "A documented decision", chip: "3 · Case mgmt", n: "The analyst records the outcome: Dismiss, where the payment stands, or Confirm / Escalate, where it's improper. The decision carries a coded reason and an AI-drafted justification memo. Every decision feeds back to retrain the models. The human decides; the AI supports.", a: function () { retro(); closeCopilot(); var me = window.APP.ROLES[window.APP.state.role].name; window.APP.assignCase("20318", me); window.APP.startLeadReview("20318"); window.APP.openAllegation("20318"); tab("decision"); var seg = document.querySelector('.seg[data-d="c"]'); if (seg) seg.click(); } },
+    { t: "Supervisor control", chip: "3 · Case mgmt", n: "Switch to the supervisor. Confirmed leads wait for approval here. Only the supervisor can open a case and release a recovery, so the analyst can't move money alone. That's separation of duties built into the workflow.", a: function () { closeCopilot(); window.APP.setRole("supervisor"); window.APP.nav("approvals"); } },
+    { t: "The case", chip: "3 · Case mgmt", n: "The case rolls up its leads and total exposure, and moves from opened through development, review and disposition to closed. Referral to OIG or law enforcement is one supervisor action away, and the full history is kept for a handoff, an appeal or a prosecution.", a: function () { window.APP.setRole("supervisor"); window.APP.openProvider("PR204"); } },
+
+    { t: "Uncovering the network", chip: "4 · Networks", n: "Fraud is rarely one provider. The Network view links providers, billing entities, owners and beneficiaries, and separates a coordinated ring from an isolated anomaly. Here, Rio Grande Surgical shares a billing tax ID with Alamo: one entity behind two fronts, billing in coordination. Insights › Businesses follows the money up to the holding company.", a: function () { retro(); closeCopilot(); window.APP.openAllegation("20517"); tab("network"); } },
+    { t: "Bad actors, screened continuously", chip: "4 · Networks", n: "Every entity is screened against exclusion lists and outside intelligence. Pacific Sands, an affiliate in the chain, is on the OIG exclusion list, so every claim it was paid during the exclusion is recoverable in full. Scroll to its risk-intelligence file: it pulls sanctions, licensure, ownership, adverse media and litigation, each with its source and date, into one external-risk score with an AI summary.", a: function () { retro(); closeCopilot(); window.APP.openProvider("PR301"); } },
+
+    { t: "Ready on day one", chip: "Close", n: "That's the loop: ingest standard data, detect in real time with explainable AI, manage the work from flag to case with a human in control, and expose the networks behind the fraud. The rules, pricing logic and models are already built and governed, and every screen exports to CSV, Excel and PDF.", a: function () { retro(); closeCopilot(); window.APP.nav("analytics"); } }
+  ];
+
+  var TOUR = (function () { try { var m = /[?&]tour=(short|full)/.exec(location.search); if (m) return m[1]; return localStorage.getItem("pivot-tour") || "full"; } catch (e) { return "full"; } })();
+  var STEPS = TOUR === "short" ? SHORT_STEPS : FULL_STEPS;
+
   var DEMO = {
     i: 0,
     start: function () { DEMO.show(); DEMO.go(0); },
@@ -85,18 +115,20 @@
       try { if (s.a) s.a(); } catch (e) {}
       DEMO.render();
     },
+    setTour: function (t) { TOUR = t; STEPS = t === "short" ? SHORT_STEPS : FULL_STEPS; try { localStorage.setItem("pivot-tour", t); } catch (e) {} DEMO.go(0); },
     next: function () { if (DEMO.i < STEPS.length - 1) DEMO.go(DEMO.i + 1); },
     prev: function () { if (DEMO.i > 0) DEMO.go(DEMO.i - 1); },
     render: function () {
       var s = STEPS[DEMO.i], n = DEMO.i + 1, N = STEPS.length;
       var dots = STEPS.map(function (_, k) { return '<span data-go="' + k + '" style="width:7px;height:7px;border-radius:50%;cursor:pointer;background:' + (k === DEMO.i ? "#17b3a6" : "rgba(255,255,255,0.25)") + '"></span>'; }).join("");
-      var hasPws = s.pws && s.pws !== "—";
-      var pwsChip = hasPws ? '<span title="PWS element" style="background:#17b3a6;color:#04342c;font-weight:600;font-size:10.5px;padding:1px 7px;border-radius:4px;letter-spacing:.02em">' + s.pws + '</span>' : '';
-      var titlePrefix = hasPws ? '<span style="color:#7fe0d6;font-weight:600">' + s.pws + '</span> · ' : '';
+      var code = s.chip || s.pws;
+      var hasPws = code && code !== "—";
+      var pwsChip = hasPws ? '<span title="' + (s.chip ? "Capability" : "PWS element") + '" style="background:#17b3a6;color:#04342c;font-weight:600;font-size:10.5px;padding:1px 7px;border-radius:4px;letter-spacing:.02em">' + code + '</span>' : '';
+      var titlePrefix = hasPws ? '<span style="color:#7fe0d6;font-weight:600">' + code + '</span> · ' : '';
       q("#demo-ribbon").innerHTML =
         '<div style="max-width:var(--page-max);margin:0 auto;padding:7px 24px">' +
         '<div style="display:flex;align-items:center;gap:10px">' +
-        '<div style="display:flex;align-items:center;gap:7px;white-space:nowrap"><i class="ti ti-player-play" style="color:#7fe0d6"></i><span style="font-size:12px;font-weight:500;color:#fff">Guided demo</span><span style="font-size:11px;color:#93a7bf">' + n + '/' + N + '</span>' + pwsChip + '</div>' +
+        '<div style="display:flex;align-items:center;gap:7px;white-space:nowrap"><i class="ti ti-player-play" style="color:#7fe0d6"></i><span style="font-size:12px;font-weight:500;color:#fff">Guided demo</span>' + '<span id="demo-tour" title="Full tour or short executive tour" style="display:inline-flex;border:0.5px solid rgba(255,255,255,0.25);border-radius:4px;overflow:hidden;font-size:10.5px">' + ["full", "short"].map(function (t) { var on = TOUR === t; return '<span data-tour="' + t + '" style="padding:1px 7px;cursor:pointer;' + (on ? "background:rgba(255,255,255,0.18);color:#fff" : "color:#93a7bf") + '">' + (t === "full" ? "Full" : "Short") + '</span>'; }).join("") + '</span>' + '<span style="font-size:11px;color:#93a7bf">' + n + '/' + N + '</span>' + pwsChip + '</div>' +
         '<div style="flex:1;display:flex;justify-content:center;align-items:center;gap:5px">' + dots + '</div>' +
         '<div style="display:flex;align-items:center;gap:6px;white-space:nowrap">' +
         '<button id="demo-prev" class="btn" style="padding:4px 9px;font-size:12px;background:rgba(255,255,255,0.1);color:#fff;border-color:rgba(255,255,255,0.25)"' + (DEMO.i === 0 ? " disabled" : "") + '><i class="ti ti-chevron-left"></i></button>' +
@@ -108,6 +140,7 @@
       q("#demo-prev").onclick = DEMO.prev;
       q("#demo-next").onclick = DEMO.next;
       q("#demo-close").onclick = DEMO.hide;
+      q("#demo-ribbon").querySelectorAll("[data-tour]").forEach(function (b) { b.onclick = function () { var t = b.getAttribute("data-tour"); if (t !== TOUR) DEMO.setTour(t); }; });
       q("#demo-ribbon").querySelectorAll("[data-go]").forEach(function (d) { d.onclick = function () { DEMO.go(+d.getAttribute("data-go")); }; });
       try { document.documentElement.style.setProperty("--ribbon-h", (q("#demo-ribbon").offsetHeight || 0) + "px"); } catch (e) {}
     },
