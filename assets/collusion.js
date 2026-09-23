@@ -155,7 +155,8 @@
     var n = provs.length, span = Math.min(W - 40, n * 250);
     var cw = Math.min(200, span / n - 18), ch = H >= 380 ? 62 : 54;
     var P = {};
-    provs.forEach(function (p, i) { P[p.id] = { p: p, x: W / 2 - span / 2 + span * (i + 0.5) / n, y: yProv, focus: p.id === providerId }; });
+    var showFocus = opts.showFocus !== false; // off where there's no "case" (Insights › Network)
+    provs.forEach(function (p, i) { P[p.id] = { p: p, x: W / 2 - span / 2 + span * (i + 0.5) / n, y: yProv, focus: showFocus && p.id === providerId }; });
     // veterans ordered by the average x of the facilities they visited (fewer crossings)
     vets.forEach(function (v) { var xs = visits[v.id].map(function (id) { return P[id] ? P[id].x : W / 2; }); v._ax = xs.reduce(function (a, b) { return a + b; }, 0) / xs.length; });
     vets.sort(function (a, b) { return a._ax - b._ax; });
@@ -297,12 +298,15 @@
   }
 
   // Legend matching the layered graph.
-  function legendHtml(s) {
+  function legendHtml(s, opts) {
+    opts = opts || {};
     if (!s || !s.isRing) return "";
     var dot = function (stroke, bg, label) { return '<span class="lg"><span class="dot" style="border-color:' + stroke + ';background:' + bg + '"></span>' + label + '</span>'; };
     var box = function (stroke, label) { return '<span class="lg"><span style="width:14px;height:10px;border:1.5px solid ' + stroke + ';border-radius:3px;background:#fff"></span>' + label + '</span>'; };
     var line = function (color, w, dash, label) { return '<span class="lg"><span style="width:16px;height:0;border-top:' + w + 'px ' + (dash ? "dashed" : "solid") + ' ' + color + '"></span>' + label + '</span>'; };
-    var out = [dot("#10243b", "#10243b", s.kind === "chain" ? "Holding company" : "Billing entity"), box("#0f6e56", "Provider in this case"), box("#c6362f", "Linked provider · high risk"), dot("#378add", "#e6f1fb", "Shared veteran")];
+    var out = [dot("#10243b", "#10243b", s.kind === "chain" ? "Holding company" : "Billing entity")];
+    if (opts.showFocus !== false) out.push(box("#0f6e56", "Provider in this case"));
+    out.push(box("#c6362f", opts.showFocus !== false ? "Linked provider · high risk" : "Provider · high risk"), dot("#378add", "#e6f1fb", "Shared veteran"));
     out.push(s.kind === "chain" ? line("#b5730e", 1.6, true, "Common ownership") : line("#c6362f", 2.4, false, "Shared TIN"));
     if (s.referralCount) out.push(line("#0f6e56", 1.8, true, "Referrals"));
     out.push(line("#9fb3c8", 1.1, false, "Billed for veteran"));
