@@ -100,7 +100,7 @@
 
       document.getElementById("bz-back").addEventListener("click", function () { window.APP.goBack(); });
       document.getElementById("bz-flag").addEventListener("click", function () { window.APP.toggleBusinessWatch(id); window.Views.business.render(document.getElementById("view"), { id: id }); });
-      document.getElementById("bz-net-full").addEventListener("click", function () { window.APP.nav("network"); });
+      document.getElementById("bz-net-full").addEventListener("click", function () { var sn = window.Collusion ? window.Collusion.analyze(focus) : null; window.APP.state.networkScenario = sn && sn.kind === "chain" ? "chain" : "ring"; window.APP.nav("network"); });
       mount.querySelectorAll(".pv-row").forEach(function (tr) { tr.addEventListener("click", function () { window.APP.openProvider(tr.getAttribute("data-id")); }); });
       mount.querySelectorAll(".al-row").forEach(function (tr) { tr.addEventListener("click", function () { window.APP.openAllegation(tr.getAttribute("data-id")); }); });
 

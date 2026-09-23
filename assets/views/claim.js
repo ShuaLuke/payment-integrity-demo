@@ -1365,7 +1365,7 @@
       legend.innerHTML = window.Collusion.legendHtml ? window.Collusion.legendHtml(s) : collusionLegend(s);
     } else { graph.style.display = "none"; legend.style.display = "none"; }
     var full = document.getElementById("c-net-full");
-    if (full) full.addEventListener("click", function () { window.APP.auditLog("NETWORK_VIEWED", "Claim #" + id + " · " + p.name); window.APP.nav("network"); });
+    if (full) full.addEventListener("click", function () { window.APP.auditLog("NETWORK_VIEWED", "Claim #" + id + " · " + p.name); window.APP.state.networkScenario = s && s.kind === "chain" ? "chain" : "ring"; window.APP.nav("network"); });
   }
   function collusionLegend(s) {
     var out = [lgDot("#10243b", "Business entity"), lgDot("#0f6e56", "Provider in this case"), lgDot(s.kind === "chain" ? "#c6362f" : "#c77d11", "Linked provider"), lgDot("#378add", "Cross-billed veteran")];
