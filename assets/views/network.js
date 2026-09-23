@@ -50,7 +50,7 @@
         var legend = document.getElementById("n-legend"), boxes = document.getElementById("n-boxes"), tools = document.getElementById("n-ring-tools");
         if (scn === "chain") {
           tools.style.display = "none";
-          legend.innerHTML = legendChain();
+          legend.innerHTML = window.Collusion.legendHtml(window.Collusion.analyze("PR300"));
           boxes.innerHTML = boxesChain();
           window.Collusion.render(document.getElementById("n-canvas"), "PR300", { height: 440 });
         } else {
@@ -95,11 +95,6 @@
       lg("#378add", "#e6f1fb", "Veteran") + lg("#8b1a13", "#fbe3e3", "Lead") +
       lgLine("#c6362f", 3, null, "Shared TIN") + lgLine("#0f6e56", 1.6, "5,4", "Referral") + lgLine("#c2cad4", 1, null, "Shared patient");
   }
-  function legendChain() {
-    return lg("#10243b", "#dfe4ea", "Business entity") + lg("#0f6e56", "#e6f7f4", "Facility in this case") + lg("#c6362f", "#fbe3e3", "Chain facility · high risk") +
-      lg("#378add", "#e6f1fb", "Cross-billed veteran") +
-      lgLine("#b5730e", 2, null, "Same registration") + lgLine("#7a3aa0", 2, null, "Same officer") + lgLine("#8a95a3", 1, null, "Shared patients");
-  }
   function boxesRing() {
     return '<div style="flex:1;background:var(--high-bg);border:0.5px solid #f3c9c9;border-radius:8px;padding:10px 12px"><div style="display:flex;align-items:center;gap:6px;font-weight:500;font-size:12.5px;color:var(--high-tx)"><i class="ti ti-alert-triangle"></i>Ring detected</div><div style="font-size:11.5px;color:#7a3a34;margin-top:3px;line-height:1.5">Alamo Internal Medicine &amp; Rio Grande Surgical share <span class="mono">TIN 00-6820473</span>, 9 referrals and 6 patients — two providers, one billing entity, coordinated anomalies.</div></div>' +
       '<div style="flex:1;background:var(--low-bg);border:0.5px solid #bfe0c9;border-radius:8px;padding:10px 12px"><div style="display:flex;align-items:center;gap:6px;font-weight:500;font-size:12.5px;color:var(--low-tx)"><i class="ti ti-circle-check"></i>Benign by contrast</div><div style="font-size:11.5px;color:#2f5a44;margin-top:3px;line-height:1.5">Coastal Kidney Care links to a <span style="font-weight:500">single patient</span> (36 dialysis claims) — an isolated star, not a ring.</div></div>';
@@ -107,7 +102,7 @@
   function boxesChain() {
     var s = window.Collusion.analyze("PR300");
     return '<div style="flex:1">' + window.Collusion.narrativeHtml(s) + '</div>' +
-      '<div style="flex:1;background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:10px 12px"><div style="display:flex;align-items:center;gap:6px;font-weight:500;font-size:12.5px;color:var(--ink)"><i class="ti ti-route"></i>How to read it</div><div style="font-size:11.5px;color:var(--text2);margin-top:3px;line-height:1.5">Each blue dot is a veteran; lines to multiple facilities show the same patient cycled across states. The facilities share an officer and a business registration but bill under <span style="font-weight:500">separate TINs</span> — which is what keeps the common ownership hidden from single-claim review. Click a facility to open its report card and flagged claims.</div></div>';
+      '<div style="flex:1;background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:10px 12px"><div style="display:flex;align-items:center;gap:6px;font-weight:500;font-size:12.5px;color:var(--ink)"><i class="ti ti-route"></i>How to read it</div><div style="font-size:11.5px;color:var(--text2);margin-top:3px;line-height:1.5">Read it top to bottom: the <b>owner</b>, the <b>facilities</b> it controls, and the <b>veterans</b> billed by more than one of them. Each facility bills under a <span style="font-weight:500">separate TIN</span>, which keeps the common ownership hidden from single-claim review. Hover a veteran to trace their path across states, hover a facility to see who it shares, and click a facility to open its report card.</div></div>';
   }
 
   function draw(G) {
