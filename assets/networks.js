@@ -55,6 +55,19 @@
       f: [["Chattahoochee Home Health", "GA"], ["Peachtree Visiting Care", "GA"], ["Altamaha Home Services", "GA"]] }
   ];
 
+  // Cross-network links (synthetic): the same billing agent, recruiter, officer or
+  // mailing address turning up in two detected networks. Drawn on the full map.
+  var BRIDGES = [
+    { a: "N14", b: "N03", type: "Paid referrals", detail: "Lighthouse Path Outreach also steers veterans to Palmetto Shoals facilities in FL and GA." },
+    { a: "N15", b: "N03", type: "Shared veterans", detail: "Three veterans recruited by Foxglove Outreach were later billed by Palmetto Shoals facilities." },
+    { a: "N10", b: "N09", type: "Same billing agent", detail: "Allegheny Ridge Claims Services also submits claims for Delaware Valley Pain Center." },
+    { a: "N12", b: "N08", type: "Same billing agent", detail: "Bayline Medical Billing also submits claims for Lakeshore Diagnostic Lab." },
+    { a: "N04", b: "N05", type: "Same registered agent", detail: "Cedar Ridge Health Holdings and Bluestem Therapy Group use the same registered agent and filing address." },
+    { a: "N01", b: "N18", type: "Same mailing address", detail: "Desert Bloom Behavioral (Meridian) and Painted Desert DME list the same Arizona mailing address." },
+    { a: "N19", b: "N07", type: "Shared veterans", detail: "Four veterans billed by the PO Box 9120 labs were also billed by the TIN 00-7314402 clinics." },
+    { a: "N11", b: "N18", type: "Same billing agent", detail: "Red Mesa Revenue Partners also submits claims for Mojave Medical Supply." }
+  ];
+
   var FIRST = ["James", "Maria", "Robert", "Linda", "Michael", "Patricia", "David", "Barbara", "William", "Elizabeth", "Richard", "Susan", "Joseph", "Jessica", "Thomas", "Sarah", "Charles", "Karen", "Daniel", "Nancy", "Anthony", "Lisa", "Mark", "Betty", "Steven", "Sandra", "Kevin", "Donna", "Brian", "Carol", "George", "Ruth", "Edward", "Sharon", "Ronald", "Michelle", "Kenneth", "Laura", "Gary", "Angela"];
   var LAST = ["Alvarez", "Brennan", "Castillo", "Dawson", "Ellison", "Fairbanks", "Gallagher", "Hollis", "Ingram", "Jarvis", "Kowalczyk", "Lindqvist", "Mercado", "Nakamura", "Oyelaran", "Pritchard", "Quintero", "Rasmussen", "Sokolov", "Thibodeaux", "Underwood", "Valdez", "Whitfield", "Yancey", "Zimmerman", "Abernathy", "Bustamante", "Cordova", "Delacroix", "Espinoza"];
 
@@ -122,6 +135,13 @@
     };
   }
 
+  // graph shape for the two core-dataset networks
+  function coreModel(r) {
+    var s = window.Collusion.analyze(r.scenario === "chain" ? "PR300" : "PR001");
+    var ids = {}; s.providers.forEach(function (p) { ids[p.id] = 1; });
+    return { providers: s.providers, net: { veterans: s.net.veterans, vetLinks: (s.net.vetLinks || []).filter(function (e) { return ids[e.target]; }) } };
+  }
+
   var cache = null;
   var NETWORKS = {
     SCHEMES: SCHEMES, SCHEME_ORDER: SCHEME_ORDER,
@@ -131,6 +151,26 @@
         cache.forEach(function (r) { r.crossState = r.states.length > 1; });
       }
       return cache;
+    },
+    BRIDGES: BRIDGES,
+    // Every network on one graph: hubs (owner / billing entity / agent / recruiter /
+    // address), their providers, the affected veterans, and cross-network links.
+    fullGraph: function () {
+      var nodes = [], links = [], seen = {};
+      var add = function (n) { if (!seen[n.id]) { seen[n.id] = 1; nodes.push(n); } };
+      NETWORKS.list().forEach(function (r) {
+        var m = r.core ? coreModel(r) : NETWORKS.model(r.id);
+        var hub = "H-" + r.id;
+        add({ id: hub, kind: "hub", net: r.id, name: r.name, scheme: r.scheme, exposure: r.exposure, states: r.states, core: r.core, scenario: r.scenario });
+        m.providers.forEach(function (p) {
+          add({ id: p.id, kind: "provider", net: r.id, name: p.name, state: p.state, risk: p.riskScore || 0, excluded: !!(p.excluded || (window.DP.LEIE_EXCLUSIONS && window.DP.LEIE_EXCLUSIONS[p.id])) });
+          links.push({ source: hub, target: p.id, kind: "hub" });
+        });
+        m.net.veterans.filter(Boolean).forEach(function (v) { add({ id: v.id, kind: "veteran", net: r.id, name: v.name, state: v.state }); });
+        (m.net.vetLinks || []).forEach(function (e) { if (seen[e.source] && seen[e.target]) links.push({ source: e.source, target: e.target, kind: "vet", net: r.id }); });
+      });
+      BRIDGES.forEach(function (b) { links.push({ source: "H-" + b.a, target: "H-" + b.b, kind: "bridge", type: b.type, detail: b.detail }); });
+      return { nodes: nodes, links: links };
     },
     model: function (id) { var n = SEED.filter(function (x) { return x.id === id; })[0]; return n ? buildModel(n) : null; },
     // portfolio stats: totals, cross-state share, and the split by scheme type
