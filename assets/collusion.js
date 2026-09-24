@@ -293,7 +293,7 @@
       var vs = {}; vs[vid] = 1;
       g.on("mouseover", function (e) {
         focusOn(all(route.map(function (id) { return { id: id }; })), vs, false);
-        showTip(e, "<div style='color:#8fc4f2;margin-bottom:2px'>Veteran · cross-billed</div><b>" + esc(v.name) + "</b><div style='color:#93a7bf'>" + [v.city, v.state].filter(Boolean).map(esc).join(", ") +
+        showTip(e, "<div style='color:#8fc4f2;margin-bottom:2px'>Affected veteran</div><b>" + esc(v.name) + "</b><div style='color:#93a7bf'>" + [v.city, v.state].filter(Boolean).map(esc).join(", ") +
           "<br>Billed by " + route.length + ": " + route.map(function (id) { return esc(shortName(P[id].p.name)) + " (" + esc(P[id].p.state || "") + ")"; }).join(" → ") + "</div>");
       }).on("mouseout", reset);
     });
@@ -313,7 +313,6 @@
     out.push(s.sharedTin ? line("#c6362f", 2.4, false, L.link) : line("#b5730e", 1.6, true, L.link));
     if (s.referralCount) out.push(line("#0f6e56", 1.8, true, "Referrals"));
     out.push(line("#9fb3c8", 1.1, false, "Billed for veteran"));
-    out.push('<span class="lg" style="color:var(--text3)"><i class="ti ti-pointer"></i> Hover to trace a thread</span>');
     return out.join("");
   }
 

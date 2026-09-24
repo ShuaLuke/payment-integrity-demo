@@ -80,7 +80,7 @@
     });
     return '<div class="card" style="padding:0;overflow:hidden">' +
       '<div style="padding:10px 12px;border-bottom:0.5px solid var(--border2);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">' +
-      '<div style="font-weight:500;font-size:12.5px"><i class="ti ti-plug-connected" style="color:var(--accent-d)"></i> Data sources <span class="muted" style="font-weight:400;font-size:10.5px">· what we pull, from where · last 24 hours</span></div>' +
+      '<div style="font-weight:500;font-size:12.5px"><i class="ti ti-plug-connected" style="color:var(--accent-d)"></i> Data sources <span class="muted" style="font-weight:400;font-size:10.5px">· last 24 hours</span></div>' +
       '<div style="font-size:11px;color:var(--text2);display:flex;align-items:center;gap:6px"><span class="edi-dot"></span> Live · ' + SOURCES.length + ' feeds connected</div></div>' +
       '<div style="display:flex;flex-wrap:wrap">' +
       '<div style="flex:1.5;min-width:420px;overflow-x:auto;padding:0 12px 8px"><table style="width:100%"><thead><tr><th>Source</th><th>Cadence</th><th class="right">24h</th><th class="right">Hits</th><th class="right">Last received</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
