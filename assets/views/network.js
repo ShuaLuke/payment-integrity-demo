@@ -10,7 +10,7 @@
       var scnBtn = function (id, label, sub) { return '<button class="nscn" data-scn="' + id + '" style="border:none;background:none;border-radius:6px;padding:5px 11px;font-size:12px;cursor:pointer;color:var(--text2);font-family:var(--sans);display:flex;flex-direction:column;align-items:flex-start;line-height:1.2"><span style="font-weight:500">' + label + '</span><span style="font-size:9.5px;color:var(--text3)">' + sub + '</span></button>'; };
       mount.innerHTML =
         '<div class="page">' +
-        '<div class="page-head"><div><div class="page-title">Provider network</div><div class="page-sub" id="n-sub">Every detected provider network, and the two worked examples. Hover the graph to trace a thread.</div></div>' +
+        '<div class="page-head"><div><div class="page-title">Provider network</div><div class="page-sub" id="n-sub">Detected provider networks.</div></div>' +
         '<div style="display:flex;gap:10px;align-items:center">' +
         '<div style="display:flex;background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:2px">' + scnBtn("all", "All networks", window.NETWORKS.list().length + " detected") + scnBtn("ring", "Shared-TIN ring", "one billing entity") + scnBtn("chain", "Residential chain", "AZ → CA → NV") + '</div>' +
         window.EXPORT.group("nw") +
@@ -105,13 +105,13 @@
       '<div class="card"><div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px;margin-bottom:6px"><div style="font-weight:500;font-size:12.5px"><i class="ti ti-map-2" style="color:var(--accent-d)"></i> Cross-state vs within one state <span class="muted" style="font-weight:400;font-size:10.5px">· by scheme type</span></div>' +
       '<div style="display:flex;gap:12px;font-size:11px;color:var(--text2)"><span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#10243b;vertical-align:-1px"></span> Cross-state</span><span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#9fd8d0;vertical-align:-1px"></span> Within one state</span></div></div>' +
       '<div style="overflow-x:auto"><div style="min-width:480px">' + split + '</div></div>' +
-      '<div style="font-size:11px;color:var(--text2);margin-top:6px"><i class="ti ti-info-circle"></i> ' + esc(mostCross[0].label) + ' networks cross state lines most often (' + pct(mostCross[0].cross, mostCross[0].total) + '%); ' + esc(mostCross[mostCross.length - 1].label.toLowerCase()) + 's mostly stay in one state (' + pct(mostCross[mostCross.length - 1].inState, mostCross[mostCross.length - 1].total) + '%). Cross-state networks need multi-jurisdiction coordination and are candidates for federal referral.</div></div>' +
+      '<div style="font-size:11px;color:var(--text2);margin-top:6px"><i class="ti ti-info-circle"></i> ' + esc(mostCross[0].label) + ' networks cross state lines most often (' + pct(mostCross[0].cross, mostCross[0].total) + '%); ' + esc(mostCross[mostCross.length - 1].label.toLowerCase()) + 's mostly stay in one state (' + pct(mostCross[mostCross.length - 1].inState, mostCross[mostCross.length - 1].total) + '%).</div></div>' +
       '<div class="card" style="padding:0;overflow:hidden">' +
       '<div style="padding:9px 12px;border-bottom:0.5px solid var(--border2);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div style="font-weight:500;font-size:12.5px"><i class="ti ti-affiliate" style="color:var(--accent-d)"></i> Networks <span class="muted" style="font-weight:400;font-size:10.5px">· click a row to open its graph</span></div>' +
       '<div style="display:flex;gap:2px;flex-wrap:wrap;background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:2px">' + chip("geo", "", "All") + chip("geo", "cross", "Cross-state") + chip("geo", "in", "One state") + '</div>' +
       '<select class="input" id="nv-scheme" style="width:auto;font-size:12px;padding:4px 8px"><option value="">All scheme types</option>' + window.NETWORKS.SCHEME_ORDER.map(function (k) { return '<option value="' + k + '"' + (ovFilter.scheme === k ? " selected" : "") + '>' + window.NETWORKS.SCHEMES[k].label + '</option>'; }).join("") + '</select></div>' +
       '<div style="overflow-x:auto"><table style="width:100%"><thead><tr><th>Network</th><th>Scheme</th><th>States</th><th class="right">Providers</th><th class="right">Veterans</th><th class="right">Exposure</th><th>Status</th><th class="right">Risk</th></tr></thead><tbody id="nv-body">' + rowsHtml() + '</tbody></table></div>' +
-      '<div style="padding:8px 12px;font-size:10.5px;color:var(--text3);border-top:0.5px solid var(--border2)">Exposure = flagged paid + pending claims at the network\'s providers. Networks other than Meridian and the Alamo ring are synthetic seed data for this demo.</div></div>' +
+      '<div style="padding:8px 12px;font-size:10.5px;color:var(--text3);border-top:0.5px solid var(--border2)">Exposure = flagged paid + pending claims at the network\'s providers.</div></div>' +
       '</div>';
   }
   // ---------- the full map: every network on one force graph ----------
@@ -230,7 +230,7 @@
       var tone = STATUS_TONE[r.status] || STATUS_TONE.New;
       var states = r.states.map(function (s) { return '<span class="tag" style="font-size:10px">' + s + '</span>'; }).join(" ");
       return '<tr class="nv-row" data-id="' + r.id + '" style="cursor:pointer">' +
-        '<td><div style="font-weight:500">' + esc(r.name) + (r.core ? ' <span class="tag" style="font-size:9.5px;background:var(--accent-l);color:var(--accent-d)">worked example</span>' : '') + '</div><div style="font-size:10.5px;color:var(--text3)">' + esc(r.type) + (r.excluded ? ' · <span style="color:var(--high-tx)">' + r.excluded + ' OIG-excluded</span>' : '') + '</div></td>' +
+        '<td><div style="font-weight:500">' + esc(r.name) + '' + '</div><div style="font-size:10.5px;color:var(--text3)">' + esc(r.type) + (r.excluded ? ' · <span style="color:var(--high-tx)">' + r.excluded + ' OIG-excluded</span>' : '') + '</div></td>' +
         '<td style="font-size:11.5px">' + esc(window.NETWORKS.SCHEMES[r.scheme].short) + '</td>' +
         '<td><div style="display:flex;gap:3px;flex-wrap:wrap;align-items:center">' + states + (r.crossState ? ' <i class="ti ti-arrows-exchange" title="Cross-state" style="color:var(--text3);font-size:12px"></i>' : '') + '</div></td>' +
         '<td class="right mono">' + r.facilities + '</td><td class="right mono">' + r.veterans + '</td>' +
@@ -264,8 +264,7 @@
     if (r.excluded) chips.push('<span class="tag" style="background:var(--high-bg);color:var(--high-tx)">' + r.excluded + ' OIG-excluded</span>');
     return '<div style="flex:1;background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:10px 12px"><div style="font-weight:600;font-size:12.5px;color:var(--ink);margin-bottom:6px"><i class="ti ti-affiliate"></i> ' + esc(r.name) + '</div>' +
       '<div style="display:flex;gap:5px;flex-wrap:wrap">' + chips.join("") + '</div>' +
-      '<div style="font-size:11.5px;color:var(--text2);margin-top:8px;line-height:1.5">' + usd(r.paid) + ' flagged paid + ' + usd(r.pending) + ' pending = <b>' + usd(r.exposure) + '</b> exposure · status <b>' + esc(r.status) + '</b> · risk ' + r.risk + '.</div></div>' +
-      '<div style="flex:1;background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:10px 12px"><div style="font-weight:500;font-size:12.5px;color:var(--ink)"><i class="ti ti-route"></i> How to read it</div><div style="font-size:11.5px;color:var(--text2);margin-top:3px;line-height:1.5">Top: the ' + esc(sc.bizKind.toLowerCase()) + ' that links these providers. Middle: the providers, each with its state and TIN. Bottom: the veterans billed by more than one of them. Hover any node to trace its thread. This is a synthetic network for the demo, so providers don\'t open report cards.</div></div>';
+      '<div style="font-size:11.5px;color:var(--text2);margin-top:8px;line-height:1.5">' + usd(r.paid) + ' flagged paid + ' + usd(r.pending) + ' pending = <b>' + usd(r.exposure) + '</b> exposure · status <b>' + esc(r.status) + '</b> · risk ' + r.risk + '.</div></div>';
   }
   function exportAll(kind) {
     var head = ["Network", "Scheme", "Type", "States", "Cross-state", "Providers", "Veterans affected", "Flagged paid", "Pending", "Exposure", "Status", "Risk"];
@@ -291,12 +290,11 @@
   function boxesRing() {
     var s = window.Collusion.analyze("PR001");
     return '<div style="flex:1">' + window.Collusion.narrativeHtml(s) + '</div>' +
-      '<div style="flex:1;background:var(--low-bg);border:0.5px solid #bfe0c9;border-radius:8px;padding:10px 12px"><div style="display:flex;align-items:center;gap:6px;font-weight:500;font-size:12.5px;color:var(--low-tx)"><i class="ti ti-circle-check"></i>Benign by contrast</div><div style="font-size:11.5px;color:#2f5a44;margin-top:3px;line-height:1.5">Coastal Kidney Care also bills one veteran heavily (<span style="font-weight:500">36 dialysis claims</span>), but it shares no TIN, owner, referrals or patients with another provider, so it has no network to draw. High volume alone isn\'t a ring. Hover a provider or veteran above to trace the ring\'s threads.</div></div>';
+      '<div style="flex:1;background:var(--low-bg);border:0.5px solid #bfe0c9;border-radius:8px;padding:10px 12px"><div style="display:flex;align-items:center;gap:6px;font-weight:500;font-size:12.5px;color:var(--low-tx)"><i class="ti ti-circle-check"></i>Benign by contrast</div><div style="font-size:11.5px;color:#2f5a44;margin-top:3px;line-height:1.5">Coastal Kidney Care also bills one veteran heavily (<span style="font-weight:500">36 dialysis claims</span>), but it shares no TIN, owner, referrals or patients with another provider, so it has no network to draw. High volume alone isn\'t a ring.</div></div>';
   }
   function boxesChain() {
     var s = window.Collusion.analyze("PR300");
-    return '<div style="flex:1">' + window.Collusion.narrativeHtml(s) + '</div>' +
-      '<div style="flex:1;background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:10px 12px"><div style="display:flex;align-items:center;gap:6px;font-weight:500;font-size:12.5px;color:var(--ink)"><i class="ti ti-route"></i>How to read it</div><div style="font-size:11.5px;color:var(--text2);margin-top:3px;line-height:1.5">Read it top to bottom: the <b>owner</b>, the <b>facilities</b> it controls, and the <b>veterans</b> billed by more than one of them. Each facility bills under a <span style="font-weight:500">separate TIN</span>, which keeps the common ownership hidden from single-claim review. Hover a veteran to trace their path across states, hover a facility to see who it shares, and click a facility to open its report card.</div></div>';
+    return '<div style="flex:1">' + window.Collusion.narrativeHtml(s) + '</div>';
   }
 
 })();

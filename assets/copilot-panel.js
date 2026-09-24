@@ -32,7 +32,7 @@
       '<div id="cp-alt" style="flex:1;overflow-y:auto;padding:12px 14px;min-height:0;display:none"></div>' +
       '<div id="cp-foot" style="padding:10px 14px;border-top:0.5px solid var(--border2)"><div class="suggest" id="cp-suggest" style="margin-bottom:8px"></div>' +
       '<div style="display:flex;gap:8px"><input id="cp-input" class="input" placeholder="Ask the Investigative Assistant…"><button class="btn primary" id="cp-send"><i class="ti ti-send"></i></button></div>' +
-      '<div style="font-size:10px;color:var(--text3);margin-top:6px"><i class="ti ti-sparkles"></i> Demonstration-scripted, grounded in the case data.</div></div>';
+      '<div style="font-size:10px;color:var(--text3);margin-top:6px"><i class="ti ti-sparkles"></i> Grounded in the case data.</div></div>';
     document.body.appendChild(panel);
 
     renderTabs();
@@ -142,7 +142,7 @@
       sect("Precedent", window.APP.esc(s.precedents.text) + (precChips ? '<div style="margin-top:5px;display:flex;gap:5px;flex-wrap:wrap">' + precChips + '</div>' : "")) +
       sect("Why this recommendation", window.APP.esc(rec.rationale)) +
       '<button class="btn primary" data-act="go" style="width:100%;justify-content:center;font-size:12px"><i class="ti ti-arrow-right"></i> ' + st.cta + '</button>' +
-      '<div style="font-size:10px;color:var(--text3);text-align:center"><i class="ti ti-sparkles"></i> Demonstration-scripted · grounded in this case\'s evidence &amp; precedent</div>' +
+      '<div style="font-size:10px;color:var(--text3);text-align:center"><i class="ti ti-sparkles"></i> Grounded in this case\'s evidence &amp; precedent</div>' +
       '</div></div>';
   }
   // Take the analyst to the decision control, pre-selecting the recommended action.
@@ -174,7 +174,7 @@
     }).join("");
     alt.innerHTML = '<div style="font-size:11.5px;color:var(--text2);margin-bottom:10px"><i class="ti ti-robot" style="color:var(--accent-d)"></i> Three agents examined lead #' + a.id + ' — each grounded in the case data it reads. Findings feed the adjudication brief and any correspondence.</div>' +
       cards +
-      '<div style="font-size:10px;color:var(--text3);margin-top:2px"><i class="ti ti-sparkles"></i> Demonstration agents · grounded in this case\'s rules, model, network, coding &amp; pricing.</div>';
+      '<div style="font-size:10px;color:var(--text3);margin-top:2px"><i class="ti ti-sparkles"></i> Grounded in this case\'s rules, model, network, coding &amp; pricing.</div>';
   }
 
   // ---- Correspondence mode: generate → review → attach / export ----
